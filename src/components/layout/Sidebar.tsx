@@ -13,9 +13,9 @@ import {
   Users,
   Settings,
   ChevronLeft,
-  ChevronRight,
-  Building2
+  ChevronRight
 } from 'lucide-react';
+import targetLogo from '@/assets/target-logo.jpg';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -43,9 +43,11 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
-            <Building2 className="h-6 w-6 text-sidebar-primary-foreground" />
-          </div>
+          <img 
+            src={targetLogo} 
+            alt="Target Specialties Logo" 
+            className="h-10 w-10 object-contain rounded-lg"
+          />
           {!collapsed && (
             <div className="animate-fade-in">
               <h1 className="text-lg font-bold text-sidebar-foreground">Target</h1>
