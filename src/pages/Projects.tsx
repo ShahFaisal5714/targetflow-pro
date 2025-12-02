@@ -4,6 +4,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import Header from '@/components/layout/Header';
 import DataTable from '@/components/shared/DataTable';
 import StatusBadge from '@/components/shared/StatusBadge';
+import ProjectFormDialog from '@/components/projects/ProjectFormDialog';
 import { mockProjects } from '@/data/mockData';
 import { Project, ProjectStatus, ProjectCategory } from '@/types/crm';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ export default function Projects() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<ProjectStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   const filteredProjects = mockProjects.filter((project) => {
     const matchesStatus = activeTab === 'all' || project.status === activeTab;
@@ -116,8 +118,13 @@ export default function Projects() {
         subtitle={`${filteredProjects.length} projects found`}
         action={{
           label: 'New Project',
-          onClick: () => console.log('Create new project'),
+          onClick: () => setIsCreateDialogOpen(true),
         }}
+      />
+
+      <ProjectFormDialog 
+        open={isCreateDialogOpen} 
+        onOpenChange={setIsCreateDialogOpen}
       />
 
       <div className="p-6 space-y-6">

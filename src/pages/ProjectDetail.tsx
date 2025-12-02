@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import Header from '@/components/layout/Header';
 import StatusBadge from '@/components/shared/StatusBadge';
+import ProjectFormDialog from '@/components/projects/ProjectFormDialog';
 import { mockProjects, mockQuotations, mockSalesOrders } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,6 +35,7 @@ export default function ProjectDetail() {
   const project = mockProjects.find((p) => p.id === id);
   const projectQuotations = mockQuotations.filter((q) => q.projectId === id);
   const projectOrders = mockSalesOrders.filter((so) => so.projectId === id);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   if (!project) {
     return (
@@ -53,6 +56,12 @@ export default function ProjectDetail() {
     <MainLayout>
       <Header title={project.name} subtitle={`Project ID: ${project.id}`} />
 
+      <ProjectFormDialog 
+        open={isEditDialogOpen} 
+        onOpenChange={setIsEditDialogOpen}
+        project={project}
+      />
+
       <div className="p-6 space-y-6">
         {/* Back Button & Actions */}
         <div className="flex items-center justify-between">
@@ -64,7 +73,7 @@ export default function ProjectDetail() {
             Back to Projects
           </Link>
           <div className="flex items-center gap-3">
-            <Button variant="outline">Edit Project</Button>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(true)}>Edit Project</Button>
             <Button>Create Quotation</Button>
           </div>
         </div>
