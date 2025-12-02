@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import Header from '@/components/layout/Header';
 import DataTable from '@/components/shared/DataTable';
 import StatusBadge from '@/components/shared/StatusBadge';
+import QuotationFormDialog from '@/components/quotations/QuotationFormDialog';
 import { mockQuotations } from '@/data/mockData';
 import { Quotation, QuotationStatus } from '@/types/crm';
 import { Button } from '@/components/ui/button';
@@ -19,8 +21,10 @@ const statusTabs: { key: QuotationStatus | 'all'; label: string }[] = [
 ];
 
 export default function Quotations() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<QuotationStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   const filteredQuotations = mockQuotations.filter((quotation) => {
     const matchesStatus = activeTab === 'all' || quotation.status === activeTab;
@@ -109,7 +113,7 @@ export default function Quotations() {
               Convert to SO
             </Button>
           )}
-          <Button size="sm" variant="outline">
+          <Button size="sm" variant="outline" onClick={() => navigate(`/quotations/${quotation.id}`)}>
             View
           </Button>
         </div>
@@ -124,9 +128,11 @@ export default function Quotations() {
         subtitle={`${filteredQuotations.length} quotations`}
         action={{
           label: 'New Quotation',
-          onClick: () => console.log('Create quotation'),
+          onClick: () => setIsCreateDialogOpen(true),
         }}
       />
+
+      <QuotationFormDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
 
       <div className="p-6 space-y-6">
         {/* Stats */}
@@ -198,6 +204,7 @@ export default function Quotations() {
           columns={columns}
           data={filteredQuotations}
           emptyMessage="No quotations found"
+          onRowClick={(quotation) => navigate(`/quotations/${quotation.id}`)}
         />
       </div>
     </MainLayout>
