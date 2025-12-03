@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import Header from '@/components/layout/Header';
@@ -9,9 +9,10 @@ import { mockProjects } from '@/data/mockData';
 import { Project, ProjectStatus, ProjectCategory } from '@/types/crm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Filter, Building, Calendar, User, Edit, Trash2 } from 'lucide-react';
+import { Search, Filter, Building, Calendar, User, Edit, Trash2, Undo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,7 +42,7 @@ const categoryLabels: Record<ProjectCategory, string> = {
 
 export default function Projects() {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
   const [activeTab, setActiveTab] = useState<ProjectStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -49,6 +50,8 @@ export default function Projects() {
   const [selectedProject, setSelectedProject] = useState<Project | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [deletedProjects, setDeletedProjects] = useState<Project[]>([]);
+  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleEditProject = (project: Project, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -62,18 +65,65 @@ export default function Projects() {
     setDeleteDialogOpen(true);
   };
 
+  const handleUndoDelete = (project: Project, toastId: string) => {
+    // Clear the timeout
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+    }
+    
+    // Remove from deleted projects
+    setDeletedProjects(prev => prev.filter(p => p.id !== project.id));
+    
+    // Dismiss the delete toast
+    dismiss(toastId);
+    
+    // Show restore confirmation
+    toast({
+      title: 'Project Restored',
+      description: `${project.name} has been restored successfully.`,
+    });
+  };
+
   const confirmDelete = () => {
     if (projectToDelete) {
-      toast({
-        title: 'Project Deleted',
-        description: `${projectToDelete.name} has been deleted successfully.`,
-      });
+      const deletedProject = projectToDelete;
+      
+      // Add to deleted projects (soft delete)
+      setDeletedProjects(prev => [...prev, deletedProject]);
+      
       setDeleteDialogOpen(false);
       setProjectToDelete(null);
+      
+      // Show toast with undo option
+      const { id: toastId } = toast({
+        title: 'Project Deleted',
+        description: `${deletedProject.name} has been deleted.`,
+        duration: 8000,
+        action: (
+          <ToastAction 
+            altText="Undo delete" 
+            onClick={() => handleUndoDelete(deletedProject, toastId)}
+            className="gap-1"
+          >
+            <Undo2 className="h-4 w-4" />
+            Undo
+          </ToastAction>
+        ),
+      });
+      
+      // Set timeout to permanently delete after toast disappears
+      undoTimeoutRef.current = setTimeout(() => {
+        // In a real app, this would make an API call to permanently delete
+        console.log(`Permanently deleted project: ${deletedProject.id}`);
+      }, 8000);
     }
   };
 
   const filteredProjects = mockProjects.filter((project) => {
+    // Exclude soft-deleted projects
+    if (deletedProjects.some(dp => dp.id === project.id)) {
+      return false;
+    }
     const matchesStatus = activeTab === 'all' || project.status === activeTab;
     const matchesSearch =
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

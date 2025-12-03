@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import Header from '@/components/layout/Header';
@@ -9,9 +9,10 @@ import { mockQuotations } from '@/data/mockData';
 import { Quotation, QuotationStatus } from '@/types/crm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Filter, FileText, Calendar, GitBranch, Edit, Trash2 } from 'lucide-react';
+import { Search, Filter, FileText, Calendar, GitBranch, Edit, Trash2, Undo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,7 +34,7 @@ const statusTabs: { key: QuotationStatus | 'all'; label: string }[] = [
 
 export default function Quotations() {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
   const [activeTab, setActiveTab] = useState<QuotationStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -41,6 +42,8 @@ export default function Quotations() {
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [quotationToDelete, setQuotationToDelete] = useState<Quotation | null>(null);
+  const [deletedQuotations, setDeletedQuotations] = useState<Quotation[]>([]);
+  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleEditQuotation = (quotation: Quotation, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -54,18 +57,65 @@ export default function Quotations() {
     setDeleteDialogOpen(true);
   };
 
+  const handleUndoDelete = (quotation: Quotation, toastId: string) => {
+    // Clear the timeout
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+    }
+    
+    // Remove from deleted quotations
+    setDeletedQuotations(prev => prev.filter(q => q.id !== quotation.id));
+    
+    // Dismiss the delete toast
+    dismiss(toastId);
+    
+    // Show restore confirmation
+    toast({
+      title: 'Quotation Restored',
+      description: `${quotation.id} has been restored successfully.`,
+    });
+  };
+
   const confirmDelete = () => {
     if (quotationToDelete) {
-      toast({
-        title: 'Quotation Deleted',
-        description: `${quotationToDelete.id} has been deleted successfully.`,
-      });
+      const deletedQuotation = quotationToDelete;
+      
+      // Add to deleted quotations (soft delete)
+      setDeletedQuotations(prev => [...prev, deletedQuotation]);
+      
       setDeleteDialogOpen(false);
       setQuotationToDelete(null);
+      
+      // Show toast with undo option
+      const { id: toastId } = toast({
+        title: 'Quotation Deleted',
+        description: `${deletedQuotation.id} has been deleted.`,
+        duration: 8000,
+        action: (
+          <ToastAction 
+            altText="Undo delete" 
+            onClick={() => handleUndoDelete(deletedQuotation, toastId)}
+            className="gap-1"
+          >
+            <Undo2 className="h-4 w-4" />
+            Undo
+          </ToastAction>
+        ),
+      });
+      
+      // Set timeout to permanently delete after toast disappears
+      undoTimeoutRef.current = setTimeout(() => {
+        // In a real app, this would make an API call to permanently delete
+        console.log(`Permanently deleted quotation: ${deletedQuotation.id}`);
+      }, 8000);
     }
   };
 
   const filteredQuotations = mockQuotations.filter((quotation) => {
+    // Exclude soft-deleted quotations
+    if (deletedQuotations.some(dq => dq.id === quotation.id)) {
+      return false;
+    }
     const matchesStatus = activeTab === 'all' || quotation.status === activeTab;
     const matchesSearch =
       quotation.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
