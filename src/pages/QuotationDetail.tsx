@@ -46,9 +46,9 @@ export default function QuotationDetail() {
     doc.setTextColor(60, 60, 60);
     doc.text('TARGET SPECIALTIES', 105, 15, { align: 'center' });
     doc.setFontSize(8);
-    doc.text('Dubai Industrial City – Saih Shuaib 2 Block J Warehouse P1 Dubai UAE', 105, 20, { align: 'center' });
-    doc.text('Email: info@targetspecialties.com | Web: targetspecialties.com', 105, 25, { align: 'center' });
-    doc.text('TRN No: 100529145300003 | Contact No: +971 50 7822 916', 105, 30, { align: 'center' });
+    doc.text('Building Rema plaza | Office no. 1 Aljurf 3 Ajman UAE', 105, 20, { align: 'center' });
+    doc.text('Email: Info@targetspecialties.com | Web: targetspecialties.com', 105, 25, { align: 'center' });
+    doc.text('Contact No: +971 50 958 7185', 105, 30, { align: 'center' });
 
     // Title
     doc.setFontSize(20);
@@ -145,14 +145,14 @@ export default function QuotationDetail() {
     const finalY = (doc as any).lastAutoTable.finalY + 10;
     
     doc.setFont('helvetica', 'bold');
-    doc.text('Sub Total Amount AED :', 120, finalY);
+    doc.text('Sub Total Amount (AED):', 120, finalY);
     doc.text(quotation.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 }), 185, finalY, { align: 'right' });
 
-    doc.text(`VAT ${quotation.tax.rate}% :`, 120, finalY + 7);
+    doc.text(`VAT ${quotation.tax.rate}%:`, 120, finalY + 7);
     doc.text(taxAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }), 185, finalY + 7, { align: 'right' });
 
     doc.setFontSize(11);
-    doc.text('Total Payable Amount :', 120, finalY + 15);
+    doc.text('Total Payable Amount (AED):', 120, finalY + 15);
     doc.text(quotation.total.toLocaleString('en-US', { minimumFractionDigits: 2 }), 185, finalY + 15, { align: 'right' });
 
     // Additional terms
@@ -235,15 +235,15 @@ export default function QuotationDetail() {
           {/* Company Header */}
           <div className="p-8 border-b bg-gradient-to-br from-primary/5 to-accent/5">
             <div className="flex items-start justify-between mb-6">
-              <img src={targetLogo} alt="Target Specialties" className="h-16 object-contain" />
+              <img src={targetLogo} alt="Target Specialties" className="h-20 w-auto object-contain" />
               <div className="text-right text-sm text-muted-foreground">
                 <p className="font-semibold text-foreground">TARGET SPECIALTIES</p>
-                <p>Dubai Industrial City – Saih Shuaib 2</p>
-                <p>Block J Warehouse P1 Dubai UAE</p>
-                <p className="mt-2">Email: info@targetspecialties.com</p>
+                <p>Building Rema plaza | Office no. 1</p>
+                <p>Aljurf 3 Ajman UAE</p>
+                <p className="mt-2">Email: Info@targetspecialties.com</p>
                 <p>Web: targetspecialties.com</p>
-                <p className="mt-2">TRN No: 100529145300003</p>
-                <p>Contact: +971 50 7822 916</p>
+                <p className="mt-2">Contact: +971 50 958 7185</p>
+                <p></p>
               </div>
             </div>
             
@@ -340,7 +340,7 @@ export default function QuotationDetail() {
           <div className="p-8 border-b bg-muted/30">
             <div className="max-w-md ml-auto space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="font-semibold">Sub Total Amount AED:</span>
+                <span className="font-semibold">Sub Total Amount (AED):</span>
                 <span className="font-mono">{quotation.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between text-sm">
@@ -348,7 +348,7 @@ export default function QuotationDetail() {
                 <span className="font-mono">{taxAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between text-lg font-bold border-t pt-3">
-                <span>Total Payable Amount:</span>
+                <span>Total Payable Amount (AED):</span>
                 <span className="font-mono text-primary">{quotation.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
