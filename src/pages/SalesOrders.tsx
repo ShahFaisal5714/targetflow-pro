@@ -92,7 +92,7 @@ export default function SalesOrders() {
       key: 'total',
       header: 'Total',
       render: (order: SalesOrder) => (
-        <span className="font-semibold text-foreground">${order.total.toLocaleString()}</span>
+        <span className="font-semibold text-foreground">AED {order.total.toLocaleString()}</span>
       ),
     },
     {
@@ -152,7 +152,7 @@ export default function SalesOrders() {
           <div className="bg-card rounded-xl p-4 border border-border/50">
             <p className="text-sm text-muted-foreground mb-2">Total Value</p>
             <p className="text-2xl font-bold text-foreground">
-              ${mockSalesOrders.reduce((sum, o) => sum + o.total, 0).toLocaleString()}
+              AED {mockSalesOrders.reduce((sum, o) => sum + o.total, 0).toLocaleString()}
             </p>
           </div>
         </div>

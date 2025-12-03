@@ -69,7 +69,7 @@ export default function Invoices() {
       key: 'total',
       header: 'Amount',
       render: (invoice: Invoice) => (
-        <span className="font-semibold text-foreground">${invoice.total.toLocaleString()}</span>
+        <span className="font-semibold text-foreground">AED {invoice.total.toLocaleString()}</span>
       ),
     },
     {
@@ -81,7 +81,7 @@ export default function Invoices() {
           <div className="w-32">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-muted-foreground">
-                ${invoice.paidAmount.toLocaleString()}
+                AED {invoice.paidAmount.toLocaleString()}
               </span>
               <span className="text-xs font-medium text-foreground">{progress}%</span>
             </div>
@@ -97,7 +97,7 @@ export default function Invoices() {
         const outstanding = invoice.total - invoice.paidAmount;
         return (
           <span className={cn('font-medium', outstanding > 0 ? 'text-destructive' : 'text-success')}>
-            ${outstanding.toLocaleString()}
+            AED {outstanding.toLocaleString()}
           </span>
         );
       },
@@ -148,7 +148,7 @@ export default function Invoices() {
               <DollarSign className="h-5 w-5" />
               <p className="text-sm text-primary-foreground/80">Total Outstanding</p>
             </div>
-            <p className="text-2xl font-bold">${totalOutstanding.toLocaleString()}</p>
+            <p className="text-2xl font-bold">AED {totalOutstanding.toLocaleString()}</p>
           </div>
           <div className="bg-card rounded-xl p-4 border border-border/50">
             <p className="text-sm text-muted-foreground mb-2">Paid</p>
