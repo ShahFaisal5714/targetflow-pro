@@ -97,7 +97,7 @@ export default function ProjectDetail() {
                 <div>
                   <p className="text-sm text-muted-foreground">Project Value</p>
                   <p className="text-2xl font-bold text-foreground">
-                    ${project.value.toLocaleString()}
+                    AED {project.value.toLocaleString()}
                   </p>
                 </div>
                 <div>
@@ -273,7 +273,7 @@ export default function ProjectDetail() {
                         <div className="flex items-center gap-4">
                           <div className="text-right">
                             <p className="font-semibold text-foreground">
-                              ${quotation.total.toLocaleString()}
+                              AED {quotation.total.toLocaleString()}
                             </p>
                             <p className="text-sm text-muted-foreground">
                               Valid until {new Date(quotation.validUntil).toLocaleDateString()}
@@ -321,7 +321,7 @@ export default function ProjectDetail() {
                         <div className="flex items-center gap-4">
                           <div className="text-right">
                             <p className="font-semibold text-foreground">
-                              ${order.total.toLocaleString()}
+                              AED {order.total.toLocaleString()}
                             </p>
                             <p className="text-sm text-muted-foreground">
                               Created {new Date(order.createdAt).toLocaleDateString()}

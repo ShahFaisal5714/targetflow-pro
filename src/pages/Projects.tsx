@@ -9,8 +9,19 @@ import { mockProjects } from '@/data/mockData';
 import { Project, ProjectStatus, ProjectCategory } from '@/types/crm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Filter, Building, Calendar, User } from 'lucide-react';
+import { Search, Filter, Building, Calendar, User, Edit, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const statusTabs: { key: ProjectStatus | 'all'; label: string }[] = [
   { key: 'all', label: 'All Projects' },
@@ -30,9 +41,37 @@ const categoryLabels: Record<ProjectCategory, string> = {
 
 export default function Projects() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<ProjectStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+
+  const handleEditProject = (project: Project, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedProject(project);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteProject = (project: Project, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setProjectToDelete(project);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (projectToDelete) {
+      toast({
+        title: 'Project Deleted',
+        description: `${projectToDelete.name} has been deleted successfully.`,
+      });
+      setDeleteDialogOpen(false);
+      setProjectToDelete(null);
+    }
+  };
 
   const filteredProjects = mockProjects.filter((project) => {
     const matchesStatus = activeTab === 'all' || project.status === activeTab;
@@ -84,7 +123,7 @@ export default function Projects() {
       header: 'Value',
       render: (project: Project) => (
         <span className="font-semibold text-foreground">
-          ${project.value.toLocaleString()}
+          AED {project.value.toLocaleString()}
         </span>
       ),
     },
@@ -109,6 +148,20 @@ export default function Projects() {
         </div>
       ),
     },
+    {
+      key: 'actions',
+      header: '',
+      render: (project: Project) => (
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={(e) => handleEditProject(project, e)}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={(e) => handleDeleteProject(project, e)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -126,6 +179,29 @@ export default function Projects() {
         open={isCreateDialogOpen} 
         onOpenChange={setIsCreateDialogOpen}
       />
+
+      <ProjectFormDialog 
+        open={isEditDialogOpen} 
+        onOpenChange={setIsEditDialogOpen}
+        project={selectedProject}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{projectToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="p-6 space-y-6">
         {/* Filters */}

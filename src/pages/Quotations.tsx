@@ -9,8 +9,19 @@ import { mockQuotations } from '@/data/mockData';
 import { Quotation, QuotationStatus } from '@/types/crm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Filter, FileText, Calendar, GitBranch } from 'lucide-react';
+import { Search, Filter, FileText, Calendar, GitBranch, Edit, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const statusTabs: { key: QuotationStatus | 'all'; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -22,9 +33,37 @@ const statusTabs: { key: QuotationStatus | 'all'; label: string }[] = [
 
 export default function Quotations() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<QuotationStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedQuotation, setSelectedQuotation] = useState<Quotation | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [quotationToDelete, setQuotationToDelete] = useState<Quotation | null>(null);
+
+  const handleEditQuotation = (quotation: Quotation, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedQuotation(quotation);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteQuotation = (quotation: Quotation, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setQuotationToDelete(quotation);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (quotationToDelete) {
+      toast({
+        title: 'Quotation Deleted',
+        description: `${quotationToDelete.id} has been deleted successfully.`,
+      });
+      setDeleteDialogOpen(false);
+      setQuotationToDelete(null);
+    }
+  };
 
   const filteredQuotations = mockQuotations.filter((quotation) => {
     const matchesStatus = activeTab === 'all' || quotation.status === activeTab;
@@ -72,7 +111,7 @@ export default function Quotations() {
       key: 'subtotal',
       header: 'Subtotal',
       render: (quotation: Quotation) => (
-        <span className="text-muted-foreground">${quotation.subtotal.toLocaleString()}</span>
+        <span className="text-muted-foreground">AED {quotation.subtotal.toLocaleString()}</span>
       ),
     },
     {
@@ -82,7 +121,7 @@ export default function Quotations() {
         <span className="text-destructive">
           {quotation.discount.type === 'percentage'
             ? `${quotation.discount.value}%`
-            : `$${quotation.discount.value.toLocaleString()}`}
+            : `AED ${quotation.discount.value.toLocaleString()}`}
         </span>
       ),
     },
@@ -90,7 +129,7 @@ export default function Quotations() {
       key: 'total',
       header: 'Total',
       render: (quotation: Quotation) => (
-        <span className="font-semibold text-foreground">${quotation.total.toLocaleString()}</span>
+        <span className="font-semibold text-foreground">AED {quotation.total.toLocaleString()}</span>
       ),
     },
     {
@@ -116,6 +155,12 @@ export default function Quotations() {
           <Button size="sm" variant="outline" onClick={() => navigate(`/quotations/${quotation.id}`)}>
             View
           </Button>
+          <Button size="sm" variant="outline" onClick={(e) => handleEditQuotation(quotation, e)}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={(e) => handleDeleteQuotation(quotation, e)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       ),
     },
@@ -133,6 +178,25 @@ export default function Quotations() {
       />
 
       <QuotationFormDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
+
+      <QuotationFormDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} quotation={selectedQuotation} />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Quotation</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{quotationToDelete?.id}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="p-6 space-y-6">
         {/* Stats */}
@@ -158,7 +222,7 @@ export default function Quotations() {
           <div className="bg-card rounded-xl p-4 border border-border/50">
             <p className="text-sm text-muted-foreground">Total Value</p>
             <p className="text-2xl font-bold text-foreground">
-              ${mockQuotations.reduce((sum, q) => sum + q.total, 0).toLocaleString()}
+              AED {mockQuotations.reduce((sum, q) => sum + q.total, 0).toLocaleString()}
             </p>
           </div>
         </div>

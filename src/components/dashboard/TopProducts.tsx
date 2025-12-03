@@ -23,7 +23,7 @@ export default function TopProducts() {
               </div>
               <div className="text-right">
                 <p className="text-sm font-semibold text-foreground">
-                  ${product.revenue.toLocaleString()}
+                  AED {product.revenue.toLocaleString()}
                 </p>
                 <p className="text-xs text-muted-foreground">{product.sales.toLocaleString()} units</p>
               </div>

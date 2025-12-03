@@ -19,9 +19,9 @@ import {
 export default function Dashboard() {
   const formatCurrency = (value: number) => {
     if (value >= 1000000) {
-      return `$${(value / 1000000).toFixed(1)}M`;
+      return `AED ${(value / 1000000).toFixed(1)}M`;
     }
-    return `$${(value / 1000).toFixed(0)}K`;
+    return `AED ${(value / 1000).toFixed(0)}K`;
   };
 
   return (

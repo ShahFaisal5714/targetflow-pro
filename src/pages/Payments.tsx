@@ -34,7 +34,7 @@ export default function Payments() {
               <DollarSign className="h-5 w-5" />
               <p className="text-sm text-success-foreground/80">Total Received</p>
             </div>
-            <p className="text-3xl font-bold">${totalReceived.toLocaleString()}</p>
+            <p className="text-3xl font-bold">AED {totalReceived.toLocaleString()}</p>
             <div className="flex items-center gap-1 mt-2 text-sm">
               <TrendingUp className="h-4 w-4" />
               <span>+12.5% this month</span>
@@ -46,7 +46,7 @@ export default function Payments() {
               <CreditCard className="h-5 w-5 text-warning" />
               <p className="text-sm text-muted-foreground">Pending</p>
             </div>
-            <p className="text-3xl font-bold text-foreground">${totalPending.toLocaleString()}</p>
+            <p className="text-3xl font-bold text-foreground">AED {totalPending.toLocaleString()}</p>
             <p className="text-sm text-muted-foreground mt-2">
               {mockInvoices.filter((i) => i.status === 'partial' || i.status === 'sent').length} invoices
             </p>
@@ -58,7 +58,7 @@ export default function Payments() {
               <p className="text-sm text-muted-foreground">Overdue</p>
             </div>
             <p className="text-3xl font-bold text-destructive">
-              ${overdueInvoices.reduce((sum, inv) => sum + (inv.total - inv.paidAmount), 0).toLocaleString()}
+              AED {overdueInvoices.reduce((sum, inv) => sum + (inv.total - inv.paidAmount), 0).toLocaleString()}
             </p>
             <p className="text-sm text-muted-foreground mt-2">{overdueInvoices.length} invoice(s)</p>
           </div>
@@ -101,7 +101,7 @@ export default function Payments() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-success">+${payment.amount.toLocaleString()}</p>
+                      <p className="font-semibold text-success">+AED {payment.amount.toLocaleString()}</p>
                       <p className="text-sm text-muted-foreground">
                         {new Date(payment.date).toLocaleDateString()}
                       </p>
@@ -148,7 +148,7 @@ export default function Payments() {
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-foreground">
-                          ${(invoice.total - invoice.paidAmount).toLocaleString()}
+                          AED {(invoice.total - invoice.paidAmount).toLocaleString()}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           Due {new Date(invoice.dueDate).toLocaleDateString()}

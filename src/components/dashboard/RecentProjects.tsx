@@ -67,7 +67,7 @@ export default function RecentProjects() {
             </div>
             <div className="text-right">
               <p className="font-semibold text-foreground">
-                ${project.value.toLocaleString()}
+                AED {project.value.toLocaleString()}
               </p>
               <p className="text-sm text-muted-foreground">{project.salesManager}</p>
             </div>
