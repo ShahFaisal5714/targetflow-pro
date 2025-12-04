@@ -35,125 +35,145 @@ export default function QuotationDetail() {
 
   const handlePrintPDF = () => {
     const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 14;
+    const contentWidth = pageWidth - (margin * 2);
     
-    // Add logo
+    // Add logo - proper proportions
     const img = new Image();
     img.src = targetLogo;
-    doc.addImage(img, 'JPEG', 15, 10, 40, 15);
+    doc.addImage(img, 'JPEG', margin, 10, 35, 20);
 
-    // Company Header
-    doc.setFontSize(10);
-    doc.setTextColor(60, 60, 60);
-    doc.text('TARGET SPECIALTIES', 105, 15, { align: 'center' });
-    doc.setFontSize(8);
-    doc.text('Building Rema plaza | Office no. 1 Aljurf 3 Ajman UAE', 105, 20, { align: 'center' });
-    doc.text('Email: Info@targetspecialties.com | Web: targetspecialties.com', 105, 25, { align: 'center' });
-    doc.text('Contact No: +971 50 958 7185', 105, 30, { align: 'center' });
-
-    // Title
-    doc.setFontSize(20);
+    // Company Header - positioned to the right of logo
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
-    doc.text('QUOTATION', 105, 45, { align: 'center' });
+    doc.text('TARGET SPECIALTIES', pageWidth / 2, 15, { align: 'center' });
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    doc.text('Building Rema plaza | Office no. 1 Aljurf 3 Ajman UAE', pageWidth / 2, 21, { align: 'center' });
+    doc.text('Email: Info@targetspecialties.com | Web: targetspecialties.com', pageWidth / 2, 26, { align: 'center' });
+    doc.text('Contact No: +971 50 958 7185', pageWidth / 2, 31, { align: 'center' });
+
+    // Title
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('QUOTATION', pageWidth / 2, 45, { align: 'center' });
 
     // Two column info section
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
+    const leftColLabel = margin;
+    const leftColValue = margin + 30;
+    const rightColLabel = pageWidth / 2 + 5;
+    const rightColValue = pageWidth / 2 + 35;
     
     // Left column
     doc.setFont('helvetica', 'bold');
-    doc.text('Attention:', 15, 60);
+    doc.text('Attention:', leftColLabel, 58);
     doc.setFont('helvetica', 'normal');
-    doc.text(project.contractor.contact, 45, 60);
+    doc.text(project.contractor.contact, leftColValue, 58);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Contractor:', 15, 67);
+    doc.text('Contractor:', leftColLabel, 65);
     doc.setFont('helvetica', 'normal');
-    doc.text(project.contractor.name, 45, 67);
+    doc.text(project.contractor.name, leftColValue, 65);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Project:', 15, 74);
+    doc.text('Project:', leftColLabel, 72);
     doc.setFont('helvetica', 'normal');
-    doc.text(project.name, 45, 74);
+    doc.text(project.name, leftColValue, 72);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Location:', 15, 81);
+    doc.text('Location:', leftColLabel, 79);
     doc.setFont('helvetica', 'normal');
-    doc.text(project.contractor.address || 'Dubai, UAE', 45, 81);
+    doc.text(project.contractor.address || 'Dubai, UAE', leftColValue, 79);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Scope of Work:', 15, 88);
+    doc.text('Scope of Work:', leftColLabel, 86);
     doc.setFont('helvetica', 'normal');
-    doc.text('Supply of Building Materials', 45, 88);
+    doc.text('Supply of Building Materials', leftColValue + 5, 86);
 
     // Right column
     doc.setFont('helvetica', 'bold');
-    doc.text('Issue Date:', 115, 60);
+    doc.text('Issue Date:', rightColLabel, 58);
     doc.setFont('helvetica', 'normal');
-    doc.text(new Date(quotation.createdAt).toLocaleDateString('en-GB'), 155, 60);
+    doc.text(new Date(quotation.createdAt).toLocaleDateString('en-GB'), rightColValue, 58);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Prepared by:', 115, 67);
+    doc.text('Prepared by:', rightColLabel, 65);
     doc.setFont('helvetica', 'normal');
-    doc.text(project.salesManager, 155, 67);
+    doc.text(project.salesManager, rightColValue, 65);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Quotation No:', 115, 74);
+    doc.text('Quotation No:', rightColLabel, 72);
     doc.setFont('helvetica', 'normal');
-    doc.text(quotation.id, 155, 74);
+    doc.text(quotation.id, rightColValue, 72);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Phone No:', 115, 81);
+    doc.text('Phone No:', rightColLabel, 79);
     doc.setFont('helvetica', 'normal');
-    doc.text(project.contractor.phone, 155, 81);
+    doc.text(project.contractor.phone, rightColValue, 79);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Quotation validity:', 115, 88);
+    doc.text('Quotation validity:', rightColLabel, 86);
     doc.setFont('helvetica', 'normal');
-    doc.text('30 Days', 155, 88);
+    doc.text('30 Days', rightColValue, 86);
 
-    // Items table
+    // Items table with proper column widths that fit the page
     const tableData = quotation.items.map((item, index) => [
       index + 1,
       item.productName.toUpperCase(),
       item.unit.toUpperCase(),
       '-',
-      item.quantity.toFixed(2),
-      item.unitPrice.toFixed(2),
-      item.total.toFixed(2)
+      item.quantity.toLocaleString('en-US', { minimumFractionDigits: 2 }),
+      item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 }),
+      item.total.toLocaleString('en-US', { minimumFractionDigits: 2 })
     ]);
 
     autoTable(doc, {
-      startY: 100,
+      startY: 95,
       head: [['S No', 'Description', 'Unit', 'Drawing Ref.', 'Quantity', 'Unit Price', 'Amount']],
       body: tableData,
       theme: 'grid',
-      styles: { fontSize: 9, cellPadding: 3 },
-      headStyles: { fillColor: [41, 98, 255], textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { 
+        fillColor: [41, 98, 255], 
+        textColor: 255, 
+        fontStyle: 'bold',
+        halign: 'center'
+      },
+      margin: { left: margin, right: margin },
+      tableWidth: contentWidth,
       columnStyles: {
-        0: { cellWidth: 15 },
-        1: { cellWidth: 70 },
-        2: { cellWidth: 20 },
-        3: { cellWidth: 25 },
-        4: { cellWidth: 25 },
-        5: { cellWidth: 25 },
-        6: { cellWidth: 25 }
+        0: { cellWidth: 12, halign: 'center' },
+        1: { cellWidth: 55 },
+        2: { cellWidth: 18, halign: 'center' },
+        3: { cellWidth: 22, halign: 'center' },
+        4: { cellWidth: 25, halign: 'right' },
+        5: { cellWidth: 25, halign: 'right' },
+        6: { cellWidth: 25, halign: 'right' }
       }
     });
 
-    // Totals
+    // Totals - aligned with table
     const finalY = (doc as any).lastAutoTable.finalY + 10;
+    const totalsLabelX = pageWidth - margin - 70;
+    const totalsValueX = pageWidth - margin;
     
     doc.setFont('helvetica', 'bold');
-    doc.text('Sub Total Amount (AED):', 120, finalY);
-    doc.text(quotation.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 }), 185, finalY, { align: 'right' });
+    doc.setFontSize(9);
+    doc.text('Sub Total Amount (AED):', totalsLabelX, finalY);
+    doc.text(quotation.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 }), totalsValueX, finalY, { align: 'right' });
 
-    doc.text(`VAT ${quotation.tax.rate}%:`, 120, finalY + 7);
-    doc.text(taxAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }), 185, finalY + 7, { align: 'right' });
+    doc.text(`VAT ${quotation.tax.rate}%:`, totalsLabelX, finalY + 7);
+    doc.text(taxAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }), totalsValueX, finalY + 7, { align: 'right' });
 
-    doc.setFontSize(11);
-    doc.text('Total Payable Amount (AED):', 120, finalY + 15);
-    doc.text(quotation.total.toLocaleString('en-US', { minimumFractionDigits: 2 }), 185, finalY + 15, { align: 'right' });
+    doc.setFontSize(10);
+    doc.text('Total Payable Amount (AED):', totalsLabelX, finalY + 15);
+    doc.text(quotation.total.toLocaleString('en-US', { minimumFractionDigits: 2 }), totalsValueX, finalY + 15, { align: 'right' });
 
     // Additional terms
     doc.setFontSize(9);
