@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Project, ProjectCategory, ProjectStatus } from '@/types/crm';
 import { useToast } from '@/hooks/use-toast';
 
@@ -12,18 +11,89 @@ interface ProjectFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   project?: Project;
+  onSubmit?: (data: Partial<Project>) => void;
 }
 
-export default function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDialogProps) {
+export default function ProjectFormDialog({ open, onOpenChange, project, onSubmit }: ProjectFormDialogProps) {
   const { toast } = useToast();
   const isEdit = !!project;
 
+  const [formData, setFormData] = useState({
+    name: '',
+    category: 'residential' as ProjectCategory,
+    status: 'lead' as ProjectStatus,
+    value: 0,
+    contractorName: '',
+    contractorContact: '',
+    contractorEmail: '',
+    contractorPhone: '',
+    salesManager: '',
+    startDate: '',
+    endDate: '',
+  });
+
+  useEffect(() => {
+    if (project) {
+      setFormData({
+        name: project.name,
+        category: project.category,
+        status: project.status,
+        value: project.value,
+        contractorName: project.contractor.name,
+        contractorContact: project.contractor.contact,
+        contractorEmail: project.contractor.email,
+        contractorPhone: project.contractor.phone,
+        salesManager: project.salesManager,
+        startDate: project.timeline.startDate,
+        endDate: project.timeline.endDate,
+      });
+    } else {
+      setFormData({
+        name: '',
+        category: 'residential',
+        status: 'lead',
+        value: 0,
+        contractorName: '',
+        contractorContact: '',
+        contractorEmail: '',
+        contractorPhone: '',
+        salesManager: '',
+        startDate: '',
+        endDate: '',
+      });
+    }
+  }, [project, open]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const projectData: Partial<Project> = {
+      name: formData.name,
+      category: formData.category,
+      status: formData.status,
+      value: formData.value,
+      contractor: {
+        id: project?.contractor.id || `CONT-${Date.now()}`,
+        name: formData.contractorName,
+        contact: formData.contractorContact,
+        email: formData.contractorEmail,
+        phone: formData.contractorPhone,
+      },
+      salesManager: formData.salesManager,
+      timeline: {
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        milestones: project?.timeline.milestones || [],
+      },
+      updatedAt: new Date().toISOString(),
+    };
+
+    onSubmit?.(projectData);
+    
     toast({
       title: isEdit ? 'Project Updated' : 'Project Created',
       description: isEdit 
-        ? `${project.name} has been updated successfully.`
+        ? `${formData.name} has been updated successfully.`
         : 'New project has been created successfully.',
     });
     onOpenChange(false);
@@ -42,7 +112,8 @@ export default function ProjectFormDialog({ open, onOpenChange, project }: Proje
               <Label htmlFor="name">Project Name</Label>
               <Input 
                 id="name" 
-                defaultValue={project?.name}
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Enter project name" 
                 required 
               />
@@ -50,7 +121,10 @@ export default function ProjectFormDialog({ open, onOpenChange, project }: Proje
 
             <div>
               <Label htmlFor="category">Category</Label>
-              <Select defaultValue={project?.category || 'residential'}>
+              <Select 
+                value={formData.category} 
+                onValueChange={(value: ProjectCategory) => setFormData(prev => ({ ...prev, category: value }))}
+              >
                 <SelectTrigger id="category">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
@@ -64,7 +138,10 @@ export default function ProjectFormDialog({ open, onOpenChange, project }: Proje
 
             <div>
               <Label htmlFor="status">Status</Label>
-              <Select defaultValue={project?.status || 'lead'}>
+              <Select 
+                value={formData.status} 
+                onValueChange={(value: ProjectStatus) => setFormData(prev => ({ ...prev, status: value }))}
+              >
                 <SelectTrigger id="status">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
@@ -80,11 +157,12 @@ export default function ProjectFormDialog({ open, onOpenChange, project }: Proje
             </div>
 
             <div className="col-span-2">
-              <Label htmlFor="value">Project Value</Label>
+              <Label htmlFor="value">Project Value (AED)</Label>
               <Input 
                 id="value" 
                 type="number" 
-                defaultValue={project?.value}
+                value={formData.value}
+                onChange={(e) => setFormData(prev => ({ ...prev, value: parseFloat(e.target.value) || 0 }))}
                 placeholder="0.00" 
                 required 
               />
@@ -94,7 +172,8 @@ export default function ProjectFormDialog({ open, onOpenChange, project }: Proje
               <Label htmlFor="contractor">Contractor Company</Label>
               <Input 
                 id="contractor" 
-                defaultValue={project?.contractor.name}
+                value={formData.contractorName}
+                onChange={(e) => setFormData(prev => ({ ...prev, contractorName: e.target.value }))}
                 placeholder="Enter contractor company name" 
                 required 
               />
@@ -104,7 +183,8 @@ export default function ProjectFormDialog({ open, onOpenChange, project }: Proje
               <Label htmlFor="contractorContact">Contractor Contact Person</Label>
               <Input 
                 id="contractorContact" 
-                defaultValue={project?.contractor.contact}
+                value={formData.contractorContact}
+                onChange={(e) => setFormData(prev => ({ ...prev, contractorContact: e.target.value }))}
                 placeholder="Contact person name" 
               />
             </div>
@@ -114,7 +194,8 @@ export default function ProjectFormDialog({ open, onOpenChange, project }: Proje
               <Input 
                 id="contractorEmail" 
                 type="email"
-                defaultValue={project?.contractor.email}
+                value={formData.contractorEmail}
+                onChange={(e) => setFormData(prev => ({ ...prev, contractorEmail: e.target.value }))}
                 placeholder="email@example.com" 
               />
             </div>
@@ -123,7 +204,8 @@ export default function ProjectFormDialog({ open, onOpenChange, project }: Proje
               <Label htmlFor="contractorPhone">Contractor Phone</Label>
               <Input 
                 id="contractorPhone" 
-                defaultValue={project?.contractor.phone}
+                value={formData.contractorPhone}
+                onChange={(e) => setFormData(prev => ({ ...prev, contractorPhone: e.target.value }))}
                 placeholder="+971 XX XXX XXXX" 
               />
             </div>
@@ -132,7 +214,8 @@ export default function ProjectFormDialog({ open, onOpenChange, project }: Proje
               <Label htmlFor="salesManager">Sales Manager</Label>
               <Input 
                 id="salesManager" 
-                defaultValue={project?.salesManager}
+                value={formData.salesManager}
+                onChange={(e) => setFormData(prev => ({ ...prev, salesManager: e.target.value }))}
                 placeholder="Assigned sales manager" 
               />
             </div>
@@ -142,7 +225,8 @@ export default function ProjectFormDialog({ open, onOpenChange, project }: Proje
               <Input 
                 id="startDate" 
                 type="date" 
-                defaultValue={project?.timeline.startDate}
+                value={formData.startDate}
+                onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
                 required 
               />
             </div>
@@ -152,7 +236,8 @@ export default function ProjectFormDialog({ open, onOpenChange, project }: Proje
               <Input 
                 id="endDate" 
                 type="date" 
-                defaultValue={project?.timeline.endDate}
+                value={formData.endDate}
+                onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
                 required 
               />
             </div>

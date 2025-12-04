@@ -43,6 +43,7 @@ const categoryLabels: Record<ProjectCategory, string> = {
 export default function Projects() {
   const navigate = useNavigate();
   const { toast, dismiss } = useToast();
+  const [projects, setProjects] = useState<Project[]>(mockProjects);
   const [activeTab, setActiveTab] = useState<ProjectStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -57,6 +58,47 @@ export default function Projects() {
     e.stopPropagation();
     setSelectedProject(project);
     setIsEditDialogOpen(true);
+  };
+
+  const handleProjectUpdate = (updatedProject: Partial<Project>) => {
+    if (selectedProject) {
+      setProjects(prev => prev.map(p => 
+        p.id === selectedProject.id ? { ...p, ...updatedProject } : p
+      ));
+    }
+  };
+
+  const handleProjectCreate = (newProject: Partial<Project>) => {
+    const project: Project = {
+      id: `PRJ-${String(projects.length + 1).padStart(3, '0')}`,
+      name: newProject.name || '',
+      category: newProject.category || 'residential',
+      status: newProject.status || 'lead',
+      value: newProject.value || 0,
+      contractor: newProject.contractor || { 
+        id: `CONT-${Date.now()}`,
+        name: '', 
+        contact: '', 
+        email: '', 
+        phone: '' 
+      },
+      client: newProject.client || { 
+        id: `CLIENT-${Date.now()}`,
+        name: '', 
+        contact: '', 
+        email: '', 
+        phone: '' 
+      },
+      salesManager: newProject.salesManager || '',
+      timeline: newProject.timeline || { 
+        startDate: '', 
+        endDate: '', 
+        milestones: [] 
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setProjects(prev => [...prev, project]);
   };
 
   const handleDeleteProject = (project: Project, e: React.MouseEvent) => {
@@ -119,7 +161,7 @@ export default function Projects() {
     }
   };
 
-  const filteredProjects = mockProjects.filter((project) => {
+  const filteredProjects = projects.filter((project) => {
     // Exclude soft-deleted projects
     if (deletedProjects.some(dp => dp.id === project.id)) {
       return false;
@@ -228,12 +270,14 @@ export default function Projects() {
       <ProjectFormDialog 
         open={isCreateDialogOpen} 
         onOpenChange={setIsCreateDialogOpen}
+        onSubmit={handleProjectCreate}
       />
 
       <ProjectFormDialog 
         open={isEditDialogOpen} 
         onOpenChange={setIsEditDialogOpen}
         project={selectedProject}
+        onSubmit={handleProjectUpdate}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
