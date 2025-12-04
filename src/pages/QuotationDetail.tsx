@@ -33,7 +33,7 @@ export default function QuotationDetail() {
   const afterDiscount = quotation.subtotal - discountAmount;
   const taxAmount = (afterDiscount * quotation.tax.rate) / 100;
 
-  const handlePrintPDF = () => {
+  const generatePDF = () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 14;
@@ -215,8 +215,31 @@ export default function QuotationDetail() {
       });
     }
 
-    // Save PDF
-    doc.save(`Quotation_${quotation.id}_${project.name.replace(/\s+/g, '_')}.pdf`);
+    return doc;
+  };
+
+  const handleExportPDF = () => {
+    const doc = generatePDF();
+    // Open PDF in new tab - user can save with their preferred name/location
+    const pdfBlob = doc.output('blob');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    const newWindow = window.open(pdfUrl, '_blank');
+    if (newWindow) {
+      newWindow.document.title = `Quotation_${quotation.id}_${project.name.replace(/\s+/g, '_')}`;
+    }
+  };
+
+  const handlePrint = () => {
+    const doc = generatePDF();
+    // Open PDF in new window and trigger print dialog
+    const pdfBlob = doc.output('blob');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    const printWindow = window.open(pdfUrl, '_blank');
+    if (printWindow) {
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    }
   };
 
   return (
@@ -236,11 +259,11 @@ export default function QuotationDetail() {
               <p className="text-muted-foreground mt-1">{project.name}</p>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handlePrintPDF}>
+              <Button variant="outline" onClick={handleExportPDF}>
                 <Download className="h-4 w-4 mr-2" />
                 Export PDF
               </Button>
-              <Button onClick={handlePrintPDF}>
+              <Button onClick={handlePrint}>
                 <Printer className="h-4 w-4 mr-2" />
                 Print
               </Button>
