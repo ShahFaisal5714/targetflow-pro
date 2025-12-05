@@ -35,6 +35,7 @@ const statusTabs: { key: QuotationStatus | 'all'; label: string }[] = [
 export default function Quotations() {
   const navigate = useNavigate();
   const { toast, dismiss } = useToast();
+  const [quotations, setQuotations] = useState<Quotation[]>(mockQuotations);
   const [activeTab, setActiveTab] = useState<QuotationStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -44,6 +45,22 @@ export default function Quotations() {
   const [quotationToDelete, setQuotationToDelete] = useState<Quotation | null>(null);
   const [deletedQuotations, setDeletedQuotations] = useState<Quotation[]>([]);
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleQuotationUpdate = (updatedQuotation: Partial<Quotation>) => {
+    setQuotations(prev => prev.map(q => 
+      q.id === selectedQuotation?.id ? { ...q, ...updatedQuotation } : q
+    ));
+  };
+
+  const handleQuotationCreate = (newQuotation: Partial<Quotation>) => {
+    const quotationWithId: Quotation = {
+      ...newQuotation,
+      id: `QUO-${String(quotations.length + 1).padStart(3, '0')}`,
+      version: 1,
+      createdAt: new Date().toISOString().split('T')[0],
+    } as Quotation;
+    setQuotations(prev => [...prev, quotationWithId]);
+  };
 
   const handleEditQuotation = (quotation: Quotation, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -111,7 +128,7 @@ export default function Quotations() {
     }
   };
 
-  const filteredQuotations = mockQuotations.filter((quotation) => {
+  const filteredQuotations = quotations.filter((quotation) => {
     // Exclude soft-deleted quotations
     if (deletedQuotations.some(dq => dq.id === quotation.id)) {
       return false;
@@ -227,9 +244,9 @@ export default function Quotations() {
         }}
       />
 
-      <QuotationFormDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
+      <QuotationFormDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} onSubmit={handleQuotationCreate} />
 
-      <QuotationFormDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} quotation={selectedQuotation} />
+      <QuotationFormDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} quotation={selectedQuotation} onSubmit={handleQuotationUpdate} />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

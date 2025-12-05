@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,16 +13,31 @@ interface QuotationFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   quotation?: Quotation;
+  onSubmit?: (quotation: Partial<Quotation>) => void;
 }
 
-export default function QuotationFormDialog({ open, onOpenChange, quotation }: QuotationFormDialogProps) {
+export default function QuotationFormDialog({ open, onOpenChange, quotation, onSubmit }: QuotationFormDialogProps) {
   const [projectId, setProjectId] = useState(quotation?.projectId || '');
   const [items, setItems] = useState<Partial<QuotationItem>[]>(
     quotation?.items || [{ productId: '', quantity: 0, unitPrice: 0 }]
   );
-  const [discountType, setDiscountType] = useState<'percentage' | 'flat'>(quotation?.discount.type || 'percentage');
-  const [discountValue, setDiscountValue] = useState(quotation?.discount.value || 0);
+  const [discountType, setDiscountType] = useState<'percentage' | 'flat'>(quotation?.discount?.type || 'percentage');
+  const [discountValue, setDiscountValue] = useState(quotation?.discount?.value || 0);
   const [validDays, setValidDays] = useState(30);
+
+  useEffect(() => {
+    if (quotation) {
+      setProjectId(quotation.projectId || '');
+      setItems(quotation.items || [{ productId: '', quantity: 0, unitPrice: 0 }]);
+      setDiscountType(quotation.discount?.type || 'percentage');
+      setDiscountValue(quotation.discount?.value || 0);
+    } else {
+      setProjectId('');
+      setItems([{ productId: '', quantity: 0, unitPrice: 0 }]);
+      setDiscountType('percentage');
+      setDiscountValue(0);
+    }
+  }, [quotation, open]);
 
   const handleAddItem = () => {
     setItems([...items, { productId: '', quantity: 0, unitPrice: 0 }]);
@@ -83,7 +98,7 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation }: Q
     const { subtotal, tax, total } = calculateTotals();
     const project = mockProjects.find(p => p.id === projectId);
     
-    const newQuotation: Partial<Quotation> = {
+    const quotationData: Partial<Quotation> = {
       projectId,
       projectName: project?.name || '',
       items: items as QuotationItem[],
@@ -92,8 +107,12 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation }: Q
       tax: { type: 'VAT', rate: 5 },
       total,
       validUntil: new Date(Date.now() + validDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      status: 'draft'
+      status: quotation?.status || 'draft'
     };
+
+    if (onSubmit) {
+      onSubmit(quotationData);
+    }
 
     toast({
       title: quotation ? 'Quotation Updated' : 'Quotation Created',
