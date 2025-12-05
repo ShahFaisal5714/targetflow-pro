@@ -7,6 +7,7 @@ import RecentProjects from '@/components/dashboard/RecentProjects';
 import TopProducts from '@/components/dashboard/TopProducts';
 import AlertsWidget from '@/components/dashboard/AlertsWidget';
 import { mockDashboardStats } from '@/data/mockData';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   DollarSign,
   FileText,
@@ -17,6 +18,8 @@ import {
 } from 'lucide-react';
 
 export default function Dashboard() {
+  const { profile } = useAuth();
+  
   const formatCurrency = (value: number) => {
     if (value >= 1000000) {
       return `AED ${(value / 1000000).toFixed(1)}M`;
@@ -24,11 +27,13 @@ export default function Dashboard() {
     return `AED ${(value / 1000).toFixed(0)}K`;
   };
 
+  const firstName = profile?.full_name?.split(' ')[0] || 'User';
+
   return (
     <MainLayout>
       <Header
         title="Dashboard"
-        subtitle="Welcome back! Here's your business overview."
+        subtitle={`Welcome back, ${firstName}! Here's your business overview.`}
       />
 
       <div className="p-6 space-y-6">

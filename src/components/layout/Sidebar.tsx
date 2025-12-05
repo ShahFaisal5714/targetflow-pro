@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useAuth, roleLabels, roleAccess, AppRole } from '@/contexts/AuthContext';
 import {
   LayoutDashboard,
   FolderKanban,
@@ -13,9 +14,17 @@ import {
   Users,
   Settings,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from 'lucide-react';
 import targetLogo from '@/assets/target-logo.jpg';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -32,6 +41,30 @@ const navigation = [
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const { profile, role, signOut, hasAccess } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
+  // Get initials from full name
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  // Filter navigation based on user role
+  const filteredNavigation = navigation.filter(item => {
+    const allowedRoles = roleAccess[item.href];
+    if (!allowedRoles) return true;
+    return hasAccess(allowedRoles);
+  });
 
   return (
     <aside
@@ -66,7 +99,7 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-3">
         <ul className="space-y-1">
-          {navigation.map((item) => (
+          {filteredNavigation.map((item) => (
             <li key={item.name}>
               <NavLink
                 to={item.href}
@@ -98,17 +131,38 @@ export default function Sidebar() {
 
       {/* User Section */}
       <div className="border-t border-sidebar-border p-4">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-sidebar-accent flex items-center justify-center">
-            <span className="text-sm font-semibold text-sidebar-foreground">JD</span>
-          </div>
-          {!collapsed && (
-            <div className="animate-fade-in">
-              <p className="text-sm font-medium text-sidebar-foreground">John Doe</p>
-              <p className="text-xs text-sidebar-foreground/60">Sales Manager</p>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-3 w-full hover:bg-sidebar-accent/50 rounded-lg p-2 transition-colors">
+              <div className="h-10 w-10 rounded-full bg-sidebar-accent flex items-center justify-center shrink-0">
+                <span className="text-sm font-semibold text-sidebar-foreground">
+                  {profile?.full_name ? getInitials(profile.full_name) : 'U'}
+                </span>
+              </div>
+              {!collapsed && (
+                <div className="animate-fade-in text-left min-w-0">
+                  <p className="text-sm font-medium text-sidebar-foreground truncate">
+                    {profile?.full_name || 'User'}
+                  </p>
+                  <p className="text-xs text-sidebar-foreground/60">
+                    {role ? roleLabels[role] : 'Loading...'}
+                  </p>
+                </div>
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="px-2 py-1.5">
+              <p className="text-sm font-medium">{profile?.full_name || 'User'}</p>
+              <p className="text-xs text-muted-foreground">{role ? roleLabels[role] : ''}</p>
             </div>
-          )}
-        </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </aside>
   );
