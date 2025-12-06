@@ -33,11 +33,13 @@ export const roleLabels: Record<AppRole, string> = {
   viewer: 'Viewer'
 };
 
-// Access control configuration
+// Access control configuration - includes parameterized routes
 export const roleAccess: Record<string, AppRole[]> = {
   '/': ['admin', 'sales_manager', 'operations', 'viewer'],
   '/projects': ['admin', 'sales_manager', 'operations', 'viewer'],
+  '/projects/:id': ['admin', 'sales_manager', 'operations', 'viewer'],
   '/quotations': ['admin', 'sales_manager', 'viewer'],
+  '/quotations/:id': ['admin', 'sales_manager', 'viewer'],
   '/sales-orders': ['admin', 'sales_manager', 'viewer'],
   '/invoices': ['admin', 'sales_manager', 'viewer'],
   '/deliveries': ['admin', 'operations', 'viewer'],
@@ -46,6 +48,27 @@ export const roleAccess: Record<string, AppRole[]> = {
   '/users': ['admin'],
   '/settings': ['admin'],
 };
+
+// Helper to match parameterized routes
+export function getRolesForPath(pathname: string): AppRole[] {
+  // Direct match first
+  if (roleAccess[pathname]) {
+    return roleAccess[pathname];
+  }
+  
+  // Try pattern matching for parameterized routes
+  for (const pattern of Object.keys(roleAccess)) {
+    if (pattern.includes(':')) {
+      const regexPattern = pattern.replace(/:[^/]+/g, '[^/]+');
+      const regex = new RegExp(`^${regexPattern}$`);
+      if (regex.test(pathname)) {
+        return roleAccess[pattern];
+      }
+    }
+  }
+  
+  return [];
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);

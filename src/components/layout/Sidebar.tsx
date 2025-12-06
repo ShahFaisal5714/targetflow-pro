@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useAuth, roleLabels, roleAccess, AppRole } from '@/contexts/AuthContext';
+import { useAuth, roleLabels, getRolesForPath } from '@/contexts/AuthContext';
 import {
   LayoutDashboard,
   FolderKanban,
@@ -61,8 +61,8 @@ export default function Sidebar() {
 
   // Filter navigation based on user role
   const filteredNavigation = navigation.filter(item => {
-    const allowedRoles = roleAccess[item.href];
-    if (!allowedRoles) return true;
+    const allowedRoles = getRolesForPath(item.href);
+    if (allowedRoles.length === 0) return true;
     return hasAccess(allowedRoles);
   });
 

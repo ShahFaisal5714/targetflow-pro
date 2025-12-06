@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth, AppRole, roleAccess } from '@/contexts/AuthContext';
+import { useAuth, AppRole, getRolesForPath } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
@@ -23,9 +23,10 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // If no specific roles defined, check roleAccess config
-  const rolesForPath = allowedRoles || roleAccess[location.pathname] || [];
+  // Use provided roles, or get from pattern-matching config
+  const rolesForPath = allowedRoles || getRolesForPath(location.pathname);
   
+  // If roles are defined for this path, enforce them
   if (rolesForPath.length > 0 && !hasAccess(rolesForPath)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
