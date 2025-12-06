@@ -13,6 +13,7 @@ import { Search, Filter, Building, Calendar, User, Edit, Trash2, Undo2 } from 'l
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +44,8 @@ const categoryLabels: Record<ProjectCategory, string> = {
 export default function Projects() {
   const navigate = useNavigate();
   const { toast, dismiss } = useToast();
+  const { role } = useAuth();
+  const canEdit = role !== 'viewer';
   const [projects, setProjects] = useState<Project[]>(mockProjects);
   const [activeTab, setActiveTab] = useState<ProjectStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -240,7 +243,7 @@ export default function Projects() {
         </div>
       ),
     },
-    {
+    ...(canEdit ? [{
       key: 'actions',
       header: '',
       render: (project: Project) => (
@@ -253,7 +256,7 @@ export default function Projects() {
           </Button>
         </div>
       ),
-    },
+    }] : []),
   ];
 
   return (
@@ -261,10 +264,10 @@ export default function Projects() {
       <Header
         title="Projects"
         subtitle={`${filteredProjects.length} projects found`}
-        action={{
+        action={canEdit ? {
           label: 'New Project',
           onClick: () => setIsCreateDialogOpen(true),
-        }}
+        } : undefined}
       />
 
       <ProjectFormDialog 
