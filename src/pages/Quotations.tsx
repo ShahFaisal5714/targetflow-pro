@@ -13,6 +13,7 @@ import { Search, Filter, FileText, Calendar, GitBranch, Edit, Trash2, Undo2 } fr
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +36,8 @@ const statusTabs: { key: QuotationStatus | 'all'; label: string }[] = [
 export default function Quotations() {
   const navigate = useNavigate();
   const { toast, dismiss } = useToast();
+  const { role } = useAuth();
+  const canEdit = role !== 'viewer';
   const [quotations, setQuotations] = useState<Quotation[]>(mockQuotations);
   const [activeTab, setActiveTab] = useState<QuotationStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -214,7 +217,7 @@ export default function Quotations() {
       header: '',
       render: (quotation: Quotation) => (
         <div className="flex items-center gap-2">
-          {quotation.status === 'approved' && (
+          {canEdit && quotation.status === 'approved' && (
             <Button size="sm" variant="accent">
               Convert to SO
             </Button>
@@ -222,12 +225,16 @@ export default function Quotations() {
           <Button size="sm" variant="outline" onClick={() => navigate(`/quotations/${quotation.id}`)}>
             View
           </Button>
-          <Button size="sm" variant="outline" onClick={(e) => handleEditQuotation(quotation, e)}>
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={(e) => handleDeleteQuotation(quotation, e)}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {canEdit && (
+            <>
+              <Button size="sm" variant="outline" onClick={(e) => handleEditQuotation(quotation, e)}>
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={(e) => handleDeleteQuotation(quotation, e)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
       ),
     },
@@ -238,10 +245,10 @@ export default function Quotations() {
       <Header
         title="Quotations"
         subtitle={`${filteredQuotations.length} quotations`}
-        action={{
+        action={canEdit ? {
           label: 'New Quotation',
           onClick: () => setIsCreateDialogOpen(true),
-        }}
+        } : undefined}
       />
 
       <QuotationFormDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} onSubmit={handleQuotationCreate} />
