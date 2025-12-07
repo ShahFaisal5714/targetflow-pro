@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Search, Filter, Receipt, Calendar, Download, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 const statusTabs: { key: InvoiceStatus | 'all'; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -21,6 +22,8 @@ const statusTabs: { key: InvoiceStatus | 'all'; label: string }[] = [
 ];
 
 export default function Invoices() {
+  const { role } = useAuth();
+  const canEdit = role !== 'viewer';
   const [activeTab, setActiveTab] = useState<InvoiceStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -134,10 +137,10 @@ export default function Invoices() {
       <Header
         title="Invoices"
         subtitle={`${filteredInvoices.length} invoices`}
-        action={{
+        action={canEdit ? {
           label: 'New Invoice',
           onClick: () => console.log('Create invoice'),
-        }}
+        } : undefined}
       />
 
       <div className="p-6 space-y-6">
