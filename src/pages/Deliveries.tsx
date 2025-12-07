@@ -5,8 +5,12 @@ import { Button } from '@/components/ui/button';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { mockSalesOrders } from '@/data/mockData';
 import { Truck, Package, Calendar, MapPin, Clock } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Deliveries() {
+  const { role } = useAuth();
+  const canEdit = role !== 'viewer';
+  
   const allDeliveries = mockSalesOrders.flatMap((order) =>
     order.deliverySchedule.map((delivery) => ({
       ...delivery,
@@ -31,10 +35,10 @@ export default function Deliveries() {
       <Header
         title="Deliveries"
         subtitle={`${allDeliveries.length} total deliveries`}
-        action={{
+        action={canEdit ? {
           label: 'New Delivery',
           onClick: () => console.log('Create delivery'),
-        }}
+        } : undefined}
       />
 
       <div className="p-6 space-y-6">
@@ -100,9 +104,11 @@ export default function Deliveries() {
                         </p>
                       ))}
                     </div>
-                    <Button size="sm" className="w-full">
-                      Schedule Dispatch
-                    </Button>
+                    {canEdit && (
+                      <Button size="sm" className="w-full">
+                        Schedule Dispatch
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               ))}
@@ -147,9 +153,11 @@ export default function Deliveries() {
                         </p>
                       ))}
                     </div>
-                    <Button size="sm" variant="outline" className="w-full">
-                      Mark as Delivered
-                    </Button>
+                    {canEdit && (
+                      <Button size="sm" variant="outline" className="w-full">
+                        Mark as Delivered
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               ))}
