@@ -3,7 +3,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import Header from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Users as UsersIcon, Shield, Clock, Loader2 } from 'lucide-react';
+import { Users as UsersIcon, Shield, Clock, Loader2, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth, AppRole, roleLabels } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -22,6 +22,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface UserWithRole {
   id: string;
@@ -48,10 +59,12 @@ const rolePermissions: Record<AppRole, string[]> = {
 };
 
 export default function Users() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, role: currentUserRole } = useAuth();
+  const isAdmin = currentUserRole === 'admin';
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -97,6 +110,11 @@ export default function Users() {
   };
 
   const handleRoleChange = async (userId: string, newRole: AppRole) => {
+    if (!isAdmin) {
+      toast.error("Only admins can change user roles");
+      return;
+    }
+    
     if (userId === currentUser?.id) {
       toast.error("You cannot change your own role");
       return;
@@ -120,6 +138,45 @@ export default function Users() {
       toast.error('Failed to update role');
     } finally {
       setUpdatingUserId(null);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!isAdmin) {
+      toast.error("Only admins can delete users");
+      return;
+    }
+    
+    if (userId === currentUser?.id) {
+      toast.error("You cannot delete your own account");
+      return;
+    }
+
+    setDeletingUserId(userId);
+    try {
+      // Delete user role first (due to foreign key constraints if any)
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
+
+      if (roleError) throw roleError;
+
+      // Delete user profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('user_id', userId);
+
+      if (profileError) throw profileError;
+
+      setUsers((prev) => prev.filter((u) => u.user_id !== userId));
+      toast.success('User deleted successfully');
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error('Failed to delete user');
+    } finally {
+      setDeletingUserId(null);
     }
   };
 
@@ -254,30 +311,69 @@ export default function Users() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {user.user_id === currentUser?.id ? (
-                        <span className="text-sm text-muted-foreground">Cannot edit own role</span>
-                      ) : (
-                        <Select
-                          value={user.role}
-                          onValueChange={(value) => handleRoleChange(user.user_id, value as AppRole)}
-                          disabled={updatingUserId === user.user_id}
-                        >
-                          <SelectTrigger className="w-[160px]">
-                            {updatingUserId === user.user_id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <SelectValue />
-                            )}
-                          </SelectTrigger>
-                          <SelectContent>
-                            {(Object.keys(roleLabels) as AppRole[]).map((role) => (
-                              <SelectItem key={role} value={role}>
-                                {roleLabels[role]}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {user.user_id === currentUser?.id ? (
+                          <span className="text-sm text-muted-foreground">Cannot edit own account</span>
+                        ) : isAdmin ? (
+                          <>
+                            <Select
+                              value={user.role}
+                              onValueChange={(value) => handleRoleChange(user.user_id, value as AppRole)}
+                              disabled={updatingUserId === user.user_id}
+                            >
+                              <SelectTrigger className="w-[140px]">
+                                {updatingUserId === user.user_id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <SelectValue />
+                                )}
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(Object.keys(roleLabels) as AppRole[]).map((role) => (
+                                  <SelectItem key={role} value={role}>
+                                    {roleLabels[role]}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  disabled={deletingUserId === user.user_id}
+                                >
+                                  {deletingUserId === user.user_id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete {user.full_name}? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteUser(user.user_id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">View only</span>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
