@@ -41,6 +41,54 @@ export type Database = {
         }
         Relationships: []
       }
+      projects: {
+        Row: {
+          category: string
+          client: Json
+          consultant: Json | null
+          contractor: Json
+          created_at: string
+          id: string
+          name: string
+          sales_manager: string | null
+          status: string
+          timeline: Json
+          updated_at: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          category: string
+          client?: Json
+          consultant?: Json | null
+          contractor?: Json
+          created_at?: string
+          id?: string
+          name: string
+          sales_manager?: string | null
+          status?: string
+          timeline?: Json
+          updated_at?: string
+          user_id: string
+          value?: number
+        }
+        Update: {
+          category?: string
+          client?: Json
+          consultant?: Json | null
+          contractor?: Json
+          created_at?: string
+          id?: string
+          name?: string
+          sales_manager?: string | null
+          status?: string
+          timeline?: Json
+          updated_at?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

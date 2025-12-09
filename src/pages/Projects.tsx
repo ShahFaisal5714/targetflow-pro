@@ -5,11 +5,11 @@ import Header from '@/components/layout/Header';
 import DataTable from '@/components/shared/DataTable';
 import StatusBadge from '@/components/shared/StatusBadge';
 import ProjectFormDialog from '@/components/projects/ProjectFormDialog';
-import { mockProjects } from '@/data/mockData';
+import { useProjects } from '@/hooks/useProjects';
 import { Project, ProjectStatus, ProjectCategory } from '@/types/crm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Filter, Building, Calendar, User, Edit, Trash2, Undo2 } from 'lucide-react';
+import { Search, Filter, Building, Calendar, User, Edit, Trash2, Undo2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
@@ -46,7 +46,7 @@ export default function Projects() {
   const { toast, dismiss } = useToast();
   const { role } = useAuth();
   const canEdit = role !== 'viewer';
-  const [projects, setProjects] = useState<Project[]>(mockProjects);
+  const { projects, loading, createProject, updateProject, deleteProject, refetch } = useProjects();
   const [activeTab, setActiveTab] = useState<ProjectStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -54,7 +54,7 @@ export default function Projects() {
   const [selectedProject, setSelectedProject] = useState<Project | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
-  const [deletedProjects, setDeletedProjects] = useState<Project[]>([]);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleEditProject = (project: Project, e: React.MouseEvent) => {
@@ -63,45 +63,14 @@ export default function Projects() {
     setIsEditDialogOpen(true);
   };
 
-  const handleProjectUpdate = (updatedProject: Partial<Project>) => {
+  const handleProjectUpdate = async (updatedProject: Partial<Project>) => {
     if (selectedProject) {
-      setProjects(prev => prev.map(p => 
-        p.id === selectedProject.id ? { ...p, ...updatedProject } : p
-      ));
+      await updateProject(selectedProject.id, updatedProject);
     }
   };
 
-  const handleProjectCreate = (newProject: Partial<Project>) => {
-    const project: Project = {
-      id: `PRJ-${String(projects.length + 1).padStart(3, '0')}`,
-      name: newProject.name || '',
-      category: newProject.category || 'residential',
-      status: newProject.status || 'lead',
-      value: newProject.value || 0,
-      contractor: newProject.contractor || { 
-        id: `CONT-${Date.now()}`,
-        name: '', 
-        contact: '', 
-        email: '', 
-        phone: '' 
-      },
-      client: newProject.client || { 
-        id: `CLIENT-${Date.now()}`,
-        name: '', 
-        contact: '', 
-        email: '', 
-        phone: '' 
-      },
-      salesManager: newProject.salesManager || '',
-      timeline: newProject.timeline || { 
-        startDate: '', 
-        endDate: '', 
-        milestones: [] 
-      },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setProjects(prev => [...prev, project]);
+  const handleProjectCreate = async (newProject: Partial<Project>) => {
+    await createProject(newProject);
   };
 
   const handleDeleteProject = (project: Project, e: React.MouseEvent) => {
@@ -111,18 +80,13 @@ export default function Projects() {
   };
 
   const handleUndoDelete = (project: Project, toastId: string) => {
-    // Clear the timeout
     if (undoTimeoutRef.current) {
       clearTimeout(undoTimeoutRef.current);
     }
     
-    // Remove from deleted projects
-    setDeletedProjects(prev => prev.filter(p => p.id !== project.id));
-    
-    // Dismiss the delete toast
+    setPendingDeleteId(null);
     dismiss(toastId);
     
-    // Show restore confirmation
     toast({
       title: 'Project Restored',
       description: `${project.name} has been restored successfully.`,
@@ -133,13 +97,10 @@ export default function Projects() {
     if (projectToDelete) {
       const deletedProject = projectToDelete;
       
-      // Add to deleted projects (soft delete)
-      setDeletedProjects(prev => [...prev, deletedProject]);
-      
+      setPendingDeleteId(deletedProject.id);
       setDeleteDialogOpen(false);
       setProjectToDelete(null);
       
-      // Show toast with undo option
       const { id: toastId } = toast({
         title: 'Project Deleted',
         description: `${deletedProject.name} has been deleted.`,
@@ -156,17 +117,15 @@ export default function Projects() {
         ),
       });
       
-      // Set timeout to permanently delete after toast disappears
-      undoTimeoutRef.current = setTimeout(() => {
-        // In a real app, this would make an API call to permanently delete
-        console.log(`Permanently deleted project: ${deletedProject.id}`);
+      undoTimeoutRef.current = setTimeout(async () => {
+        await deleteProject(deletedProject.id);
+        setPendingDeleteId(null);
       }, 8000);
     }
   };
 
   const filteredProjects = projects.filter((project) => {
-    // Exclude soft-deleted projects
-    if (deletedProjects.some(dp => dp.id === project.id)) {
+    if (pendingDeleteId === project.id) {
       return false;
     }
     const matchesStatus = activeTab === 'all' || project.status === activeTab;
@@ -181,7 +140,7 @@ export default function Projects() {
       key: 'id',
       header: 'Project ID',
       render: (project: Project) => (
-        <span className="font-mono text-sm text-muted-foreground">{project.id}</span>
+        <span className="font-mono text-sm text-muted-foreground">{project.id.slice(0, 8)}</span>
       ),
     },
     {
@@ -228,7 +187,7 @@ export default function Projects() {
       render: (project: Project) => (
         <div className="flex items-center gap-2">
           <User className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm">{project.salesManager}</span>
+          <span className="text-sm">{project.salesManager || 'Unassigned'}</span>
         </div>
       ),
     },
@@ -238,8 +197,14 @@ export default function Projects() {
       render: (project: Project) => (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Calendar className="h-4 w-4" />
-          {new Date(project.timeline.startDate).toLocaleDateString()} -{' '}
-          {new Date(project.timeline.endDate).toLocaleDateString()}
+          {project.timeline.startDate && project.timeline.endDate ? (
+            <>
+              {new Date(project.timeline.startDate).toLocaleDateString()} -{' '}
+              {new Date(project.timeline.endDate).toLocaleDateString()}
+            </>
+          ) : (
+            'Not set'
+          )}
         </div>
       ),
     },
@@ -338,12 +303,18 @@ export default function Projects() {
         </div>
 
         {/* Projects Table */}
-        <DataTable
-          columns={columns}
-          data={filteredProjects}
-          onRowClick={(project) => navigate(`/projects/${project.id}`)}
-          emptyMessage="No projects found matching your criteria"
-        />
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={filteredProjects}
+            onRowClick={(project) => navigate(`/projects/${project.id}`)}
+            emptyMessage="No projects found matching your criteria"
+          />
+        )}
       </div>
     </MainLayout>
   );
