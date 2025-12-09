@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import Header from '@/components/layout/Header';
 import StatusBadge from '@/components/shared/StatusBadge';
 import ProjectFormDialog from '@/components/projects/ProjectFormDialog';
-import { mockProjects, mockQuotations, mockSalesOrders } from '@/data/mockData';
+import { mockQuotations, mockSalesOrders } from '@/data/mockData';
+import { useProjects } from '@/hooks/useProjects';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,11 +21,12 @@ import {
   ShoppingCart,
   CheckCircle2,
   Circle,
-  Plus
+  Plus,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const categoryLabels = {
+const categoryLabels: Record<string, string> = {
   residential: 'Residential',
   commercial: 'Commercial',
   industrial: 'Industrial',
@@ -32,10 +34,21 @@ const categoryLabels = {
 
 export default function ProjectDetail() {
   const { id } = useParams();
-  const project = mockProjects.find((p) => p.id === id);
+  const { projects, loading } = useProjects();
+  const project = projects.find((p) => p.id === id);
   const projectQuotations = mockQuotations.filter((q) => q.projectId === id);
   const projectOrders = mockSalesOrders.filter((so) => so.projectId === id);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </MainLayout>
+    );
+  }
 
   if (!project) {
     return (
