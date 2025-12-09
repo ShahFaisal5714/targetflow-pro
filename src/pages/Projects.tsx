@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import Header from '@/components/layout/Header';
@@ -54,8 +54,6 @@ export default function Projects() {
   const [selectedProject, setSelectedProject] = useState<Project | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleEditProject = (project: Project, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -79,55 +77,64 @@ export default function Projects() {
     setDeleteDialogOpen(true);
   };
 
-  const handleUndoDelete = (project: Project, toastId: string) => {
-    if (undoTimeoutRef.current) {
-      clearTimeout(undoTimeoutRef.current);
-    }
-    
-    setPendingDeleteId(null);
+  const handleUndoDelete = async (project: Project, toastId: string) => {
     dismiss(toastId);
     
-    toast({
-      title: 'Project Restored',
-      description: `${project.name} has been restored successfully.`,
+    // Re-create the project in the database
+    const restored = await createProject({
+      name: project.name,
+      category: project.category,
+      status: project.status,
+      value: project.value,
+      salesManager: project.salesManager,
+      contractor: project.contractor,
+      client: project.client,
+      consultant: project.consultant,
+      timeline: project.timeline,
     });
+    
+    if (restored) {
+      toast({
+        title: 'Project Restored',
+        description: `${project.name} has been restored successfully.`,
+      });
+    }
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (projectToDelete) {
       const deletedProject = projectToDelete;
       
-      setPendingDeleteId(deletedProject.id);
       setDeleteDialogOpen(false);
       setProjectToDelete(null);
       
-      const { id: toastId } = toast({
-        title: 'Project Deleted',
-        description: `${deletedProject.name} has been deleted.`,
-        duration: 8000,
-        action: (
-          <ToastAction 
-            altText="Undo delete" 
-            onClick={() => handleUndoDelete(deletedProject, toastId)}
-            className="gap-1"
-          >
-            <Undo2 className="h-4 w-4" />
-            Undo
-          </ToastAction>
-        ),
-      });
+      // Delete immediately from database
+      const success = await deleteProject(deletedProject.id);
       
-      undoTimeoutRef.current = setTimeout(async () => {
-        await deleteProject(deletedProject.id);
-        setPendingDeleteId(null);
-      }, 8000);
+      if (success) {
+        toast({
+          title: 'Project Deleted',
+          description: `${deletedProject.name} has been deleted.`,
+          duration: 8000,
+          action: (
+            <ToastAction 
+              altText="Undo delete" 
+              onClick={(e) => {
+                e.preventDefault();
+                handleUndoDelete(deletedProject, '');
+              }}
+              className="gap-1"
+            >
+              <Undo2 className="h-4 w-4" />
+              Undo
+            </ToastAction>
+          ),
+        });
+      }
     }
   };
 
   const filteredProjects = projects.filter((project) => {
-    if (pendingDeleteId === project.id) {
-      return false;
-    }
     const matchesStatus = activeTab === 'all' || project.status === activeTab;
     const matchesSearch =
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
