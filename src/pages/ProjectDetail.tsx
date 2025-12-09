@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import Header from '@/components/layout/Header';
 import StatusBadge from '@/components/shared/StatusBadge';
 import ProjectFormDialog from '@/components/projects/ProjectFormDialog';
 import { mockQuotations, mockSalesOrders } from '@/data/mockData';
 import { useProjects } from '@/hooks/useProjects';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -34,11 +35,23 @@ const categoryLabels: Record<string, string> = {
 
 export default function ProjectDetail() {
   const { id } = useParams();
-  const { projects, loading } = useProjects();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { projects, loading, updateProject } = useProjects();
   const project = projects.find((p) => p.id === id);
   const projectQuotations = mockQuotations.filter((q) => q.projectId === id);
   const projectOrders = mockSalesOrders.filter((so) => so.projectId === id);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  const handleUpdateProject = async (data: Partial<typeof project>) => {
+    if (project && id) {
+      await updateProject(id, data);
+    }
+  };
+
+  const handleCreateQuotation = () => {
+    navigate(`/quotations/new?projectId=${id}`);
+  };
 
   if (loading) {
     return (
@@ -73,6 +86,7 @@ export default function ProjectDetail() {
         open={isEditDialogOpen} 
         onOpenChange={setIsEditDialogOpen}
         project={project}
+        onSubmit={handleUpdateProject}
       />
 
       <div className="p-6 space-y-6">
@@ -87,7 +101,7 @@ export default function ProjectDetail() {
           </Link>
           <div className="flex items-center gap-3">
             <Button variant="outline" onClick={() => setIsEditDialogOpen(true)}>Edit Project</Button>
-            <Button>Create Quotation</Button>
+            <Button onClick={handleCreateQuotation}>Create Quotation</Button>
           </div>
         </div>
 
