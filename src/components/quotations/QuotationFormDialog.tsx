@@ -14,10 +14,11 @@ interface QuotationFormDialogProps {
   onOpenChange: (open: boolean) => void;
   quotation?: Quotation;
   onSubmit?: (quotation: Partial<Quotation>) => void;
+  initialProjectId?: string;
 }
 
-export default function QuotationFormDialog({ open, onOpenChange, quotation, onSubmit }: QuotationFormDialogProps) {
-  const [projectId, setProjectId] = useState(quotation?.projectId || '');
+export default function QuotationFormDialog({ open, onOpenChange, quotation, onSubmit, initialProjectId }: QuotationFormDialogProps) {
+  const [projectId, setProjectId] = useState(quotation?.projectId || initialProjectId || '');
   const [items, setItems] = useState<Partial<QuotationItem>[]>(
     quotation?.items || [{ productId: '', quantity: 0, unitPrice: 0 }]
   );
@@ -31,13 +32,13 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
       setItems(quotation.items || [{ productId: '', quantity: 0, unitPrice: 0 }]);
       setDiscountType(quotation.discount?.type || 'percentage');
       setDiscountValue(quotation.discount?.value || 0);
-    } else {
-      setProjectId('');
+    } else if (open) {
+      setProjectId(initialProjectId || '');
       setItems([{ productId: '', quantity: 0, unitPrice: 0 }]);
       setDiscountType('percentage');
       setDiscountValue(0);
     }
-  }, [quotation, open]);
+  }, [quotation, open, initialProjectId]);
 
   const handleAddItem = () => {
     setItems([...items, { productId: '', quantity: 0, unitPrice: 0 }]);
