@@ -5,11 +5,11 @@ import Header from '@/components/layout/Header';
 import DataTable from '@/components/shared/DataTable';
 import StatusBadge from '@/components/shared/StatusBadge';
 import QuotationFormDialog from '@/components/quotations/QuotationFormDialog';
-import { mockQuotations } from '@/data/mockData';
-import { Quotation, QuotationStatus } from '@/types/crm';
+import { useQuotations, Quotation } from '@/hooks/useQuotations';
+import { QuotationStatus } from '@/types/crm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Filter, FileText, Calendar, GitBranch, Edit, Trash2, Undo2 } from 'lucide-react';
+import { Search, Filter, FileText, Calendar, GitBranch, Edit, Trash2, Undo2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
@@ -38,7 +38,7 @@ export default function Quotations() {
   const { toast, dismiss } = useToast();
   const { role } = useAuth();
   const canEdit = role !== 'viewer';
-  const [quotations, setQuotations] = useState<Quotation[]>(mockQuotations);
+  const { quotations, loading, createQuotation, updateQuotation, deleteQuotation, refetch } = useQuotations();
   const [activeTab, setActiveTab] = useState<QuotationStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -46,23 +46,39 @@ export default function Quotations() {
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [quotationToDelete, setQuotationToDelete] = useState<Quotation | null>(null);
-  const [deletedQuotations, setDeletedQuotations] = useState<Quotation[]>([]);
-  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [pendingDeletes, setPendingDeletes] = useState<string[]>([]);
+  const undoTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
-  const handleQuotationUpdate = (updatedQuotation: Partial<Quotation>) => {
-    setQuotations(prev => prev.map(q => 
-      q.id === selectedQuotation?.id ? { ...q, ...updatedQuotation } : q
-    ));
+  const handleQuotationUpdate = async (updatedQuotation: any) => {
+    if (selectedQuotation) {
+      await updateQuotation(selectedQuotation.id, {
+        project_id: updatedQuotation.projectId,
+        project_name: updatedQuotation.projectName,
+        items: updatedQuotation.items,
+        subtotal: updatedQuotation.subtotal,
+        discount: updatedQuotation.discount,
+        tax: updatedQuotation.tax,
+        total: updatedQuotation.total,
+        valid_until: updatedQuotation.validUntil,
+        status: updatedQuotation.status,
+      });
+      refetch();
+    }
   };
 
-  const handleQuotationCreate = (newQuotation: Partial<Quotation>) => {
-    const quotationWithId: Quotation = {
-      ...newQuotation,
-      id: `QUO-${String(quotations.length + 1).padStart(3, '0')}`,
-      version: 1,
-      createdAt: new Date().toISOString().split('T')[0],
-    } as Quotation;
-    setQuotations(prev => [...prev, quotationWithId]);
+  const handleQuotationCreate = async (newQuotation: any) => {
+    await createQuotation({
+      project_id: newQuotation.projectId,
+      project_name: newQuotation.projectName,
+      items: newQuotation.items,
+      subtotal: newQuotation.subtotal,
+      discount: newQuotation.discount,
+      tax: newQuotation.tax,
+      total: newQuotation.total,
+      valid_until: newQuotation.validUntil,
+      status: newQuotation.status,
+    });
+    refetch();
   };
 
   const handleEditQuotation = (quotation: Quotation, e: React.MouseEvent) => {
@@ -77,14 +93,16 @@ export default function Quotations() {
     setDeleteDialogOpen(true);
   };
 
-  const handleUndoDelete = (quotation: Quotation, toastId: string) => {
-    // Clear the timeout
-    if (undoTimeoutRef.current) {
-      clearTimeout(undoTimeoutRef.current);
+  const handleUndoDelete = (quotationId: string, toastId: string) => {
+    // Clear the timeout for this quotation
+    const timeout = undoTimeoutRef.current.get(quotationId);
+    if (timeout) {
+      clearTimeout(timeout);
+      undoTimeoutRef.current.delete(quotationId);
     }
     
-    // Remove from deleted quotations
-    setDeletedQuotations(prev => prev.filter(q => q.id !== quotation.id));
+    // Remove from pending deletes
+    setPendingDeletes(prev => prev.filter(id => id !== quotationId));
     
     // Dismiss the delete toast
     dismiss(toastId);
@@ -92,16 +110,16 @@ export default function Quotations() {
     // Show restore confirmation
     toast({
       title: 'Quotation Restored',
-      description: `${quotation.id} has been restored successfully.`,
+      description: `Quotation has been restored successfully.`,
     });
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (quotationToDelete) {
-      const deletedQuotation = quotationToDelete;
+      const quotationId = quotationToDelete.id;
       
-      // Add to deleted quotations (soft delete)
-      setDeletedQuotations(prev => [...prev, deletedQuotation]);
+      // Add to pending deletes (soft delete in UI)
+      setPendingDeletes(prev => [...prev, quotationId]);
       
       setDeleteDialogOpen(false);
       setQuotationToDelete(null);
@@ -109,12 +127,12 @@ export default function Quotations() {
       // Show toast with undo option
       const { id: toastId } = toast({
         title: 'Quotation Deleted',
-        description: `${deletedQuotation.id} has been deleted.`,
+        description: `Quotation has been deleted.`,
         duration: 8000,
         action: (
           <ToastAction 
             altText="Undo delete" 
-            onClick={() => handleUndoDelete(deletedQuotation, toastId)}
+            onClick={() => handleUndoDelete(quotationId, toastId)}
             className="gap-1"
           >
             <Undo2 className="h-4 w-4" />
@@ -124,22 +142,25 @@ export default function Quotations() {
       });
       
       // Set timeout to permanently delete after toast disappears
-      undoTimeoutRef.current = setTimeout(() => {
-        // In a real app, this would make an API call to permanently delete
-        console.log(`Permanently deleted quotation: ${deletedQuotation.id}`);
+      const timeout = setTimeout(async () => {
+        await deleteQuotation(quotationId);
+        setPendingDeletes(prev => prev.filter(id => id !== quotationId));
+        undoTimeoutRef.current.delete(quotationId);
       }, 8000);
+      
+      undoTimeoutRef.current.set(quotationId, timeout);
     }
   };
 
   const filteredQuotations = quotations.filter((quotation) => {
-    // Exclude soft-deleted quotations
-    if (deletedQuotations.some(dq => dq.id === quotation.id)) {
+    // Exclude pending delete quotations
+    if (pendingDeletes.includes(quotation.id)) {
       return false;
     }
     const matchesStatus = activeTab === 'all' || quotation.status === activeTab;
     const matchesSearch =
       quotation.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      quotation.projectName.toLowerCase().includes(searchQuery.toLowerCase());
+      quotation.project_name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
@@ -167,7 +188,7 @@ export default function Quotations() {
       header: 'Project',
       render: (quotation: Quotation) => (
         <div>
-          <p className="font-medium text-foreground">{quotation.projectName}</p>
+          <p className="font-medium text-foreground">{quotation.project_name}</p>
           <p className="text-sm text-muted-foreground">{quotation.items.length} line items</p>
         </div>
       ),
@@ -175,7 +196,7 @@ export default function Quotations() {
     {
       key: 'status',
       header: 'Status',
-      render: (quotation: Quotation) => <StatusBadge status={quotation.status} />,
+      render: (quotation: Quotation) => <StatusBadge status={quotation.status as any} />,
     },
     {
       key: 'subtotal',
@@ -208,7 +229,7 @@ export default function Quotations() {
       render: (quotation: Quotation) => (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Calendar className="h-4 w-4" />
-          {new Date(quotation.validUntil).toLocaleDateString()}
+          {quotation.valid_until ? new Date(quotation.valid_until).toLocaleDateString() : 'N/A'}
         </div>
       ),
     },
@@ -240,6 +261,16 @@ export default function Quotations() {
     },
   ];
 
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <Header
@@ -253,7 +284,7 @@ export default function Quotations() {
 
       <QuotationFormDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} onSubmit={handleQuotationCreate} />
 
-      <QuotationFormDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} quotation={selectedQuotation} onSubmit={handleQuotationUpdate} />
+      <QuotationFormDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} onSubmit={handleQuotationUpdate} />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
@@ -278,25 +309,25 @@ export default function Quotations() {
           <div className="bg-card rounded-xl p-4 border border-border/50">
             <p className="text-sm text-muted-foreground">Draft</p>
             <p className="text-2xl font-bold text-foreground">
-              {mockQuotations.filter((q) => q.status === 'draft').length}
+              {quotations.filter((q) => q.status === 'draft').length}
             </p>
           </div>
           <div className="bg-card rounded-xl p-4 border border-border/50">
             <p className="text-sm text-muted-foreground">Submitted</p>
             <p className="text-2xl font-bold text-info">
-              {mockQuotations.filter((q) => q.status === 'submitted').length}
+              {quotations.filter((q) => q.status === 'submitted').length}
             </p>
           </div>
           <div className="bg-card rounded-xl p-4 border border-border/50">
             <p className="text-sm text-muted-foreground">Approved</p>
             <p className="text-2xl font-bold text-success">
-              {mockQuotations.filter((q) => q.status === 'approved').length}
+              {quotations.filter((q) => q.status === 'approved').length}
             </p>
           </div>
           <div className="bg-card rounded-xl p-4 border border-border/50">
             <p className="text-sm text-muted-foreground">Total Value</p>
             <p className="text-2xl font-bold text-foreground">
-              AED {mockQuotations.reduce((sum, q) => sum + q.total, 0).toLocaleString()}
+              AED {quotations.reduce((sum, q) => sum + q.total, 0).toLocaleString()}
             </p>
           </div>
         </div>
