@@ -5,9 +5,9 @@ import Header from '@/components/layout/Header';
 import StatusBadge from '@/components/shared/StatusBadge';
 import ProjectFormDialog from '@/components/projects/ProjectFormDialog';
 import QuotationFormDialog from '@/components/quotations/QuotationFormDialog';
-import { mockQuotations, mockSalesOrders } from '@/data/mockData';
+import { mockSalesOrders } from '@/data/mockData';
 import { useProjects } from '@/hooks/useProjects';
-import { useToast } from '@/hooks/use-toast';
+import { useQuotations } from '@/hooks/useQuotations';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -36,10 +36,10 @@ const categoryLabels: Record<string, string> = {
 
 export default function ProjectDetail() {
   const { id } = useParams();
-  const { toast } = useToast();
   const { projects, loading, updateProject } = useProjects();
+  const { quotations, createQuotation, refetch: refetchQuotations } = useQuotations();
   const project = projects.find((p) => p.id === id);
-  const projectQuotations = mockQuotations.filter((q) => q.projectId === id);
+  const projectQuotations = quotations.filter((q) => q.project_id === id);
   const projectOrders = mockSalesOrders.filter((so) => so.projectId === id);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isQuotationDialogOpen, setIsQuotationDialogOpen] = useState(false);
@@ -50,11 +50,19 @@ export default function ProjectDetail() {
     }
   };
 
-  const handleQuotationSubmit = (quotationData: any) => {
-    toast({
-      title: 'Quotation Created',
-      description: `Quotation for ${project?.name} has been created successfully.`
+  const handleQuotationSubmit = async (quotationData: any) => {
+    await createQuotation({
+      project_id: quotationData.projectId,
+      project_name: quotationData.projectName,
+      items: quotationData.items,
+      subtotal: quotationData.subtotal,
+      discount: quotationData.discount,
+      tax: quotationData.tax,
+      total: quotationData.total,
+      valid_until: quotationData.validUntil,
+      status: quotationData.status,
     });
+    refetchQuotations();
   };
 
   if (loading) {
@@ -314,10 +322,10 @@ export default function ProjectDetail() {
                               AED {quotation.total.toLocaleString()}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              Valid until {new Date(quotation.validUntil).toLocaleDateString()}
+                              Valid until {quotation.valid_until ? new Date(quotation.valid_until).toLocaleDateString() : 'N/A'}
                             </p>
                           </div>
-                          <StatusBadge status={quotation.status} />
+                          <StatusBadge status={quotation.status as any} />
                         </div>
                       </div>
                     </CardContent>
