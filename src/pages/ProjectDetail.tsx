@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import Header from '@/components/layout/Header';
 import StatusBadge from '@/components/shared/StatusBadge';
 import ProjectFormDialog from '@/components/projects/ProjectFormDialog';
+import QuotationFormDialog from '@/components/quotations/QuotationFormDialog';
 import { mockQuotations, mockSalesOrders } from '@/data/mockData';
 import { useProjects } from '@/hooks/useProjects';
 import { useToast } from '@/hooks/use-toast';
@@ -35,13 +36,13 @@ const categoryLabels: Record<string, string> = {
 
 export default function ProjectDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const { projects, loading, updateProject } = useProjects();
   const project = projects.find((p) => p.id === id);
   const projectQuotations = mockQuotations.filter((q) => q.projectId === id);
   const projectOrders = mockSalesOrders.filter((so) => so.projectId === id);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isQuotationDialogOpen, setIsQuotationDialogOpen] = useState(false);
 
   const handleUpdateProject = async (data: Partial<typeof project>) => {
     if (project && id) {
@@ -49,8 +50,11 @@ export default function ProjectDetail() {
     }
   };
 
-  const handleCreateQuotation = () => {
-    navigate(`/quotations/new?projectId=${id}`);
+  const handleQuotationSubmit = (quotationData: any) => {
+    toast({
+      title: 'Quotation Created',
+      description: `Quotation for ${project?.name} has been created successfully.`
+    });
   };
 
   if (loading) {
@@ -89,6 +93,13 @@ export default function ProjectDetail() {
         onSubmit={handleUpdateProject}
       />
 
+      <QuotationFormDialog
+        open={isQuotationDialogOpen}
+        onOpenChange={setIsQuotationDialogOpen}
+        initialProjectId={id}
+        onSubmit={handleQuotationSubmit}
+      />
+
       <div className="p-6 space-y-6">
         {/* Back Button & Actions */}
         <div className="flex items-center justify-between">
@@ -101,7 +112,7 @@ export default function ProjectDetail() {
           </Link>
           <div className="flex items-center gap-3">
             <Button variant="outline" onClick={() => setIsEditDialogOpen(true)}>Edit Project</Button>
-            <Button onClick={handleCreateQuotation}>Create Quotation</Button>
+            <Button onClick={() => setIsQuotationDialogOpen(true)}>Create Quotation</Button>
           </div>
         </div>
 
