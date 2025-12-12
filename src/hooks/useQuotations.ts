@@ -12,6 +12,7 @@ export interface QuotationItem {
   unitPrice: number;
   margin: number;
   total: number;
+  color?: string;
 }
 
 export interface Quotation {

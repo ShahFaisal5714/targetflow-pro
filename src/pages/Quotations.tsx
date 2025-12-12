@@ -9,7 +9,7 @@ import { useQuotations, Quotation } from '@/hooks/useQuotations';
 import { QuotationStatus } from '@/types/crm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Filter, FileText, Calendar, GitBranch, Edit, Trash2, Undo2, Loader2 } from 'lucide-react';
+import { Search, Filter, FileText, Calendar, GitBranch, Edit, Trash2, Undo2, Loader2, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
@@ -24,6 +24,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const statusTabs: { key: QuotationStatus | 'all'; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -32,6 +39,28 @@ const statusTabs: { key: QuotationStatus | 'all'; label: string }[] = [
   { key: 'approved', label: 'Approved' },
   { key: 'rejected', label: 'Rejected' },
 ];
+
+interface FilterState {
+  productName: string;
+  productColor: string;
+  minPrice: string;
+  maxPrice: string;
+  minTotal: string;
+  maxTotal: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
+const initialFilters: FilterState = {
+  productName: '',
+  productColor: '',
+  minPrice: '',
+  maxPrice: '',
+  minTotal: '',
+  maxTotal: '',
+  dateFrom: '',
+  dateTo: '',
+};
 
 export default function Quotations() {
   const navigate = useNavigate();
@@ -48,6 +77,14 @@ export default function Quotations() {
   const [quotationToDelete, setQuotationToDelete] = useState<Quotation | null>(null);
   const [pendingDeletes, setPendingDeletes] = useState<string[]>([]);
   const undoTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<FilterState>(initialFilters);
+
+  const hasActiveFilters = Object.values(filters).some(v => v !== '');
+
+  const clearFilters = () => {
+    setFilters(initialFilters);
+  };
 
   const handleQuotationUpdate = async (updatedQuotation: any) => {
     if (selectedQuotation) {
@@ -161,7 +198,37 @@ export default function Quotations() {
     const matchesSearch =
       quotation.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       quotation.project_name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesSearch;
+    
+    // Product name filter - check if any item matches
+    const matchesProductName = !filters.productName || 
+      quotation.items.some(item => 
+        item.productName.toLowerCase().includes(filters.productName.toLowerCase())
+      );
+    
+    // Product color filter
+    const matchesProductColor = !filters.productColor || 
+      quotation.items.some(item => 
+        item.color?.toLowerCase().includes(filters.productColor.toLowerCase())
+      );
+    
+    // Product price range filter
+    const matchesMinPrice = !filters.minPrice || 
+      quotation.items.some(item => item.unitPrice >= parseFloat(filters.minPrice));
+    const matchesMaxPrice = !filters.maxPrice || 
+      quotation.items.some(item => item.unitPrice <= parseFloat(filters.maxPrice));
+    
+    // Total range filter
+    const matchesMinTotal = !filters.minTotal || quotation.total >= parseFloat(filters.minTotal);
+    const matchesMaxTotal = !filters.maxTotal || quotation.total <= parseFloat(filters.maxTotal);
+    
+    // Date filter
+    const quotationDate = quotation.valid_until ? new Date(quotation.valid_until) : null;
+    const matchesDateFrom = !filters.dateFrom || (quotationDate && quotationDate >= new Date(filters.dateFrom));
+    const matchesDateTo = !filters.dateTo || (quotationDate && quotationDate <= new Date(filters.dateTo));
+    
+    return matchesStatus && matchesSearch && matchesProductName && matchesProductColor && 
+           matchesMinPrice && matchesMaxPrice && matchesMinTotal && matchesMaxTotal &&
+           matchesDateFrom && matchesDateTo;
   });
 
   const columns = [
@@ -362,11 +429,126 @@ export default function Quotations() {
                 className="pl-10 w-full sm:w-64"
               />
             </div>
-            <Button variant="outline" size="icon">
+            <Button 
+              variant={hasActiveFilters ? "default" : "outline"} 
+              size="icon"
+              onClick={() => setShowFilters(!showFilters)}
+              className="relative"
+            >
               <Filter className="h-4 w-4" />
+              {hasActiveFilters && (
+                <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full" />
+              )}
             </Button>
           </div>
         </div>
+
+        {/* Advanced Filters Panel */}
+        {showFilters && (
+          <div className="bg-card rounded-xl border border-border/50 p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-foreground flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                Advanced Filters
+              </h3>
+              <div className="flex items-center gap-2">
+                {hasActiveFilters && (
+                  <Button variant="ghost" size="sm" onClick={clearFilters}>
+                    <X className="h-4 w-4 mr-1" />
+                    Clear All
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" onClick={() => setShowFilters(false)}>
+                  <ChevronUp className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Product Name Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Product Name</label>
+                <Input
+                  placeholder="Search by product name..."
+                  value={filters.productName}
+                  onChange={(e) => setFilters(prev => ({ ...prev, productName: e.target.value }))}
+                />
+              </div>
+
+              {/* Product Color Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Product Color</label>
+                <Input
+                  placeholder="Search by color..."
+                  value={filters.productColor}
+                  onChange={(e) => setFilters(prev => ({ ...prev, productColor: e.target.value }))}
+                />
+              </div>
+
+              {/* Product Price Range */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Product Price Range (AED)</label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={filters.minPrice}
+                    onChange={(e) => setFilters(prev => ({ ...prev, minPrice: e.target.value }))}
+                    className="flex-1"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={filters.maxPrice}
+                    onChange={(e) => setFilters(prev => ({ ...prev, maxPrice: e.target.value }))}
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+
+              {/* Total Range */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Total Range (AED)</label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={filters.minTotal}
+                    onChange={(e) => setFilters(prev => ({ ...prev, minTotal: e.target.value }))}
+                    className="flex-1"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={filters.maxTotal}
+                    onChange={(e) => setFilters(prev => ({ ...prev, maxTotal: e.target.value }))}
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+
+              {/* Valid Until Date Range */}
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-medium text-muted-foreground">Valid Until Date Range</label>
+                <div className="flex gap-2">
+                  <Input
+                    type="date"
+                    value={filters.dateFrom}
+                    onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                    className="flex-1"
+                  />
+                  <span className="flex items-center text-muted-foreground">to</span>
+                  <Input
+                    type="date"
+                    value={filters.dateTo}
+                    onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Table */}
         <DataTable
