@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import Header from '@/components/layout/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,9 +7,64 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Bell, Shield, Database, Mail, Globe } from 'lucide-react';
+import { Building2, Bell, Shield, Database, Mail, Globe, Loader2 } from 'lucide-react';
+import { useSettings, CompanySettings, TaxSettings, NotificationSettings } from '@/hooks/useSettings';
 
 export default function Settings() {
+  const { 
+    companySettings, 
+    taxSettings, 
+    notificationSettings, 
+    loading, 
+    saving,
+    saveCompanySettings,
+    saveTaxSettings,
+    saveNotificationSettings
+  } = useSettings();
+
+  // Local state for form inputs
+  const [company, setCompany] = useState<CompanySettings>(companySettings);
+  const [tax, setTax] = useState<TaxSettings>(taxSettings);
+  const [notifications, setNotifications] = useState<NotificationSettings>(notificationSettings);
+
+  // Update local state when settings are loaded
+  useEffect(() => {
+    setCompany(companySettings);
+  }, [companySettings]);
+
+  useEffect(() => {
+    setTax(taxSettings);
+  }, [taxSettings]);
+
+  useEffect(() => {
+    setNotifications(notificationSettings);
+  }, [notificationSettings]);
+
+  const handleSaveCompany = () => {
+    saveCompanySettings(company);
+  };
+
+  const handleSaveTax = () => {
+    saveTaxSettings(tax);
+  };
+
+  const handleNotificationChange = (key: keyof NotificationSettings, value: boolean) => {
+    const updated = { ...notifications, [key]: value };
+    setNotifications(updated);
+    saveNotificationSettings(updated);
+  };
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <Header title="Settings" subtitle="Manage your system preferences" />
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <Header title="Settings" subtitle="Manage your system preferences" />
@@ -45,28 +101,57 @@ export default function Settings() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="companyName">Company Name</Label>
-                      <Input id="companyName" defaultValue="Target Specialties" />
+                      <Input 
+                        id="companyName" 
+                        value={company.companyName}
+                        onChange={(e) => setCompany({ ...company, companyName: e.target.value })}
+                        placeholder="Enter company name"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="tradeLicense">Trade License</Label>
-                      <Input id="tradeLicense" defaultValue="TL-123456" />
+                      <Input 
+                        id="tradeLicense" 
+                        value={company.tradeLicense}
+                        onChange={(e) => setCompany({ ...company, tradeLicense: e.target.value })}
+                        placeholder="Enter trade license"
+                      />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" defaultValue="info@targetspec.ae" />
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        value={company.email}
+                        onChange={(e) => setCompany({ ...company, email: e.target.value })}
+                        placeholder="Enter email"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phone">Phone</Label>
-                      <Input id="phone" defaultValue="+971 4 123 4567" />
+                      <Input 
+                        id="phone" 
+                        value={company.phone}
+                        onChange={(e) => setCompany({ ...company, phone: e.target.value })}
+                        placeholder="Enter phone number"
+                      />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="address">Address</Label>
-                    <Input id="address" defaultValue="Dubai Industrial City, Dubai, UAE" />
+                    <Input 
+                      id="address" 
+                      value={company.address}
+                      onChange={(e) => setCompany({ ...company, address: e.target.value })}
+                      placeholder="Enter address"
+                    />
                   </div>
-                  <Button>Save Changes</Button>
+                  <Button onClick={handleSaveCompany} disabled={saving}>
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Save Changes
+                  </Button>
                 </CardContent>
               </Card>
 
@@ -79,18 +164,35 @@ export default function Settings() {
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="vatRate">VAT Rate (%)</Label>
-                      <Input id="vatRate" type="number" defaultValue="5" />
+                      <Input 
+                        id="vatRate" 
+                        type="number" 
+                        value={tax.vatRate}
+                        onChange={(e) => setTax({ ...tax, vatRate: parseFloat(e.target.value) || 0 })}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="taxNumber">Tax Registration Number</Label>
-                      <Input id="taxNumber" defaultValue="TRN100123456789" />
+                      <Input 
+                        id="taxNumber" 
+                        value={tax.taxNumber}
+                        onChange={(e) => setTax({ ...tax, taxNumber: e.target.value })}
+                        placeholder="Enter TRN"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="currency">Default Currency</Label>
-                      <Input id="currency" defaultValue="AED" />
+                      <Input 
+                        id="currency" 
+                        value={tax.currency}
+                        onChange={(e) => setTax({ ...tax, currency: e.target.value })}
+                      />
                     </div>
                   </div>
-                  <Button>Save Tax Settings</Button>
+                  <Button onClick={handleSaveTax} disabled={saving}>
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Save Tax Settings
+                  </Button>
                 </CardContent>
               </Card>
             </div>
@@ -110,7 +212,10 @@ export default function Settings() {
                       Get notified when quotations are approved or rejected
                     </p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={notifications.quotationApprovals}
+                    onCheckedChange={(checked) => handleNotificationChange('quotationApprovals', checked)}
+                  />
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
@@ -119,7 +224,10 @@ export default function Settings() {
                       Receive alerts when products fall below reorder level
                     </p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={notifications.lowStockAlerts}
+                    onCheckedChange={(checked) => handleNotificationChange('lowStockAlerts', checked)}
+                  />
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
@@ -128,7 +236,10 @@ export default function Settings() {
                       Get notified about overdue payments
                     </p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={notifications.paymentOverdue}
+                    onCheckedChange={(checked) => handleNotificationChange('paymentOverdue', checked)}
+                  />
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
@@ -137,7 +248,10 @@ export default function Settings() {
                       Track delivery status changes
                     </p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={notifications.deliveryUpdates}
+                    onCheckedChange={(checked) => handleNotificationChange('deliveryUpdates', checked)}
+                  />
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
@@ -146,7 +260,10 @@ export default function Settings() {
                       Receive notifications via email
                     </p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={notifications.emailNotifications}
+                    onCheckedChange={(checked) => handleNotificationChange('emailNotifications', checked)}
+                  />
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
@@ -155,7 +272,10 @@ export default function Settings() {
                       Receive notifications via WhatsApp
                     </p>
                   </div>
-                  <Switch />
+                  <Switch 
+                    checked={notifications.whatsappNotifications}
+                    onCheckedChange={(checked) => handleNotificationChange('whatsappNotifications', checked)}
+                  />
                 </div>
               </CardContent>
             </Card>
