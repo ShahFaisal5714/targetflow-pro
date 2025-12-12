@@ -2,43 +2,62 @@ import { useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import Header from '@/components/layout/Header';
 import DataTable from '@/components/shared/DataTable';
-import { mockProducts } from '@/data/mockData';
-import { Product, ProductCategory } from '@/types/crm';
+import { useProducts, Product, ProductInput } from '@/hooks/useProducts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Search, Filter, Package, AlertTriangle, Plus } from 'lucide-react';
+import { Search, Filter, Package, AlertTriangle, Plus, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import ProductFormDialog from '@/components/inventory/ProductFormDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
-const categoryTabs: { key: ProductCategory | 'all'; label: string }[] = [
+const categoryTabs: { key: string; label: string }[] = [
   { key: 'all', label: 'All Products' },
   { key: 'spc_flooring', label: 'SPC Flooring' },
   { key: 'tile_trims', label: 'Tile Trims' },
   { key: 'wpc_decking', label: 'WPC Decking' },
   { key: 'expansion_joints', label: 'Expansion Joints' },
+  { key: 'lighting', label: 'Lighting' },
+  { key: 'other', label: 'Other' },
 ];
 
-const categoryLabels: Record<ProductCategory, string> = {
+const categoryLabels: Record<string, string> = {
   spc_flooring: 'SPC Flooring',
   tile_trims: 'Tile Trims',
   wpc_decking: 'WPC Decking',
   expansion_joints: 'Expansion Joints',
+  lighting: 'Lighting',
   other: 'Other',
 };
 
 const unitLabels: Record<string, string> = {
   sqm: 'sqm',
+  piece: 'pcs',
   pcs: 'pcs',
   lm: 'lm',
   kg: 'kg',
   box: 'box',
+  set: 'set',
 };
 
 export default function Inventory() {
-  const [activeTab, setActiveTab] = useState<ProductCategory | 'all'>('all');
+  const { products, loading, createProduct, updateProduct, deleteProduct } = useProducts();
+  const [activeTab, setActiveTab] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
 
-  const filteredProducts = mockProducts.filter((product) => {
+  const filteredProducts = products.filter((product) => {
     const matchesCategory = activeTab === 'all' || product.category === activeTab;
     const matchesSearch =
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -46,11 +65,38 @@ export default function Inventory() {
     return matchesCategory && matchesSearch;
   });
 
-  const lowStockProducts = mockProducts.filter((p) => p.stock <= p.reorderLevel);
-  const totalStockValue = mockProducts.reduce(
-    (sum, p) => sum + p.stock * p.prices.project,
+  const lowStockProducts = products.filter((p) => p.stock_quantity <= p.reorder_level);
+  const totalStockValue = products.reduce(
+    (sum, p) => sum + p.stock_quantity * p.price,
     0
   );
+
+  const uniqueCategories = [...new Set(products.map((p) => p.category))];
+
+  const handleAddProduct = () => {
+    setEditingProduct(null);
+    setIsFormOpen(true);
+  };
+
+  const handleEditProduct = (product: Product) => {
+    setEditingProduct(product);
+    setIsFormOpen(true);
+  };
+
+  const handleFormSubmit = async (data: ProductInput) => {
+    if (editingProduct) {
+      await updateProduct(editingProduct.id, data);
+    } else {
+      await createProduct(data);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deletingProduct) {
+      await deleteProduct(deletingProduct.id);
+      setDeletingProduct(null);
+    }
+  };
 
   const columns = [
     {
@@ -61,10 +107,10 @@ export default function Inventory() {
           <div
             className={cn(
               'flex h-10 w-10 items-center justify-center rounded-lg',
-              product.stock <= product.reorderLevel ? 'bg-destructive/10' : 'bg-primary/10'
+              product.stock_quantity <= product.reorder_level ? 'bg-destructive/10' : 'bg-primary/10'
             )}
           >
-            {product.stock <= product.reorderLevel ? (
+            {product.stock_quantity <= product.reorder_level ? (
               <AlertTriangle className="h-5 w-5 text-destructive" />
             ) : (
               <Package className="h-5 w-5 text-primary" />
@@ -72,7 +118,7 @@ export default function Inventory() {
           </div>
           <div>
             <p className="font-mono text-sm font-medium text-foreground">{product.sku}</p>
-            <p className="text-xs text-muted-foreground">{categoryLabels[product.category]}</p>
+            <p className="text-xs text-muted-foreground">{categoryLabels[product.category] || product.category}</p>
           </div>
         </div>
       ),
@@ -83,7 +129,10 @@ export default function Inventory() {
       render: (product: Product) => (
         <div>
           <p className="font-medium text-foreground">{product.name}</p>
-          <p className="text-sm text-muted-foreground">Unit: {unitLabels[product.unit]}</p>
+          <p className="text-sm text-muted-foreground">
+            {product.color && `Color: ${product.color} • `}
+            Unit: {unitLabels[product.unit] || product.unit}
+          </p>
         </div>
       ),
     },
@@ -91,13 +140,13 @@ export default function Inventory() {
       key: 'stock',
       header: 'Stock Level',
       render: (product: Product) => {
-        const stockPercentage = Math.min((product.stock / (product.reorderLevel * 3)) * 100, 100);
-        const isLow = product.stock <= product.reorderLevel;
+        const stockPercentage = Math.min((product.stock_quantity / (product.reorder_level * 3)) * 100, 100);
+        const isLow = product.stock_quantity <= product.reorder_level;
         return (
           <div className="w-40">
             <div className="flex items-center justify-between mb-1">
               <span className={cn('text-sm font-medium', isLow ? 'text-destructive' : 'text-foreground')}>
-                {product.stock.toLocaleString()} {unitLabels[product.unit]}
+                {product.stock_quantity.toLocaleString()} {unitLabels[product.unit] || product.unit}
               </span>
             </div>
             <Progress
@@ -106,7 +155,7 @@ export default function Inventory() {
             />
             {isLow && (
               <p className="text-xs text-destructive mt-1">
-                Below reorder level ({product.reorderLevel})
+                Below reorder level ({product.reorder_level})
               </p>
             )}
           </div>
@@ -115,14 +164,12 @@ export default function Inventory() {
     },
     {
       key: 'prices',
-      header: 'Pricing (D/C/P)',
+      header: 'Price / Cost',
       render: (product: Product) => (
         <div className="text-sm">
-          <span className="text-muted-foreground">${product.prices.dealer}</span>
+          <span className="font-medium text-foreground">${product.price}</span>
           <span className="text-muted-foreground mx-1">/</span>
-          <span className="text-muted-foreground">${product.prices.contractor}</span>
-          <span className="text-muted-foreground mx-1">/</span>
-          <span className="font-medium text-foreground">${product.prices.project}</span>
+          <span className="text-muted-foreground">${product.cost}</span>
         </div>
       ),
     },
@@ -131,7 +178,7 @@ export default function Inventory() {
       header: 'Stock Value',
       render: (product: Product) => (
         <span className="font-semibold text-foreground">
-          ${(product.stock * product.prices.project).toLocaleString()}
+          ${(product.stock_quantity * product.price).toLocaleString()}
         </span>
       ),
     },
@@ -140,19 +187,48 @@ export default function Inventory() {
       header: '',
       render: (product: Product) => (
         <div className="flex items-center gap-2">
-          {product.stock <= product.reorderLevel && (
+          {product.stock_quantity <= product.reorder_level && (
             <Button size="sm" variant="destructive" className="gap-1">
               <Plus className="h-3 w-3" />
               Reorder
             </Button>
           )}
-          <Button size="sm" variant="outline">
-            Edit
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditProduct(product);
+            }}
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-destructive hover:text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeletingProduct(product);
+            }}
+          >
+            <Trash2 className="h-3 w-3" />
           </Button>
         </div>
       ),
     },
   ];
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <Header title="Inventory" subtitle="Loading..." />
+        <div className="p-6 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -161,7 +237,7 @@ export default function Inventory() {
         subtitle={`${filteredProducts.length} products`}
         action={{
           label: 'Add Product',
-          onClick: () => console.log('Add product'),
+          onClick: handleAddProduct,
         }}
       />
 
@@ -173,7 +249,7 @@ export default function Inventory() {
               <Package className="h-5 w-5 text-primary" />
               <p className="text-sm text-muted-foreground">Total Products</p>
             </div>
-            <p className="text-2xl font-bold text-foreground">{mockProducts.length}</p>
+            <p className="text-2xl font-bold text-foreground">{products.length}</p>
           </div>
           <div className="bg-card rounded-xl p-4 border border-border/50">
             <div className="flex items-center gap-2 mb-2">
@@ -190,7 +266,7 @@ export default function Inventory() {
           </div>
           <div className="bg-card rounded-xl p-4 border border-border/50">
             <p className="text-sm text-muted-foreground mb-2">Categories</p>
-            <p className="text-2xl font-bold text-foreground">5</p>
+            <p className="text-2xl font-bold text-foreground">{uniqueCategories.length}</p>
           </div>
         </div>
 
@@ -248,9 +324,35 @@ export default function Inventory() {
         <DataTable
           columns={columns}
           data={filteredProducts}
-          emptyMessage="No products found"
+          emptyMessage="No products found. Add your first product to get started."
         />
       </div>
+
+      {/* Product Form Dialog */}
+      <ProductFormDialog
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        product={editingProduct}
+        onSubmit={handleFormSubmit}
+      />
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deletingProduct} onOpenChange={() => setDeletingProduct(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deletingProduct?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
