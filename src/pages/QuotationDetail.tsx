@@ -1,10 +1,10 @@
-import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Download, FileText, Printer } from 'lucide-react';
-import { mockQuotations, mockProjects } from '@/data/mockData';
+import { ArrowLeft, Download, FileText, Printer, Loader2 } from 'lucide-react';
+import { useQuotations } from '@/hooks/useQuotations';
+import { useProjects } from '@/hooks/useProjects';
 import StatusBadge from '@/components/shared/StatusBadge';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -13,10 +13,23 @@ import targetLogo from '@/assets/target-logo.jpg';
 export default function QuotationDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const quotation = mockQuotations.find(q => q.id === id);
-  const project = quotation ? mockProjects.find(p => p.id === quotation.projectId) : null;
+  const { quotations, loading: quotationsLoading } = useQuotations();
+  const { projects, loading: projectsLoading } = useProjects();
+  
+  const quotation = quotations.find(q => q.id === id);
+  const project = quotation ? projects.find(p => p.id === quotation.project_id) : null;
 
-  if (!quotation || !project) {
+  if (quotationsLoading || projectsLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (!quotation) {
     return (
       <MainLayout>
         <div className="p-6">
@@ -74,22 +87,22 @@ export default function QuotationDetail() {
     doc.setFont('helvetica', 'bold');
     doc.text('Attention:', leftColLabel, 58);
     doc.setFont('helvetica', 'normal');
-    doc.text(project.contractor.contact, leftColValue, 58);
+    doc.text(project?.contractor?.contact || 'N/A', leftColValue, 58);
 
     doc.setFont('helvetica', 'bold');
     doc.text('Contractor:', leftColLabel, 65);
     doc.setFont('helvetica', 'normal');
-    doc.text(project.contractor.name, leftColValue, 65);
+    doc.text(project?.contractor?.name || 'N/A', leftColValue, 65);
 
     doc.setFont('helvetica', 'bold');
     doc.text('Project:', leftColLabel, 72);
     doc.setFont('helvetica', 'normal');
-    doc.text(project.name, leftColValue, 72);
+    doc.text(quotation.project_name, leftColValue, 72);
 
     doc.setFont('helvetica', 'bold');
     doc.text('Location:', leftColLabel, 79);
     doc.setFont('helvetica', 'normal');
-    doc.text(project.contractor.address || 'Dubai, UAE', leftColValue, 79);
+    doc.text(project?.contractor?.address || 'Dubai, UAE', leftColValue, 79);
 
     doc.setFont('helvetica', 'bold');
     doc.text('Scope of Work:', leftColLabel, 86);
@@ -100,12 +113,12 @@ export default function QuotationDetail() {
     doc.setFont('helvetica', 'bold');
     doc.text('Issue Date:', rightColLabel, 58);
     doc.setFont('helvetica', 'normal');
-    doc.text(new Date(quotation.createdAt).toLocaleDateString('en-GB'), rightColValue, 58);
+    doc.text(new Date(quotation.created_at).toLocaleDateString('en-GB'), rightColValue, 58);
 
     doc.setFont('helvetica', 'bold');
     doc.text('Prepared by:', rightColLabel, 65);
     doc.setFont('helvetica', 'normal');
-    doc.text(project.salesManager, rightColValue, 65);
+    doc.text(project?.salesManager || 'N/A', rightColValue, 65);
 
     doc.setFont('helvetica', 'bold');
     doc.text('Quotation No:', rightColLabel, 72);
@@ -115,7 +128,7 @@ export default function QuotationDetail() {
     doc.setFont('helvetica', 'bold');
     doc.text('Phone No:', rightColLabel, 79);
     doc.setFont('helvetica', 'normal');
-    doc.text(project.contractor.phone, rightColValue, 79);
+    doc.text(project?.contractor?.phone || 'N/A', rightColValue, 79);
 
     doc.setFont('helvetica', 'bold');
     doc.text('Quotation validity:', rightColLabel, 86);
@@ -254,9 +267,9 @@ export default function QuotationDetail() {
             <div className="flex-1">
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold text-foreground">{quotation.id}</h1>
-                <StatusBadge status={quotation.status} />
+                <StatusBadge status={quotation.status as any} />
               </div>
-              <p className="text-muted-foreground mt-1">{project.name}</p>
+              <p className="text-muted-foreground mt-1">{quotation.project_name}</p>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleExportPDF}>
@@ -303,19 +316,19 @@ export default function QuotationDetail() {
             <div className="space-y-3">
               <div>
                 <p className="text-xs font-semibold text-muted-foreground">Attention:</p>
-                <p className="text-sm text-foreground">{project.contractor.contact}</p>
+                <p className="text-sm text-foreground">{project?.contractor?.contact || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-muted-foreground">Contractor:</p>
-                <p className="text-sm text-foreground">{project.contractor.name}</p>
+                <p className="text-sm text-foreground">{project?.contractor?.name || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-muted-foreground">Project:</p>
-                <p className="text-sm text-foreground font-semibold">{project.name}</p>
+                <p className="text-sm text-foreground font-semibold">{quotation.project_name}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-muted-foreground">Location:</p>
-                <p className="text-sm text-foreground">{project.contractor.address || 'Dubai, UAE'}</p>
+                <p className="text-sm text-foreground">{project?.contractor?.address || 'Dubai, UAE'}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-muted-foreground">Scope of Work:</p>
@@ -326,11 +339,11 @@ export default function QuotationDetail() {
             <div className="space-y-3">
               <div>
                 <p className="text-xs font-semibold text-muted-foreground">Issue Date:</p>
-                <p className="text-sm text-foreground">{new Date(quotation.createdAt).toLocaleDateString('en-GB')}</p>
+                <p className="text-sm text-foreground">{new Date(quotation.created_at).toLocaleDateString('en-GB')}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-muted-foreground">Prepared by:</p>
-                <p className="text-sm text-foreground">{project.salesManager}</p>
+                <p className="text-sm text-foreground">{project?.salesManager || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-muted-foreground">Quotation No:</p>
@@ -338,7 +351,7 @@ export default function QuotationDetail() {
               </div>
               <div>
                 <p className="text-xs font-semibold text-muted-foreground">Phone No:</p>
-                <p className="text-sm text-foreground">{project.contractor.phone}</p>
+                <p className="text-sm text-foreground">{project?.contractor?.phone || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-muted-foreground">Quotation validity:</p>
@@ -364,7 +377,7 @@ export default function QuotationDetail() {
                 </thead>
                 <tbody>
                   {quotation.items.map((item, index) => (
-                    <tr key={item.id} className="border-b hover:bg-muted/50">
+                    <tr key={item.productId} className="border-b hover:bg-muted/50">
                       <td className="px-4 py-3 text-sm">{index + 1}</td>
                       <td className="px-4 py-3 text-sm font-medium">{item.productName.toUpperCase()}</td>
                       <td className="px-4 py-3 text-sm text-center">{item.unit.toUpperCase()}</td>
