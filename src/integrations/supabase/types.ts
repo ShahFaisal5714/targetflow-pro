@@ -89,6 +89,65 @@ export type Database = {
         }
         Relationships: []
       }
+      quotations: {
+        Row: {
+          created_at: string
+          discount: Json | null
+          id: string
+          items: Json
+          project_id: string | null
+          project_name: string
+          status: string
+          subtotal: number
+          tax: Json | null
+          total: number
+          updated_at: string
+          user_id: string
+          valid_until: string | null
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          discount?: Json | null
+          id?: string
+          items?: Json
+          project_id?: string | null
+          project_name: string
+          status?: string
+          subtotal?: number
+          tax?: Json | null
+          total?: number
+          updated_at?: string
+          user_id: string
+          valid_until?: string | null
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          discount?: Json | null
+          id?: string
+          items?: Json
+          project_id?: string | null
+          project_name?: string
+          status?: string
+          subtotal?: number
+          tax?: Json | null
+          total?: number
+          updated_at?: string
+          user_id?: string
+          valid_until?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string

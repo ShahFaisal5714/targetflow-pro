@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { Plus, X } from 'lucide-react';
-import { Quotation, QuotationItem, ProductCategory, ProductUnit } from '@/types/crm';
-import { mockProjects, mockProducts } from '@/data/mockData';
+import { Quotation, QuotationItem } from '@/types/crm';
+import { mockProducts } from '@/data/mockData';
+import { useProjects } from '@/hooks/useProjects';
 
 interface QuotationFormDialogProps {
   open: boolean;
@@ -18,6 +19,7 @@ interface QuotationFormDialogProps {
 }
 
 export default function QuotationFormDialog({ open, onOpenChange, quotation, onSubmit, initialProjectId }: QuotationFormDialogProps) {
+  const { projects } = useProjects();
   const [projectId, setProjectId] = useState(quotation?.projectId || initialProjectId || '');
   const [items, setItems] = useState<Partial<QuotationItem>[]>(
     quotation?.items || [{ productId: '', quantity: 0, unitPrice: 0 }]
@@ -97,7 +99,7 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
     e.preventDefault();
     
     const { subtotal, tax, total } = calculateTotals();
-    const project = mockProjects.find(p => p.id === projectId);
+    const project = projects.find(p => p.id === projectId);
     
     const quotationData: Partial<Quotation> = {
       projectId,
@@ -142,7 +144,7 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockProjects.map((project) => (
+                  {projects.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
                     </SelectItem>
