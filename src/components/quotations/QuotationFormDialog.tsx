@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/hooks/use-toast';
 import { Plus, X } from 'lucide-react';
 import { Quotation, QuotationItem } from '@/types/crm';
-import { mockProducts } from '@/data/mockData';
 import { useProjects } from '@/hooks/useProjects';
+import { useProducts } from '@/hooks/useProducts';
 
 interface QuotationFormDialogProps {
   open: boolean;
@@ -20,6 +20,7 @@ interface QuotationFormDialogProps {
 
 export default function QuotationFormDialog({ open, onOpenChange, quotation, onSubmit, initialProjectId }: QuotationFormDialogProps) {
   const { projects } = useProjects();
+  const { products } = useProducts();
   const [projectId, setProjectId] = useState(quotation?.projectId || initialProjectId || '');
   const [items, setItems] = useState<Partial<QuotationItem>[]>(
     quotation?.items || [{ productId: '', quantity: 0, unitPrice: 0 }]
@@ -53,15 +54,15 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
   const handleItemChange = (index: number, field: string, value: any) => {
     const newItems = [...items];
     if (field === 'productId') {
-      const product = mockProducts.find(p => p.id === value);
+      const product = products.find(p => p.id === value);
       if (product) {
         newItems[index] = {
           ...newItems[index],
           productId: value,
           productName: product.name,
-          category: product.category,
-          unit: product.unit,
-          unitPrice: product.prices.project,
+          category: product.category as any,
+          unit: product.unit as any,
+          unitPrice: product.price,
           margin: 25
         };
       }
@@ -189,9 +190,9 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
                           <SelectValue placeholder="Select product" />
                         </SelectTrigger>
                         <SelectContent>
-                          {mockProducts.map((product) => (
+                          {products.map((product) => (
                             <SelectItem key={product.id} value={product.id}>
-                              {product.name}
+                              {product.name} {product.color ? `(${product.color})` : ''} - AED {product.price}
                             </SelectItem>
                           ))}
                         </SelectContent>
