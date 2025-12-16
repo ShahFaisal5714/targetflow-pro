@@ -9,13 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Product, ProductInput } from '@/hooks/useProducts';
 
 interface ProductFormDialogProps {
@@ -24,24 +17,6 @@ interface ProductFormDialogProps {
   product?: Product | null;
   onSubmit: (data: ProductInput) => void;
 }
-
-const categories = [
-  { value: 'spc_flooring', label: 'SPC Flooring' },
-  { value: 'tile_trims', label: 'Tile Trims' },
-  { value: 'wpc_decking', label: 'WPC Decking' },
-  { value: 'expansion_joints', label: 'Expansion Joints' },
-  { value: 'lighting', label: 'Lighting' },
-  { value: 'other', label: 'Other' },
-];
-
-const units = [
-  { value: 'piece', label: 'Piece' },
-  { value: 'sqm', label: 'Square Meter' },
-  { value: 'lm', label: 'Linear Meter' },
-  { value: 'kg', label: 'Kilogram' },
-  { value: 'box', label: 'Box' },
-  { value: 'set', label: 'Set' },
-];
 
 export default function ProductFormDialog({
   open,
@@ -152,23 +127,15 @@ export default function ProductFormDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Category *</Label>
-              <Select
+              <Input
+                id="category"
                 value={formData.category}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, category: value })
+                onChange={(e) =>
+                  setFormData({ ...formData, category: e.target.value })
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Enter category"
+                required
+              />
             </div>
 
             <div className="space-y-2">
@@ -251,23 +218,15 @@ export default function ProductFormDialog({
 
             <div className="space-y-2">
               <Label htmlFor="unit">Unit *</Label>
-              <Select
+              <Input
+                id="unit"
                 value={formData.unit}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, unit: value })
+                onChange={(e) =>
+                  setFormData({ ...formData, unit: e.target.value })
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select unit" />
-                </SelectTrigger>
-                <SelectContent>
-                  {units.map((unit) => (
-                    <SelectItem key={unit.value} value={unit.value}>
-                      {unit.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="e.g., Piece, Box, Meter"
+                required
+              />
             </div>
           </div>
 

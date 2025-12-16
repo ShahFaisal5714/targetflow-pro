@@ -178,7 +178,7 @@ export default function Inventory() {
       header: 'Stock Value',
       render: (product: Product) => (
         <span className="font-semibold text-foreground">
-          ${(product.stock_quantity * product.price).toLocaleString()}
+          AED {(product.stock_quantity * product.price).toLocaleString()}
         </span>
       ),
     },
@@ -261,7 +261,7 @@ export default function Inventory() {
           <div className="bg-card rounded-xl p-4 border border-border/50">
             <p className="text-sm text-muted-foreground mb-2">Total Stock Value</p>
             <p className="text-2xl font-bold text-foreground">
-              ${totalStockValue.toLocaleString()}
+              AED {totalStockValue.toLocaleString()}
             </p>
           </div>
           <div className="bg-card rounded-xl p-4 border border-border/50">
