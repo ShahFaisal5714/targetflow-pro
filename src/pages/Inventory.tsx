@@ -49,6 +49,26 @@ const unitLabels: Record<string, string> = {
   set: 'set',
 };
 
+interface FilterState {
+  name: string;
+  sku: string;
+  color: string;
+  minPrice: string;
+  maxPrice: string;
+  minStock: string;
+  maxStock: string;
+}
+
+const initialFilters: FilterState = {
+  name: '',
+  sku: '',
+  color: '',
+  minPrice: '',
+  maxPrice: '',
+  minStock: '',
+  maxStock: '',
+};
+
 export default function Inventory() {
   const { products, loading, createProduct, updateProduct, deleteProduct } = useProducts();
   const [activeTab, setActiveTab] = useState<string>('all');
@@ -56,14 +76,33 @@ export default function Inventory() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<FilterState>(initialFilters);
 
   const filteredProducts = products.filter((product) => {
     const matchesCategory = activeTab === 'all' || product.category === activeTab;
     const matchesSearch =
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.sku.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    
+    // Advanced filters
+    const matchesName = !filters.name || product.name.toLowerCase().includes(filters.name.toLowerCase());
+    const matchesSku = !filters.sku || product.sku.toLowerCase().includes(filters.sku.toLowerCase());
+    const matchesColor = !filters.color || (product.color && product.color.toLowerCase().includes(filters.color.toLowerCase()));
+    const matchesMinPrice = !filters.minPrice || product.price >= parseFloat(filters.minPrice);
+    const matchesMaxPrice = !filters.maxPrice || product.price <= parseFloat(filters.maxPrice);
+    const matchesMinStock = !filters.minStock || product.stock_quantity >= parseInt(filters.minStock);
+    const matchesMaxStock = !filters.maxStock || product.stock_quantity <= parseInt(filters.maxStock);
+    
+    return matchesCategory && matchesSearch && matchesName && matchesSku && matchesColor && 
+           matchesMinPrice && matchesMaxPrice && matchesMinStock && matchesMaxStock;
   });
+
+  const clearFilters = () => {
+    setFilters(initialFilters);
+  };
+
+  const hasActiveFilters = Object.values(filters).some(v => v !== '');
 
   const lowStockProducts = products.filter((p) => p.stock_quantity <= p.reorder_level);
   const totalStockValue = products.reduce(
@@ -167,9 +206,9 @@ export default function Inventory() {
       header: 'Price / Cost',
       render: (product: Product) => (
         <div className="text-sm">
-          <span className="font-medium text-foreground">${product.price}</span>
+          <span className="font-medium text-foreground">AED {product.price}</span>
           <span className="text-muted-foreground mx-1">/</span>
-          <span className="text-muted-foreground">${product.cost}</span>
+          <span className="text-muted-foreground">AED {product.cost}</span>
         </div>
       ),
     },
@@ -314,11 +353,91 @@ export default function Inventory() {
                 className="pl-10 w-full sm:w-64"
               />
             </div>
-            <Button variant="outline" size="icon">
+            <Button 
+              variant={showFilters ? "default" : "outline"} 
+              size="icon"
+              onClick={() => setShowFilters(!showFilters)}
+            >
               <Filter className="h-4 w-4" />
             </Button>
           </div>
         </div>
+
+        {/* Advanced Filters Panel */}
+        {showFilters && (
+          <div className="bg-card rounded-xl p-4 border border-border/50 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-foreground">Advanced Filters</h3>
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  Clear All
+                </Button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Product Name</label>
+                <Input
+                  placeholder="Filter by name"
+                  value={filters.name}
+                  onChange={(e) => setFilters({ ...filters, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">SKU</label>
+                <Input
+                  placeholder="Filter by SKU"
+                  value={filters.sku}
+                  onChange={(e) => setFilters({ ...filters, sku: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Color</label>
+                <Input
+                  placeholder="Filter by color"
+                  value={filters.color}
+                  onChange={(e) => setFilters({ ...filters, color: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Min Price (AED)</label>
+                <Input
+                  type="number"
+                  placeholder="Min"
+                  value={filters.minPrice}
+                  onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Max Price (AED)</label>
+                <Input
+                  type="number"
+                  placeholder="Max"
+                  value={filters.maxPrice}
+                  onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Min Stock</label>
+                <Input
+                  type="number"
+                  placeholder="Min"
+                  value={filters.minStock}
+                  onChange={(e) => setFilters({ ...filters, minStock: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Max Stock</label>
+                <Input
+                  type="number"
+                  placeholder="Max"
+                  value={filters.maxStock}
+                  onChange={(e) => setFilters({ ...filters, maxStock: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Table */}
         <DataTable
