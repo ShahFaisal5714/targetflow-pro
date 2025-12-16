@@ -172,17 +172,21 @@ export default function ProductFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cost">Cost Price</Label>
-              <Input
-                id="cost"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.cost}
-                onChange={(e) =>
-                  setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })
-                }
-              />
+              <Label htmlFor="cost">Cost Price (AED)</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">AED</span>
+                <Input
+                  id="cost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.cost}
+                  onChange={(e) =>
+                    setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })
+                  }
+                  className="pl-12"
+                />
+              </div>
             </div>
           </div>
 
