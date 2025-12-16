@@ -140,7 +140,6 @@ export default function QuotationDetail() {
       index + 1,
       item.productName.toUpperCase(),
       item.unit.toUpperCase(),
-      '-',
       item.quantity.toLocaleString('en-US', { minimumFractionDigits: 2 }),
       item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 }),
       item.total.toLocaleString('en-US', { minimumFractionDigits: 2 })
@@ -148,7 +147,7 @@ export default function QuotationDetail() {
 
     autoTable(doc, {
       startY: 95,
-      head: [['S No', 'Description', 'Unit', 'Drawing Ref.', 'Quantity', 'Unit Price', 'Amount']],
+      head: [['S No', 'Description', 'Unit', 'Quantity', 'Unit Price', 'Amount']],
       body: tableData,
       theme: 'grid',
       styles: { fontSize: 8, cellPadding: 2 },
@@ -162,12 +161,11 @@ export default function QuotationDetail() {
       tableWidth: contentWidth,
       columnStyles: {
         0: { cellWidth: 12, halign: 'center' },
-        1: { cellWidth: 55 },
-        2: { cellWidth: 18, halign: 'center' },
-        3: { cellWidth: 22, halign: 'center' },
-        4: { cellWidth: 25, halign: 'right' },
-        5: { cellWidth: 25, halign: 'right' },
-        6: { cellWidth: 25, halign: 'right' }
+        1: { cellWidth: 65 },
+        2: { cellWidth: 20, halign: 'center' },
+        3: { cellWidth: 28, halign: 'right' },
+        4: { cellWidth: 28, halign: 'right' },
+        5: { cellWidth: 28, halign: 'right' }
       }
     });
 
@@ -369,7 +367,6 @@ export default function QuotationDetail() {
                     <th className="px-4 py-3 text-left text-xs font-semibold">S No</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold">Description</th>
                     <th className="px-4 py-3 text-center text-xs font-semibold">Unit</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold">Drawing Ref.</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold">Quantity</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold">Unit Price</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold">Amount</th>
@@ -381,7 +378,6 @@ export default function QuotationDetail() {
                       <td className="px-4 py-3 text-sm">{index + 1}</td>
                       <td className="px-4 py-3 text-sm font-medium">{item.productName.toUpperCase()}</td>
                       <td className="px-4 py-3 text-sm text-center">{item.unit.toUpperCase()}</td>
-                      <td className="px-4 py-3 text-sm text-center text-muted-foreground">-</td>
                       <td className="px-4 py-3 text-sm text-right">{item.quantity.toFixed(2)}</td>
                       <td className="px-4 py-3 text-sm text-right">{item.unitPrice.toFixed(2)}</td>
                       <td className="px-4 py-3 text-sm text-right font-semibold">{item.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
