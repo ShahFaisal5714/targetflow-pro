@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import Header from '@/components/layout/Header';
 import DataTable from '@/components/shared/DataTable';
@@ -6,9 +6,19 @@ import { useProducts, Product, ProductInput } from '@/hooks/useProducts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Search, Filter, Package, AlertTriangle, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Search, Filter, Package, AlertTriangle, Plus, Pencil, Trash2, Upload, Download, FileText, FileSpreadsheet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ProductFormDialog from '@/components/inventory/ProductFormDialog';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -79,6 +89,11 @@ export default function Inventory() {
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<FilterState>(initialFilters);
 
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+
   const filteredProducts = products.filter((product) => {
     const matchesCategory = activeTab === 'all' || product.category === activeTab;
     const matchesSearch =
@@ -135,6 +150,139 @@ export default function Inventory() {
       await deleteProduct(deletingProduct.id);
       setDeletingProduct(null);
     }
+  };
+
+  // CSV Import Handler
+  const handleCSVImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    setImporting(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result as string;
+        const lines = text.split('\n').filter(line => line.trim());
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        
+        const requiredHeaders = ['name', 'sku', 'category', 'price', 'cost', 'stock_quantity', 'unit'];
+        const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+        
+        if (missingHeaders.length > 0) {
+          toast({
+            title: 'Invalid CSV Format',
+            description: `Missing required columns: ${missingHeaders.join(', ')}`,
+            variant: 'destructive',
+          });
+          setImporting(false);
+          return;
+        }
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map(v => v.trim());
+          const rowData: Record<string, string> = {};
+          headers.forEach((header, index) => {
+            rowData[header] = values[index] || '';
+          });
+
+          const productInput: ProductInput = {
+            name: rowData.name,
+            sku: rowData.sku,
+            category: rowData.category || 'other',
+            price: parseFloat(rowData.price) || 0,
+            cost: parseFloat(rowData.cost) || 0,
+            stock_quantity: parseInt(rowData.stock_quantity) || 0,
+            reorder_level: parseInt(rowData.reorder_level) || 10,
+            unit: rowData.unit || 'piece',
+            description: rowData.description,
+            color: rowData.color,
+          };
+
+          if (productInput.name && productInput.sku) {
+            const result = await createProduct(productInput);
+            if (result) successCount++;
+            else errorCount++;
+          }
+        }
+
+        toast({
+          title: 'Import Complete',
+          description: `Successfully imported ${successCount} products${errorCount > 0 ? `, ${errorCount} failed` : ''}`,
+        });
+      } catch (error: any) {
+        toast({
+          title: 'Import Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } finally {
+        setImporting(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // CSV Export Handler
+  const exportToCSV = () => {
+    const headers = ['SKU', 'Name', 'Category', 'Color', 'Price', 'Cost', 'Stock Quantity', 'Reorder Level', 'Unit', 'Description'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredProducts.map(p => [
+        p.sku,
+        `"${p.name}"`,
+        p.category,
+        p.color || '',
+        p.price,
+        p.cost,
+        p.stock_quantity,
+        p.reorder_level,
+        p.unit,
+        `"${p.description || ''}"`,
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `inventory_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    
+    toast({ title: 'CSV Exported', description: `${filteredProducts.length} products exported successfully` });
+  };
+
+  // PDF Export Handler
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text('Inventory Report', 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+    doc.text(`Total Products: ${filteredProducts.length}`, 14, 36);
+    doc.text(`Total Stock Value: AED ${totalStockValue.toLocaleString()}`, 14, 42);
+
+    autoTable(doc, {
+      startY: 50,
+      head: [['SKU', 'Name', 'Category', 'Color', 'Price (AED)', 'Stock', 'Value (AED)']],
+      body: filteredProducts.map(p => [
+        p.sku,
+        p.name,
+        categoryLabels[p.category] || p.category,
+        p.color || '-',
+        p.price.toFixed(2),
+        `${p.stock_quantity} ${unitLabels[p.unit] || p.unit}`,
+        (p.stock_quantity * p.price).toFixed(2),
+      ]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [41, 128, 185] },
+    });
+
+    doc.save(`inventory_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast({ title: 'PDF Exported', description: `${filteredProducts.length} products exported successfully` });
   };
 
   const columns = [
@@ -343,6 +491,45 @@ export default function Inventory() {
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto">
+            {/* Hidden file input for CSV import */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleCSVImport}
+              className="hidden"
+            />
+            
+            {/* Import Button */}
+            <Button 
+              variant="outline" 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              {importing ? 'Importing...' : 'Import CSV'}
+            </Button>
+
+            {/* Export Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={exportToCSV}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToPDF}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export as PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <div className="relative flex-1 sm:flex-initial">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
