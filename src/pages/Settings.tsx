@@ -9,8 +9,9 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Building2, Bell, Shield, Database, Loader2, Star, Check, Edit } from 'lucide-react';
 import { useSettings, CompanySettings, TaxSettings, NotificationSettings } from '@/hooks/useSettings';
-import { useCompanies, Company } from '@/hooks/useCompanies';
+import { useCompanies } from '@/hooks/useCompanies';
 import targetLogo from '@/assets/target-logo.jpg';
+import alhadafLogo from '@/assets/alhadaf-logo.png';
 
 export default function Settings() {
   const { 
@@ -41,7 +42,6 @@ export default function Settings() {
   // Alhadaf editing state
   const [editingAlhadaf, setEditingAlhadaf] = useState(false);
   const [alhadafForm, setAlhadafForm] = useState({
-    logo_url: '',
     email: '',
     phone: '',
     address: '',
@@ -65,7 +65,6 @@ export default function Settings() {
   useEffect(() => {
     if (alhadafCompany) {
       setAlhadafForm({
-        logo_url: alhadafCompany.logo_url || '',
         email: alhadafCompany.email || '',
         phone: alhadafCompany.phone || '',
         address: alhadafCompany.address || '',
@@ -155,7 +154,7 @@ export default function Settings() {
                   }`}
                   onClick={() => handleSelectCompany('target-specialties')}
                 >
-                  <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-secondary/50 flex items-center justify-center overflow-hidden">
+                  <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-white flex items-center justify-center overflow-hidden">
                     <img src={targetLogo} alt="Target Specialties" className="w-full h-full object-contain" />
                   </div>
                   
@@ -192,24 +191,20 @@ export default function Settings() {
                 {/* Alhadaf Projects - Editable */}
                 <div 
                   className={`flex items-start gap-4 p-4 rounded-lg border transition-colors ${
-                    alhadafCompany && activeCompanyId === alhadafCompany.id 
+                    activeCompanyId === 'alhadaf-projects' 
                       ? 'border-primary bg-primary/5' 
                       : 'bg-card hover:bg-secondary/20'
                   } ${!editingAlhadaf ? 'cursor-pointer' : ''}`}
-                  onClick={() => !editingAlhadaf && alhadafCompany && handleSelectCompany(alhadafCompany.id)}
+                  onClick={() => !editingAlhadaf && handleSelectCompany('alhadaf-projects')}
                 >
-                  <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-secondary/50 flex items-center justify-center overflow-hidden">
-                    {alhadafForm.logo_url ? (
-                      <img src={alhadafForm.logo_url} alt="Alhadaf Projects" className="w-full h-full object-contain" />
-                    ) : (
-                      <Building2 className="h-8 w-8 text-muted-foreground" />
-                    )}
+                  <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-white flex items-center justify-center overflow-hidden">
+                    <img src={alhadafLogo} alt="Alhadaf Projects" className="w-full h-full object-contain" />
                   </div>
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold truncate">ALHADAF PROJECTS</h3>
-                      {alhadafCompany && activeCompanyId === alhadafCompany.id && (
+                      <h3 className="font-semibold truncate">{alhadafCompany.name}</h3>
+                      {activeCompanyId === 'alhadaf-projects' && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">
                           <Star className="h-3 w-3" />
                           Active
@@ -219,15 +214,6 @@ export default function Settings() {
 
                     {editingAlhadaf ? (
                       <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Logo URL</Label>
-                          <Input 
-                            value={alhadafForm.logo_url}
-                            onChange={(e) => setAlhadafForm(prev => ({ ...prev, logo_url: e.target.value }))}
-                            placeholder="https://example.com/logo.png"
-                            className="h-8 text-sm"
-                          />
-                        </div>
                         <div className="grid grid-cols-2 gap-2">
                           <div className="space-y-1">
                             <Label className="text-xs">Email</Label>
@@ -278,17 +264,11 @@ export default function Settings() {
                       </div>
                     ) : (
                       <div className="text-sm text-muted-foreground space-y-0.5">
-                        {alhadafCompany ? (
-                          <>
-                            {alhadafCompany.email && <p>{alhadafCompany.email}</p>}
-                            {alhadafCompany.phone && <p>{alhadafCompany.phone}</p>}
-                            {alhadafCompany.address && <p className="truncate">{alhadafCompany.address}</p>}
-                            {!alhadafCompany.email && !alhadafCompany.phone && !alhadafCompany.address && (
-                              <p className="text-muted-foreground/60">Click Edit to add details</p>
-                            )}
-                          </>
-                        ) : (
-                          <p className="text-muted-foreground/60">Click Edit to add details</p>
+                        {alhadafCompany.email && <p>{alhadafCompany.email}</p>}
+                        {alhadafCompany.phone && <p>{alhadafCompany.phone}</p>}
+                        {alhadafCompany.address && <p className="truncate">{alhadafCompany.address}</p>}
+                        {!alhadafCompany.email && !alhadafCompany.phone && !alhadafCompany.address && (
+                          <p className="text-muted-foreground/60">Click Edit to add contact details</p>
                         )}
                       </div>
                     )}
@@ -300,12 +280,12 @@ export default function Settings() {
                         <Edit className="h-4 w-4" />
                       </Button>
                     )}
-                    {alhadafCompany && activeCompanyId === alhadafCompany.id ? (
+                    {activeCompanyId === 'alhadaf-projects' ? (
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                         <Check className="h-4 w-4 text-primary" />
                       </div>
-                    ) : alhadafCompany && !editingAlhadaf ? (
-                      <Button variant="outline" size="sm" onClick={() => handleSelectCompany(alhadafCompany.id)}>
+                    ) : !editingAlhadaf ? (
+                      <Button variant="outline" size="sm" onClick={() => handleSelectCompany('alhadaf-projects')}>
                         Select
                       </Button>
                     ) : null}
