@@ -86,10 +86,10 @@ export default function QuotationDetail() {
     const margin = 14;
     const contentWidth = pageWidth - (margin * 2);
     
-    // Add logo - proper proportions
+    // Add logo - larger and more visible
     const img = new Image();
     img.src = logo;
-    doc.addImage(img, 'PNG', margin, 10, 35, 20);
+    doc.addImage(img, 'PNG', margin, 8, 50, 30);
 
     // Company Header - positioned to the right of logo
     doc.setFontSize(12);
