@@ -28,6 +28,7 @@ export interface Quotation {
   valid_until: string;
   status: string;
   version: number;
+  company_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -45,6 +46,7 @@ interface DbQuotation {
   valid_until: string | null;
   status: string;
   version: number;
+  company_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -62,6 +64,7 @@ const mapDbToQuotation = (db: DbQuotation): Quotation => ({
   valid_until: db.valid_until || '',
   status: db.status,
   version: db.version,
+  company_id: db.company_id,
   created_at: db.created_at,
   updated_at: db.updated_at,
 });
@@ -115,6 +118,7 @@ export function useQuotations() {
         total: quotationData.total || 0,
         valid_until: quotationData.valid_until || null,
         status: quotationData.status || 'draft',
+        company_id: quotationData.company_id || null,
         version: 1,
       };
 
@@ -158,6 +162,7 @@ export function useQuotations() {
         total: updates.total,
         valid_until: updates.valid_until,
         status: updates.status,
+        company_id: updates.company_id,
       };
 
       const { data, error } = await supabase

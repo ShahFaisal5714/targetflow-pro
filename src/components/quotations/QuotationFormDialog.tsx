@@ -9,6 +9,7 @@ import { Plus, X } from 'lucide-react';
 import { Quotation, QuotationItem } from '@/types/crm';
 import { useProjects } from '@/hooks/useProjects';
 import { useProducts } from '@/hooks/useProducts';
+import { useCompanies } from '@/hooks/useCompanies';
 
 interface QuotationFormDialogProps {
   open: boolean;
@@ -21,7 +22,9 @@ interface QuotationFormDialogProps {
 export default function QuotationFormDialog({ open, onOpenChange, quotation, onSubmit, initialProjectId }: QuotationFormDialogProps) {
   const { projects } = useProjects();
   const { products } = useProducts();
+  const { companies, getDefaultCompany } = useCompanies();
   const [projectId, setProjectId] = useState(quotation?.projectId || initialProjectId || '');
+  const [companyId, setCompanyId] = useState(quotation?.companyId || '');
   const [items, setItems] = useState<Partial<QuotationItem>[]>(
     quotation?.items || [{ productId: '', quantity: 0, unitPrice: 0 }]
   );
@@ -32,16 +35,19 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
   useEffect(() => {
     if (quotation) {
       setProjectId(quotation.projectId || '');
+      setCompanyId(quotation.companyId || '');
       setItems(quotation.items || [{ productId: '', quantity: 0, unitPrice: 0 }]);
       setDiscountType(quotation.discount?.type || 'percentage');
       setDiscountValue(quotation.discount?.value || 0);
     } else if (open) {
+      const defaultCompany = getDefaultCompany();
       setProjectId(initialProjectId || '');
+      setCompanyId(defaultCompany?.id || '');
       setItems([{ productId: '', quantity: 0, unitPrice: 0 }]);
       setDiscountType('percentage');
       setDiscountValue(0);
     }
-  }, [quotation, open, initialProjectId]);
+  }, [quotation, open, initialProjectId, companies]);
 
   const handleAddItem = () => {
     setItems([...items, { productId: '', quantity: 0, unitPrice: 0 }]);
@@ -111,6 +117,7 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
       tax: { type: 'VAT', rate: 5 },
       total,
       validUntil: new Date(Date.now() + validDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      companyId: companyId || undefined,
       status: quotation?.status || 'draft'
     };
 
@@ -136,8 +143,24 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Project Selection */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Company & Project Selection */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Company *</Label>
+              <Select value={companyId} onValueChange={setCompanyId} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select company" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label>Project *</Label>
               <Select value={projectId} onValueChange={setProjectId} required>
@@ -153,6 +176,17 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label>Valid For (Days)</Label>
+              <Input
+                type="number"
+                value={validDays}
+                onChange={(e) => setValidDays(Number(e.target.value))}
+                min={1}
+              />
+            </div>
+          </div>
 
             <div className="space-y-2">
               <Label>Valid For (Days)</Label>

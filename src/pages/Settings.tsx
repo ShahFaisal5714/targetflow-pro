@@ -7,8 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Bell, Shield, Database, Mail, Globe, Loader2 } from 'lucide-react';
+import { Building2, Bell, Shield, Database, Mail, Globe, Loader2, Plus, Edit, Trash2, Star } from 'lucide-react';
 import { useSettings, CompanySettings, TaxSettings, NotificationSettings } from '@/hooks/useSettings';
+import { useCompanies, Company } from '@/hooks/useCompanies';
+import CompanyFormDialog from '@/components/settings/CompanyFormDialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 export default function Settings() {
   const { 
@@ -22,10 +25,24 @@ export default function Settings() {
     saveNotificationSettings
   } = useSettings();
 
+  const {
+    companies,
+    loading: companiesLoading,
+    createCompany,
+    updateCompany,
+    deleteCompany,
+  } = useCompanies();
+
   // Local state for form inputs
   const [company, setCompany] = useState<CompanySettings>(companySettings);
   const [tax, setTax] = useState<TaxSettings>(taxSettings);
   const [notifications, setNotifications] = useState<NotificationSettings>(notificationSettings);
+
+  // Company management state
+  const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<Company | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
 
   // Update local state when settings are loaded
   useEffect(() => {
@@ -54,7 +71,38 @@ export default function Settings() {
     saveNotificationSettings(updated);
   };
 
-  if (loading) {
+  const handleAddCompany = () => {
+    setSelectedCompany(undefined);
+    setCompanyDialogOpen(true);
+  };
+
+  const handleEditCompany = (comp: Company) => {
+    setSelectedCompany(comp);
+    setCompanyDialogOpen(true);
+  };
+
+  const handleDeleteCompany = (comp: Company) => {
+    setCompanyToDelete(comp);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteCompany = async () => {
+    if (companyToDelete) {
+      await deleteCompany(companyToDelete.id);
+      setDeleteDialogOpen(false);
+      setCompanyToDelete(null);
+    }
+  };
+
+  const handleCompanySubmit = async (data: Partial<Company>) => {
+    if (selectedCompany) {
+      return await updateCompany(selectedCompany.id, data);
+    } else {
+      return await createCompany(data);
+    }
+  };
+
+  if (loading || companiesLoading) {
     return (
       <MainLayout>
         <Header title="Settings" subtitle="Manage your system preferences" />
@@ -70,11 +118,15 @@ export default function Settings() {
       <Header title="Settings" subtitle="Manage your system preferences" />
 
       <div className="p-6">
-        <Tabs defaultValue="company" className="w-full">
+        <Tabs defaultValue="companies" className="w-full">
           <TabsList className="bg-secondary/50 mb-6">
+            <TabsTrigger value="companies" className="gap-2">
+              <Building2 className="h-4 w-4" />
+              Companies
+            </TabsTrigger>
             <TabsTrigger value="company" className="gap-2">
               <Building2 className="h-4 w-4" />
-              Company
+              General
             </TabsTrigger>
             <TabsTrigger value="notifications" className="gap-2">
               <Bell className="h-4 w-4" />
@@ -90,12 +142,78 @@ export default function Settings() {
             </TabsTrigger>
           </TabsList>
 
+          <TabsContent value="companies">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Company Profiles</CardTitle>
+                    <CardDescription>Manage multiple company identities for quotations and invoices</CardDescription>
+                  </div>
+                  <Button onClick={handleAddCompany}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Company
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {companies.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium">No companies added yet</p>
+                    <p className="text-sm">Add your first company to get started</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {companies.map((comp) => (
+                      <div key={comp.id} className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-secondary/20 transition-colors">
+                        <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-secondary/50 flex items-center justify-center overflow-hidden">
+                          {comp.logo_url ? (
+                            <img src={comp.logo_url} alt={comp.name} className="w-full h-full object-contain" />
+                          ) : (
+                            <Building2 className="h-8 w-8 text-muted-foreground" />
+                          )}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold truncate">{comp.name}</h3>
+                            {comp.is_default && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">
+                                <Star className="h-3 w-3" />
+                                Default
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground space-y-0.5">
+                            {comp.email && <p>{comp.email}</p>}
+                            {comp.phone && <p>{comp.phone}</p>}
+                            {comp.address && <p className="truncate">{comp.address}</p>}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditCompany(comp)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteCompany(comp)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="company">
             <div className="grid gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Company Information</CardTitle>
-                  <CardDescription>Update your company details and branding</CardDescription>
+                  <CardTitle>General Information</CardTitle>
+                  <CardDescription>Update your default company details</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -389,6 +507,30 @@ export default function Settings() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <CompanyFormDialog
+        open={companyDialogOpen}
+        onOpenChange={setCompanyDialogOpen}
+        company={selectedCompany}
+        onSubmit={handleCompanySubmit}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Company</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{companyToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteCompany} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
