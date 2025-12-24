@@ -16,6 +16,20 @@ export interface Company {
   updated_at: string;
 }
 
+// Fixed company data for Target Specialties (hardcoded)
+const TARGET_SPECIALTIES: Company = {
+  id: 'target-specialties',
+  name: 'TARGET SPECIALTIES',
+  logo_url: null, // Will use the imported logo
+  email: 'Info@targetspecialties.com',
+  phone: '+971 50 958 7185',
+  address: 'Building Rema plaza | Office no. 1 Aljurf 3 Ajman UAE',
+  website: 'targetspecialties.com',
+  is_default: true,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
 interface DbCompany {
   id: string;
   user_id: string;
@@ -32,29 +46,44 @@ interface DbCompany {
 
 export function useCompanies() {
   const { user } = useAuth();
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const [alhadafCompany, setAlhadafCompany] = useState<Company | null>(null);
+  const [activeCompanyId, setActiveCompanyId] = useState<string>('target-specialties');
   const [loading, setLoading] = useState(true);
 
   const fetchCompanies = async () => {
     if (!user) return;
     
     try {
+      // Fetch Alhadaf company from database
       const { data, error } = await supabase
         .from('companies')
         .select('*')
-        .order('is_default', { ascending: false })
-        .order('name');
+        .eq('name', 'ALHADAF PROJECTS')
+        .maybeSingle();
 
       if (error) throw error;
 
-      setCompanies((data as DbCompany[]) || []);
+      if (data) {
+        setAlhadafCompany(data as DbCompany);
+        if (data.is_default) {
+          setActiveCompanyId(data.id);
+        }
+      }
+
+      // Check which company is default
+      const { data: defaultData } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('is_default', true)
+        .maybeSingle();
+
+      if (defaultData) {
+        setActiveCompanyId(defaultData.id);
+      } else {
+        setActiveCompanyId('target-specialties');
+      }
     } catch (error: any) {
       console.error('Error fetching companies:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch companies',
-        variant: 'destructive',
-      });
     } finally {
       setLoading(false);
     }
@@ -64,96 +93,63 @@ export function useCompanies() {
     fetchCompanies();
   }, [user]);
 
-  const createCompany = async (companyData: Partial<Company>): Promise<Company | null> => {
+  const updateAlhadafCompany = async (updates: Partial<Company>): Promise<Company | null> => {
     if (!user) return null;
 
     try {
-      // If this is set as default, remove default from other companies
-      if (companyData.is_default) {
-        await supabase
+      if (alhadafCompany) {
+        // Update existing
+        const { data, error } = await supabase
           .from('companies')
-          .update({ is_default: false })
-          .eq('user_id', user.id);
-      }
+          .update({
+            logo_url: updates.logo_url,
+            email: updates.email,
+            phone: updates.phone,
+            address: updates.address,
+            website: updates.website,
+          })
+          .eq('id', alhadafCompany.id)
+          .select()
+          .single();
 
-      const { data, error } = await supabase
-        .from('companies')
-        .insert({
-          user_id: user.id,
-          name: companyData.name || '',
-          logo_url: companyData.logo_url || null,
-          email: companyData.email || null,
-          phone: companyData.phone || null,
-          address: companyData.address || null,
-          website: companyData.website || null,
-          is_default: companyData.is_default || false,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      const newCompany = data as Company;
-      setCompanies(prev => [...prev, newCompany]);
-      
-      toast({
-        title: 'Success',
-        description: 'Company created successfully',
-      });
-
-      return newCompany;
-    } catch (error: any) {
-      console.error('Error creating company:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create company',
-        variant: 'destructive',
-      });
-      return null;
-    }
-  };
-
-  const updateCompany = async (id: string, updates: Partial<Company>): Promise<Company | null> => {
-    if (!user) return null;
-
-    try {
-      // If this is set as default, remove default from other companies
-      if (updates.is_default) {
-        await supabase
+        if (error) throw error;
+        setAlhadafCompany(data as Company);
+        
+        toast({
+          title: 'Success',
+          description: 'Alhadaf Projects details updated',
+        });
+        
+        return data as Company;
+      } else {
+        // Create new
+        const { data, error } = await supabase
           .from('companies')
-          .update({ is_default: false })
-          .eq('user_id', user.id)
-          .neq('id', id);
+          .insert({
+            user_id: user.id,
+            name: 'ALHADAF PROJECTS',
+            logo_url: updates.logo_url || null,
+            email: updates.email || null,
+            phone: updates.phone || null,
+            address: updates.address || null,
+            website: updates.website || null,
+            is_default: false,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        setAlhadafCompany(data as Company);
+        
+        toast({
+          title: 'Success',
+          description: 'Alhadaf Projects created',
+        });
+        
+        return data as Company;
       }
-
-      const { data, error } = await supabase
-        .from('companies')
-        .update({
-          name: updates.name,
-          logo_url: updates.logo_url,
-          email: updates.email,
-          phone: updates.phone,
-          address: updates.address,
-          website: updates.website,
-          is_default: updates.is_default,
-        })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      const updatedCompany = data as Company;
-      setCompanies(prev => prev.map(c => c.id === id ? updatedCompany : c));
-      
-      toast({
-        title: 'Success',
-        description: 'Company updated successfully',
-      });
-
-      return updatedCompany;
     } catch (error: any) {
-      console.error('Error updating company:', error);
+      console.error('Error updating Alhadaf company:', error);
       toast({
         title: 'Error',
         description: 'Failed to update company',
@@ -163,45 +159,64 @@ export function useCompanies() {
     }
   };
 
-  const deleteCompany = async (id: string): Promise<boolean> => {
+  const setActiveCompany = async (companyId: string): Promise<boolean> => {
+    if (!user) return false;
+
     try {
-      const { error } = await supabase
+      // First, set all companies to non-default
+      await supabase
         .from('companies')
-        .delete()
-        .eq('id', id);
+        .update({ is_default: false })
+        .eq('user_id', user.id);
 
-      if (error) throw error;
+      // If selecting Alhadaf, set it as default in DB
+      if (companyId !== 'target-specialties' && alhadafCompany) {
+        await supabase
+          .from('companies')
+          .update({ is_default: true })
+          .eq('id', companyId);
+      }
 
-      setCompanies(prev => prev.filter(c => c.id !== id));
+      setActiveCompanyId(companyId);
       
       toast({
         title: 'Success',
-        description: 'Company deleted successfully',
+        description: `${companyId === 'target-specialties' ? 'Target Specialties' : 'Alhadaf Projects'} is now active`,
       });
 
       return true;
     } catch (error: any) {
-      console.error('Error deleting company:', error);
+      console.error('Error setting active company:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete company',
+        description: 'Failed to set active company',
         variant: 'destructive',
       });
       return false;
     }
   };
 
-  const getDefaultCompany = (): Company | undefined => {
-    return companies.find(c => c.is_default) || companies[0];
+  const getActiveCompany = (): Company => {
+    if (activeCompanyId === 'target-specialties') {
+      return TARGET_SPECIALTIES;
+    }
+    return alhadafCompany || TARGET_SPECIALTIES;
   };
 
+  const getTargetSpecialties = (): Company => TARGET_SPECIALTIES;
+
+  const getAlhadafProjects = (): Company | null => alhadafCompany;
+
   return {
-    companies,
+    targetSpecialties: TARGET_SPECIALTIES,
+    alhadafCompany,
+    activeCompanyId,
     loading,
-    createCompany,
-    updateCompany,
-    deleteCompany,
-    getDefaultCompany,
+    updateAlhadafCompany,
+    setActiveCompany,
+    getActiveCompany,
+    getTargetSpecialties,
+    getAlhadafProjects,
     refetch: fetchCompanies,
   };
 }
