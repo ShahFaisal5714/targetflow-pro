@@ -5,21 +5,53 @@ import { Card } from '@/components/ui/card';
 import { ArrowLeft, Download, FileText, Printer, Loader2 } from 'lucide-react';
 import { useQuotations } from '@/hooks/useQuotations';
 import { useProjects } from '@/hooks/useProjects';
+import { useCompanies, TARGET_SPECIALTIES, ALHADAF_PROJECTS, Company } from '@/hooks/useCompanies';
 import StatusBadge from '@/components/shared/StatusBadge';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import targetLogo from '@/assets/target-logo.jpg';
+import alhadafLogo from '@/assets/alhadaf-logo.png';
 
 export default function QuotationDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { quotations, loading: quotationsLoading } = useQuotations();
   const { projects, loading: projectsLoading } = useProjects();
+  const { activeCompanyId, alhadafCompany, loading: companiesLoading } = useCompanies();
   
   const quotation = quotations.find(q => q.id === id);
   const project = quotation ? projects.find(p => p.id === quotation.project_id) : null;
 
-  if (quotationsLoading || projectsLoading) {
+  // Determine which company to use for this quotation
+  // Priority: quotation's company_id > active company
+  const getQuotationCompany = (): { company: Company; logo: string } => {
+    const quotationCompanyId = quotation?.company_id;
+    
+    // Check if quotation has a specific company assigned
+    if (quotationCompanyId === 'alhadaf-projects' || 
+        (quotationCompanyId && quotationCompanyId !== 'target-specialties')) {
+      return { 
+        company: { ...ALHADAF_PROJECTS, ...alhadafCompany },
+        logo: alhadafLogo 
+      };
+    }
+    
+    if (quotationCompanyId === 'target-specialties') {
+      return { company: TARGET_SPECIALTIES, logo: targetLogo };
+    }
+    
+    // Fall back to active company
+    if (activeCompanyId === 'alhadaf-projects') {
+      return { 
+        company: { ...ALHADAF_PROJECTS, ...alhadafCompany },
+        logo: alhadafLogo 
+      };
+    }
+    
+    return { company: TARGET_SPECIALTIES, logo: targetLogo };
+  };
+
+  if (quotationsLoading || projectsLoading || companiesLoading) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center min-h-screen">
@@ -39,6 +71,8 @@ export default function QuotationDetail() {
     );
   }
 
+  const { company, logo } = getQuotationCompany();
+
   const discountAmount = quotation.discount.type === 'percentage'
     ? (quotation.subtotal * quotation.discount.value) / 100
     : quotation.discount.value;
@@ -54,20 +88,20 @@ export default function QuotationDetail() {
     
     // Add logo - proper proportions
     const img = new Image();
-    img.src = targetLogo;
-    doc.addImage(img, 'JPEG', margin, 10, 35, 20);
+    img.src = logo;
+    doc.addImage(img, 'PNG', margin, 10, 35, 20);
 
     // Company Header - positioned to the right of logo
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
-    doc.text('TARGET SPECIALTIES', pageWidth / 2, 15, { align: 'center' });
+    doc.text(company.name, pageWidth / 2, 15, { align: 'center' });
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 60, 60);
-    doc.text('Building Rema plaza | Office no. 1 Aljurf 3 Ajman UAE', pageWidth / 2, 21, { align: 'center' });
-    doc.text('Email: Info@targetspecialties.com | Web: targetspecialties.com', pageWidth / 2, 26, { align: 'center' });
-    doc.text('Contact No: +971 50 958 7185', pageWidth / 2, 31, { align: 'center' });
+    doc.text(company.address || '', pageWidth / 2, 21, { align: 'center' });
+    doc.text(`Email: ${company.email || 'N/A'} | Web: ${company.website || 'N/A'}`, pageWidth / 2, 26, { align: 'center' });
+    doc.text(`Contact No: ${company.phone || 'N/A'}`, pageWidth / 2, 31, { align: 'center' });
 
     // Title
     doc.setFontSize(18);
@@ -212,8 +246,8 @@ export default function QuotationDetail() {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       const terms = [
-        '1. Our offer excludes any civil work/electrical work/mechanical work/protection work, floor leveling & other enablement works.',
-        '2. All products remain property of Target Specialties until paid in full.',
+        `1. Our offer excludes any civil work/electrical work/mechanical work/protection work, floor leveling & other enablement works.`,
+        `2. All products remain property of ${company.name} until paid in full.`,
         '3. The prices are on the basis of above mentioned quantities, any variation shall subject to revise the commercial offer.',
         '4. Our cost of finance is 3% of the invoice value per month. Any payments that are not paid on the due date & or late payment, charges of 3% per month will be charged.'
       ];
@@ -231,18 +265,16 @@ export default function QuotationDetail() {
 
   const handleExportPDF = () => {
     const doc = generatePDF();
-    // Open PDF in new tab - user can save with their preferred name/location
     const pdfBlob = doc.output('blob');
     const pdfUrl = URL.createObjectURL(pdfBlob);
     const newWindow = window.open(pdfUrl, '_blank');
     if (newWindow) {
-      newWindow.document.title = `Quotation_${quotation.id}_${project.name.replace(/\s+/g, '_')}`;
+      newWindow.document.title = `Quotation_${quotation.id}_${project?.name?.replace(/\s+/g, '_') || 'Unknown'}`;
     }
   };
 
   const handlePrint = () => {
     const doc = generatePDF();
-    // Open PDF in new window and trigger print dialog
     const pdfBlob = doc.output('blob');
     const pdfUrl = URL.createObjectURL(pdfBlob);
     const printWindow = window.open(pdfUrl, '_blank');
@@ -289,15 +321,13 @@ export default function QuotationDetail() {
           {/* Company Header */}
           <div className="p-8 border-b bg-gradient-to-br from-primary/5 to-accent/5">
             <div className="flex items-start justify-between mb-6">
-              <img src={targetLogo} alt="Target Specialties" className="h-20 w-auto object-contain" />
+              <img src={logo} alt={company.name} className="h-20 w-auto object-contain bg-white rounded p-2" />
               <div className="text-right text-sm text-muted-foreground">
-                <p className="font-semibold text-foreground">TARGET SPECIALTIES</p>
-                <p>Building Rema plaza | Office no. 1</p>
-                <p>Aljurf 3 Ajman UAE</p>
-                <p className="mt-2">Email: Info@targetspecialties.com</p>
-                <p>Web: targetspecialties.com</p>
-                <p className="mt-2">Contact: +971 50 958 7185</p>
-                <p></p>
+                <p className="font-semibold text-foreground">{company.name}</p>
+                {company.address && <p>{company.address}</p>}
+                {company.email && <p className="mt-2">Email: {company.email}</p>}
+                {company.website && <p>Web: {company.website}</p>}
+                {company.phone && <p className="mt-2">Contact: {company.phone}</p>}
               </div>
             </div>
             
@@ -427,7 +457,7 @@ export default function QuotationDetail() {
               <h3 className="font-bold text-foreground mb-3">Terms & Conditions</h3>
               <div className="space-y-2 text-xs text-muted-foreground">
                 <p>1. Our offer excludes any civil work/electrical work/mechanical work/protection work, floor leveling & other enablement works.</p>
-                <p>2. All products remain property of Target Specialties until paid in full.</p>
+                <p>2. All products remain property of {company.name} until paid in full.</p>
                 <p>3. The prices are on the basis of above mentioned quantities, any variation shall subject to revise the commercial offer.</p>
                 <p>4. Our cost of finance is 3% of the invoice value per month. Any payments that are not paid on the due date & or late payment, charges of 3% per month will be charged to cover our finance costs.</p>
               </div>
