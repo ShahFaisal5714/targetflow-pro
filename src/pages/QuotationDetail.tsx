@@ -265,24 +265,32 @@ export default function QuotationDetail() {
 
   const handleExportPDF = () => {
     const doc = generatePDF();
-    const pdfBlob = doc.output('blob');
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-    const newWindow = window.open(pdfUrl, '_blank');
-    if (newWindow) {
-      newWindow.document.title = `Quotation_${quotation.id}_${project?.name?.replace(/\s+/g, '_') || 'Unknown'}`;
-    }
+    // Direct download instead of popup
+    doc.save(`Quotation_${quotation.id}_${project?.name?.replace(/\s+/g, '_') || 'Unknown'}.pdf`);
   };
 
   const handlePrint = () => {
     const doc = generatePDF();
+    // Create an iframe for printing to avoid popup blocker
     const pdfBlob = doc.output('blob');
     const pdfUrl = URL.createObjectURL(pdfBlob);
-    const printWindow = window.open(pdfUrl, '_blank');
-    if (printWindow) {
-      printWindow.onload = () => {
-        printWindow.print();
-      };
-    }
+    
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = pdfUrl;
+    document.body.appendChild(iframe);
+    
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow?.print();
+      }, 100);
+    };
+    
+    // Cleanup after a delay
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+      URL.revokeObjectURL(pdfUrl);
+    }, 60000);
   };
 
   return (
