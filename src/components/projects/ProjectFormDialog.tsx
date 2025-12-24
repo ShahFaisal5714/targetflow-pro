@@ -17,7 +17,7 @@ interface ProjectFormDialogProps {
 
 export default function ProjectFormDialog({ open, onOpenChange, project, onSubmit }: ProjectFormDialogProps) {
   const { toast } = useToast();
-  const { companies, getDefaultCompany } = useCompanies();
+  const { targetSpecialties, alhadafCompany, activeCompanyId } = useCompanies();
   const isEdit = !!project;
 
   const [formData, setFormData] = useState({
@@ -49,10 +49,9 @@ export default function ProjectFormDialog({ open, onOpenChange, project, onSubmi
         salesManager: project.salesManager,
         startDate: project.timeline.startDate,
         endDate: project.timeline.endDate,
-        companyId: project.companyId || '',
+        companyId: project.companyId || activeCompanyId,
       });
     } else {
-      const defaultCompany = getDefaultCompany();
       setFormData({
         name: '',
         category: 'residential',
@@ -65,10 +64,10 @@ export default function ProjectFormDialog({ open, onOpenChange, project, onSubmi
         salesManager: '',
         startDate: '',
         endDate: '',
-        companyId: defaultCompany?.id || '',
+        companyId: activeCompanyId,
       });
     }
-  }, [project, open, companies]);
+  }, [project, open, activeCompanyId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,6 +105,14 @@ export default function ProjectFormDialog({ open, onOpenChange, project, onSubmi
     onOpenChange(false);
   };
 
+  // Build company options
+  const companyOptions = [
+    { id: targetSpecialties.id, name: targetSpecialties.name },
+  ];
+  if (alhadafCompany) {
+    companyOptions.push({ id: alhadafCompany.id, name: alhadafCompany.name });
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -125,7 +132,7 @@ export default function ProjectFormDialog({ open, onOpenChange, project, onSubmi
                   <SelectValue placeholder="Select company" />
                 </SelectTrigger>
                 <SelectContent>
-                  {companies.map((company) => (
+                  {companyOptions.map((company) => (
                     <SelectItem key={company.id} value={company.id}>
                       {company.name}
                     </SelectItem>

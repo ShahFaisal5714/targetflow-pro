@@ -22,7 +22,7 @@ interface QuotationFormDialogProps {
 export default function QuotationFormDialog({ open, onOpenChange, quotation, onSubmit, initialProjectId }: QuotationFormDialogProps) {
   const { projects } = useProjects();
   const { products } = useProducts();
-  const { companies, getDefaultCompany } = useCompanies();
+  const { targetSpecialties, alhadafCompany, activeCompanyId } = useCompanies();
   const [projectId, setProjectId] = useState(quotation?.projectId || initialProjectId || '');
   const [companyId, setCompanyId] = useState(quotation?.companyId || '');
   const [items, setItems] = useState<Partial<QuotationItem>[]>(
@@ -32,6 +32,14 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
   const [discountValue, setDiscountValue] = useState(quotation?.discount?.value || 0);
   const [validDays, setValidDays] = useState(30);
 
+  // Build company options
+  const companyOptions = [
+    { id: targetSpecialties.id, name: targetSpecialties.name },
+  ];
+  if (alhadafCompany) {
+    companyOptions.push({ id: alhadafCompany.id, name: alhadafCompany.name });
+  }
+
   useEffect(() => {
     if (quotation) {
       setProjectId(quotation.projectId || '');
@@ -40,14 +48,13 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
       setDiscountType(quotation.discount?.type || 'percentage');
       setDiscountValue(quotation.discount?.value || 0);
     } else if (open) {
-      const defaultCompany = getDefaultCompany();
       setProjectId(initialProjectId || '');
-      setCompanyId(defaultCompany?.id || '');
+      setCompanyId(activeCompanyId);
       setItems([{ productId: '', quantity: 0, unitPrice: 0 }]);
       setDiscountType('percentage');
       setDiscountValue(0);
     }
-  }, [quotation, open, initialProjectId, companies]);
+  }, [quotation, open, initialProjectId, activeCompanyId]);
 
   const handleAddItem = () => {
     setItems([...items, { productId: '', quantity: 0, unitPrice: 0 }]);
@@ -152,7 +159,7 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
                   <SelectValue placeholder="Select company" />
                 </SelectTrigger>
                 <SelectContent>
-                  {companies.map((company) => (
+                  {companyOptions.map((company) => (
                     <SelectItem key={company.id} value={company.id}>
                       {company.name}
                     </SelectItem>

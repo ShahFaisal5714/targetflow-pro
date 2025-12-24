@@ -7,11 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Bell, Shield, Database, Mail, Globe, Loader2, Plus, Edit, Trash2, Star } from 'lucide-react';
+import { Building2, Bell, Shield, Database, Loader2, Star, Check, Edit } from 'lucide-react';
 import { useSettings, CompanySettings, TaxSettings, NotificationSettings } from '@/hooks/useSettings';
 import { useCompanies, Company } from '@/hooks/useCompanies';
-import CompanyFormDialog from '@/components/settings/CompanyFormDialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import targetLogo from '@/assets/target-logo.jpg';
 
 export default function Settings() {
   const { 
@@ -26,11 +25,12 @@ export default function Settings() {
   } = useSettings();
 
   const {
-    companies,
+    targetSpecialties,
+    alhadafCompany,
+    activeCompanyId,
     loading: companiesLoading,
-    createCompany,
-    updateCompany,
-    deleteCompany,
+    updateAlhadafCompany,
+    setActiveCompany,
   } = useCompanies();
 
   // Local state for form inputs
@@ -38,11 +38,16 @@ export default function Settings() {
   const [tax, setTax] = useState<TaxSettings>(taxSettings);
   const [notifications, setNotifications] = useState<NotificationSettings>(notificationSettings);
 
-  // Company management state
-  const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
-  const [selectedCompany, setSelectedCompany] = useState<Company | undefined>();
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+  // Alhadaf editing state
+  const [editingAlhadaf, setEditingAlhadaf] = useState(false);
+  const [alhadafForm, setAlhadafForm] = useState({
+    logo_url: '',
+    email: '',
+    phone: '',
+    address: '',
+    website: '',
+  });
+  const [savingAlhadaf, setSavingAlhadaf] = useState(false);
 
   // Update local state when settings are loaded
   useEffect(() => {
@@ -56,6 +61,18 @@ export default function Settings() {
   useEffect(() => {
     setNotifications(notificationSettings);
   }, [notificationSettings]);
+
+  useEffect(() => {
+    if (alhadafCompany) {
+      setAlhadafForm({
+        logo_url: alhadafCompany.logo_url || '',
+        email: alhadafCompany.email || '',
+        phone: alhadafCompany.phone || '',
+        address: alhadafCompany.address || '',
+        website: alhadafCompany.website || '',
+      });
+    }
+  }, [alhadafCompany]);
 
   const handleSaveCompany = () => {
     saveCompanySettings(company);
@@ -71,35 +88,15 @@ export default function Settings() {
     saveNotificationSettings(updated);
   };
 
-  const handleAddCompany = () => {
-    setSelectedCompany(undefined);
-    setCompanyDialogOpen(true);
+  const handleSaveAlhadaf = async () => {
+    setSavingAlhadaf(true);
+    await updateAlhadafCompany(alhadafForm);
+    setSavingAlhadaf(false);
+    setEditingAlhadaf(false);
   };
 
-  const handleEditCompany = (comp: Company) => {
-    setSelectedCompany(comp);
-    setCompanyDialogOpen(true);
-  };
-
-  const handleDeleteCompany = (comp: Company) => {
-    setCompanyToDelete(comp);
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDeleteCompany = async () => {
-    if (companyToDelete) {
-      await deleteCompany(companyToDelete.id);
-      setDeleteDialogOpen(false);
-      setCompanyToDelete(null);
-    }
-  };
-
-  const handleCompanySubmit = async (data: Partial<Company>) => {
-    if (selectedCompany) {
-      return await updateCompany(selectedCompany.id, data);
-    } else {
-      return await createCompany(data);
-    }
+  const handleSelectCompany = async (companyId: string) => {
+    await setActiveCompany(companyId);
   };
 
   if (loading || companiesLoading) {
@@ -145,65 +142,175 @@ export default function Settings() {
           <TabsContent value="companies">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Company Profiles</CardTitle>
-                    <CardDescription>Manage multiple company identities for quotations and invoices</CardDescription>
-                  </div>
-                  <Button onClick={handleAddCompany}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Company
-                  </Button>
-                </div>
+                <CardTitle>Company Profiles</CardTitle>
+                <CardDescription>Select which company's branding to use for quotations and invoices</CardDescription>
               </CardHeader>
-              <CardContent>
-                {companies.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg font-medium">No companies added yet</p>
-                    <p className="text-sm">Add your first company to get started</p>
+              <CardContent className="space-y-4">
+                {/* Target Specialties - Always present, hardcoded */}
+                <div 
+                  className={`flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-colors ${
+                    activeCompanyId === 'target-specialties' 
+                      ? 'border-primary bg-primary/5' 
+                      : 'bg-card hover:bg-secondary/20'
+                  }`}
+                  onClick={() => handleSelectCompany('target-specialties')}
+                >
+                  <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-secondary/50 flex items-center justify-center overflow-hidden">
+                    <img src={targetLogo} alt="Target Specialties" className="w-full h-full object-contain" />
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    {companies.map((comp) => (
-                      <div key={comp.id} className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-secondary/20 transition-colors">
-                        <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-secondary/50 flex items-center justify-center overflow-hidden">
-                          {comp.logo_url ? (
-                            <img src={comp.logo_url} alt={comp.name} className="w-full h-full object-contain" />
-                          ) : (
-                            <Building2 className="h-8 w-8 text-muted-foreground" />
-                          )}
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold truncate">{comp.name}</h3>
-                            {comp.is_default && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">
-                                <Star className="h-3 w-3" />
-                                Default
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-sm text-muted-foreground space-y-0.5">
-                            {comp.email && <p>{comp.email}</p>}
-                            {comp.phone && <p>{comp.phone}</p>}
-                            {comp.address && <p className="truncate">{comp.address}</p>}
-                          </div>
-                        </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold truncate">{targetSpecialties.name}</h3>
+                      {activeCompanyId === 'target-specialties' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">
+                          <Star className="h-3 w-3" />
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm text-muted-foreground space-y-0.5">
+                      <p>{targetSpecialties.email}</p>
+                      <p>{targetSpecialties.phone}</p>
+                      <p className="truncate">{targetSpecialties.address}</p>
+                    </div>
+                  </div>
 
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleEditCompany(comp)}>
-                            <Edit className="h-4 w-4" />
+                  <div className="flex items-center gap-2">
+                    {activeCompanyId === 'target-specialties' ? (
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Check className="h-4 w-4 text-primary" />
+                      </div>
+                    ) : (
+                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleSelectCompany('target-specialties'); }}>
+                        Select
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Alhadaf Projects - Editable */}
+                <div 
+                  className={`flex items-start gap-4 p-4 rounded-lg border transition-colors ${
+                    alhadafCompany && activeCompanyId === alhadafCompany.id 
+                      ? 'border-primary bg-primary/5' 
+                      : 'bg-card hover:bg-secondary/20'
+                  } ${!editingAlhadaf ? 'cursor-pointer' : ''}`}
+                  onClick={() => !editingAlhadaf && alhadafCompany && handleSelectCompany(alhadafCompany.id)}
+                >
+                  <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-secondary/50 flex items-center justify-center overflow-hidden">
+                    {alhadafForm.logo_url ? (
+                      <img src={alhadafForm.logo_url} alt="Alhadaf Projects" className="w-full h-full object-contain" />
+                    ) : (
+                      <Building2 className="h-8 w-8 text-muted-foreground" />
+                    )}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="font-semibold truncate">ALHADAF PROJECTS</h3>
+                      {alhadafCompany && activeCompanyId === alhadafCompany.id && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">
+                          <Star className="h-3 w-3" />
+                          Active
+                        </span>
+                      )}
+                    </div>
+
+                    {editingAlhadaf ? (
+                      <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Logo URL</Label>
+                          <Input 
+                            value={alhadafForm.logo_url}
+                            onChange={(e) => setAlhadafForm(prev => ({ ...prev, logo_url: e.target.value }))}
+                            placeholder="https://example.com/logo.png"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Email</Label>
+                            <Input 
+                              value={alhadafForm.email}
+                              onChange={(e) => setAlhadafForm(prev => ({ ...prev, email: e.target.value }))}
+                              placeholder="email@example.com"
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Phone</Label>
+                            <Input 
+                              value={alhadafForm.phone}
+                              onChange={(e) => setAlhadafForm(prev => ({ ...prev, phone: e.target.value }))}
+                              placeholder="+971 XX XXX XXXX"
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Address</Label>
+                          <Input 
+                            value={alhadafForm.address}
+                            onChange={(e) => setAlhadafForm(prev => ({ ...prev, address: e.target.value }))}
+                            placeholder="Company address"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Website</Label>
+                          <Input 
+                            value={alhadafForm.website}
+                            onChange={(e) => setAlhadafForm(prev => ({ ...prev, website: e.target.value }))}
+                            placeholder="https://example.com"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                          <Button size="sm" onClick={handleSaveAlhadaf} disabled={savingAlhadaf}>
+                            {savingAlhadaf && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+                            Save
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteCompany(comp)}>
-                            <Trash2 className="h-4 w-4" />
+                          <Button size="sm" variant="outline" onClick={() => setEditingAlhadaf(false)}>
+                            Cancel
                           </Button>
                         </div>
                       </div>
-                    ))}
+                    ) : (
+                      <div className="text-sm text-muted-foreground space-y-0.5">
+                        {alhadafCompany ? (
+                          <>
+                            {alhadafCompany.email && <p>{alhadafCompany.email}</p>}
+                            {alhadafCompany.phone && <p>{alhadafCompany.phone}</p>}
+                            {alhadafCompany.address && <p className="truncate">{alhadafCompany.address}</p>}
+                            {!alhadafCompany.email && !alhadafCompany.phone && !alhadafCompany.address && (
+                              <p className="text-muted-foreground/60">Click Edit to add details</p>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-muted-foreground/60">Click Edit to add details</p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                )}
+
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    {!editingAlhadaf && (
+                      <Button variant="ghost" size="icon" onClick={() => setEditingAlhadaf(true)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {alhadafCompany && activeCompanyId === alhadafCompany.id ? (
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Check className="h-4 w-4 text-primary" />
+                      </div>
+                    ) : alhadafCompany && !editingAlhadaf ? (
+                      <Button variant="outline" size="sm" onClick={() => handleSelectCompany(alhadafCompany.id)}>
+                        Select
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -433,7 +540,7 @@ export default function Settings() {
                     <div className="space-y-0.5">
                       <Label>Enable 2FA</Label>
                       <p className="text-sm text-muted-foreground">
-                        Require a code from your phone to log in
+                        Require a verification code when signing in
                       </p>
                     </div>
                     <Switch />
@@ -444,93 +551,53 @@ export default function Settings() {
           </TabsContent>
 
           <TabsContent value="integrations">
-            <div className="grid gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Mail className="h-5 w-5" />
-                    Email Integration
-                  </CardTitle>
-                  <CardDescription>Configure email settings for notifications</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="smtpServer">SMTP Server</Label>
-                      <Input id="smtpServer" placeholder="smtp.example.com" />
+            <Card>
+              <CardHeader>
+                <CardTitle>Connected Integrations</CardTitle>
+                <CardDescription>Manage external service connections</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded bg-blue-100 flex items-center justify-center">
+                      <span className="text-blue-600 font-bold">QB</span>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="smtpPort">Port</Label>
-                      <Input id="smtpPort" placeholder="587" />
-                    </div>
-                  </div>
-                  <Button variant="outline">Test Connection</Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Globe className="h-5 w-5" />
-                    WhatsApp Business API
-                  </CardTitle>
-                  <CardDescription>Send notifications via WhatsApp</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="whatsappToken">API Token</Label>
-                    <Input id="whatsappToken" type="password" placeholder="Enter your API token" />
-                  </div>
-                  <Button variant="outline">Connect WhatsApp</Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Database className="h-5 w-5" />
-                    Accounting Software
-                  </CardTitle>
-                  <CardDescription>Sync with your accounting system</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30">
                     <div>
-                      <p className="font-medium text-foreground">QuickBooks</p>
-                      <p className="text-sm text-muted-foreground">Not connected</p>
+                      <p className="font-medium">QuickBooks</p>
+                      <p className="text-sm text-muted-foreground">Accounting & Finance</p>
                     </div>
-                    <Button variant="outline">Connect</Button>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                  <Button variant="outline">Connect</Button>
+                </div>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded bg-green-100 flex items-center justify-center">
+                      <span className="text-green-600 font-bold">WA</span>
+                    </div>
+                    <div>
+                      <p className="font-medium">WhatsApp Business</p>
+                      <p className="text-sm text-muted-foreground">Customer Communication</p>
+                    </div>
+                  </div>
+                  <Button variant="outline">Connect</Button>
+                </div>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded bg-purple-100 flex items-center justify-center">
+                      <span className="text-purple-600 font-bold">Z</span>
+                    </div>
+                    <div>
+                      <p className="font-medium">Zoho CRM</p>
+                      <p className="text-sm text-muted-foreground">Customer Management</p>
+                    </div>
+                  </div>
+                  <Button variant="outline">Connect</Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
-
-      <CompanyFormDialog
-        open={companyDialogOpen}
-        onOpenChange={setCompanyDialogOpen}
-        company={selectedCompany}
-        onSubmit={handleCompanySubmit}
-      />
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Company</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{companyToDelete?.name}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteCompany} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </MainLayout>
   );
 }
