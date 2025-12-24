@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      companies: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_default: boolean
+          logo_url: string | null
+          name: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_default?: boolean
+          logo_url?: string | null
+          name: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_default?: boolean
+          logo_url?: string | null
+          name?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string
@@ -96,6 +138,7 @@ export type Database = {
         Row: {
           category: string
           client: Json
+          company_id: string | null
           consultant: Json | null
           contractor: Json
           created_at: string
@@ -111,6 +154,7 @@ export type Database = {
         Insert: {
           category: string
           client?: Json
+          company_id?: string | null
           consultant?: Json | null
           contractor?: Json
           created_at?: string
@@ -126,6 +170,7 @@ export type Database = {
         Update: {
           category?: string
           client?: Json
+          company_id?: string | null
           consultant?: Json | null
           contractor?: Json
           created_at?: string
@@ -138,10 +183,19 @@ export type Database = {
           user_id?: string
           value?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quotations: {
         Row: {
+          company_id: string | null
           created_at: string
           discount: Json | null
           id: string
@@ -158,6 +212,7 @@ export type Database = {
           version: number
         }
         Insert: {
+          company_id?: string | null
           created_at?: string
           discount?: Json | null
           id?: string
@@ -174,6 +229,7 @@ export type Database = {
           version?: number
         }
         Update: {
+          company_id?: string | null
           created_at?: string
           discount?: Json | null
           id?: string
@@ -190,6 +246,13 @@ export type Database = {
           version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "quotations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quotations_project_id_fkey"
             columns: ["project_id"]

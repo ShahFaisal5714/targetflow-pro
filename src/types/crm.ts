@@ -17,6 +17,7 @@ export interface Project {
     milestones: Milestone[];
   };
   value: number;
+  companyId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -58,6 +59,7 @@ export interface Quotation {
   };
   total: number;
   validUntil: string;
+  companyId?: string;
   createdAt: string;
   updatedAt: string;
 }

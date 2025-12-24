@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Project, ProjectCategory, ProjectStatus } from '@/types/crm';
 import { useToast } from '@/hooks/use-toast';
+import { useCompanies } from '@/hooks/useCompanies';
 
 interface ProjectFormDialogProps {
   open: boolean;
@@ -16,6 +17,7 @@ interface ProjectFormDialogProps {
 
 export default function ProjectFormDialog({ open, onOpenChange, project, onSubmit }: ProjectFormDialogProps) {
   const { toast } = useToast();
+  const { companies, getDefaultCompany } = useCompanies();
   const isEdit = !!project;
 
   const [formData, setFormData] = useState({
@@ -30,6 +32,7 @@ export default function ProjectFormDialog({ open, onOpenChange, project, onSubmi
     salesManager: '',
     startDate: '',
     endDate: '',
+    companyId: '',
   });
 
   useEffect(() => {
@@ -46,8 +49,10 @@ export default function ProjectFormDialog({ open, onOpenChange, project, onSubmi
         salesManager: project.salesManager,
         startDate: project.timeline.startDate,
         endDate: project.timeline.endDate,
+        companyId: project.companyId || '',
       });
     } else {
+      const defaultCompany = getDefaultCompany();
       setFormData({
         name: '',
         category: 'residential',
@@ -60,9 +65,10 @@ export default function ProjectFormDialog({ open, onOpenChange, project, onSubmi
         salesManager: '',
         startDate: '',
         endDate: '',
+        companyId: defaultCompany?.id || '',
       });
     }
-  }, [project, open]);
+  }, [project, open, companies]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,6 +91,7 @@ export default function ProjectFormDialog({ open, onOpenChange, project, onSubmi
         endDate: formData.endDate,
         milestones: project?.timeline.milestones || [],
       },
+      companyId: formData.companyId || undefined,
       updatedAt: new Date().toISOString(),
     };
 
@@ -108,6 +115,25 @@ export default function ProjectFormDialog({ open, onOpenChange, project, onSubmi
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <Label htmlFor="company">Company *</Label>
+              <Select 
+                value={formData.companyId} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, companyId: value }))}
+              >
+                <SelectTrigger id="company">
+                  <SelectValue placeholder="Select company" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="col-span-2">
               <Label htmlFor="name">Project Name</Label>
               <Input 

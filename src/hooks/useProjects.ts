@@ -15,6 +15,7 @@ interface DbProject {
   client: unknown;
   consultant: unknown | null;
   timeline: unknown;
+  company_id: string | null;
   user_id: string;
   created_at: string;
   updated_at: string;
@@ -63,6 +64,7 @@ const mapDbToProject = (row: DbProject): Project => ({
   client: parseCompany(row.client),
   consultant: row.consultant ? parseCompany(row.consultant) : undefined,
   timeline: parseTimeline(row.timeline),
+  companyId: row.company_id || undefined,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -118,6 +120,7 @@ export function useProjects() {
         client: JSON.parse(JSON.stringify(projectData.client || {})),
         consultant: projectData.consultant ? JSON.parse(JSON.stringify(projectData.consultant)) : null,
         timeline: JSON.parse(JSON.stringify(projectData.timeline || { startDate: '', endDate: '', milestones: [] })),
+        company_id: projectData.companyId || null,
         user_id: user.id,
       };
 
@@ -162,6 +165,7 @@ export function useProjects() {
       if (projectData.client !== undefined) updateData.client = projectData.client;
       if (projectData.consultant !== undefined) updateData.consultant = projectData.consultant;
       if (projectData.timeline !== undefined) updateData.timeline = projectData.timeline;
+      if (projectData.companyId !== undefined) updateData.company_id = projectData.companyId;
 
       const { error } = await supabase
         .from('projects')
