@@ -188,17 +188,6 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
             </div>
           </div>
 
-            <div className="space-y-2">
-              <Label>Valid For (Days)</Label>
-              <Input
-                type="number"
-                value={validDays}
-                onChange={(e) => setValidDays(Number(e.target.value))}
-                min={1}
-              />
-            </div>
-          </div>
-
           {/* Items */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
