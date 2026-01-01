@@ -4,7 +4,7 @@ import Header from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { logError } from '@/lib/logger';
-import { Users as UsersIcon, Shield, Clock, Loader2, Trash2 } from 'lucide-react';
+import { Users as UsersIcon, Shield, Clock, Loader2, Trash2, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth, AppRole, roleLabels } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -34,6 +34,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import UserFormDialog from '@/components/users/UserFormDialog';
 
 interface UserWithRole {
   id: string;
@@ -66,6 +67,8 @@ export default function Users() {
   const [loading, setLoading] = useState(true);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [showAddUserDialog, setShowAddUserDialog] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -181,6 +184,60 @@ export default function Users() {
     }
   };
 
+  const handleCreateUser = async (data: {
+    email: string;
+    password: string;
+    fullName: string;
+    role: AppRole;
+  }) => {
+    if (!isAdmin) {
+      toast.error('Only admins can create users');
+      return;
+    }
+
+    setIsCreatingUser(true);
+    try {
+      // Create user via Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            full_name: data.fullName,
+          },
+        },
+      });
+
+      if (authError) throw authError;
+
+      if (authData.user) {
+        // Update the role if not viewer (default)
+        if (data.role !== 'viewer') {
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .update({ role: data.role })
+            .eq('user_id', authData.user.id);
+
+          if (roleError) throw roleError;
+        }
+
+        toast.success('User created successfully');
+        setShowAddUserDialog(false);
+        fetchUsers();
+      }
+    } catch (error: any) {
+      logError('Users.handleCreateUser', error);
+      if (error.message?.includes('already registered')) {
+        toast.error('A user with this email already exists');
+      } else {
+        toast.error('Failed to create user');
+      }
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
+
   const roleStats = {
     admin: users.filter((u) => u.role === 'admin').length,
     sales: users.filter((u) => u.role === 'sales_manager').length,
@@ -203,6 +260,21 @@ export default function Users() {
       <Header
         title="User Management"
         subtitle={`${users.length} team members`}
+        action={
+          isAdmin && (
+            <Button onClick={() => setShowAddUserDialog(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add User
+            </Button>
+          )
+        }
+      />
+
+      <UserFormDialog
+        open={showAddUserDialog}
+        onOpenChange={setShowAddUserDialog}
+        onSubmit={handleCreateUser}
+        isLoading={isCreatingUser}
       />
 
       <div className="p-6 space-y-6">
