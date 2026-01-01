@@ -3,6 +3,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import Header from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { logError } from '@/lib/logger';
 import { Users as UsersIcon, Shield, Clock, Loader2, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth, AppRole, roleLabels } from '@/contexts/AuthContext';
@@ -102,7 +103,7 @@ export default function Users() {
 
       setUsers(usersWithRoles);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      logError('Users.fetchUsers', error);
       toast.error('Failed to load users');
     } finally {
       setLoading(false);
@@ -134,7 +135,7 @@ export default function Users() {
       );
       toast.success('Role updated successfully');
     } catch (error) {
-      console.error('Error updating role:', error);
+      logError('Users.handleRoleChange', error);
       toast.error('Failed to update role');
     } finally {
       setUpdatingUserId(null);
@@ -173,7 +174,7 @@ export default function Users() {
       setUsers((prev) => prev.filter((u) => u.user_id !== userId));
       toast.success('User deleted successfully');
     } catch (error) {
-      console.error('Error deleting user:', error);
+      logError('Users.handleDeleteUser', error);
       toast.error('Failed to delete user');
     } finally {
       setDeletingUserId(null);

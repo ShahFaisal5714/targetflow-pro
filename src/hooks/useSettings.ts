@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { logError } from '@/lib/logger';
 
 export interface CompanySettings {
   companyName: string;
@@ -84,8 +85,8 @@ export function useSettings() {
           setNotificationSettings(setting.value as NotificationSettings);
         }
       });
-    } catch (error: any) {
-      console.error('Error fetching settings:', error);
+    } catch (error) {
+      logError('useSettings.fetchSettings', error);
     } finally {
       setLoading(false);
     }
@@ -117,8 +118,8 @@ export function useSettings() {
         title: 'Settings saved',
         description: 'Your settings have been saved successfully.'
       });
-    } catch (error: any) {
-      console.error('Error saving settings:', error);
+    } catch (error) {
+      logError('useSettings.saveSetting', error);
       toast({
         title: 'Error',
         description: 'Failed to save settings. Please try again.',

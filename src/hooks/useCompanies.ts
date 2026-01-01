@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { logError } from '@/lib/logger';
 
 export interface Company {
   id: string;
@@ -104,8 +105,8 @@ export function useCompanies() {
       } else {
         setActiveCompanyIdState('target-specialties');
       }
-    } catch (error: any) {
-      console.error('Error fetching companies:', error);
+    } catch (error) {
+      logError('useCompanies.fetchCompanies', error);
     } finally {
       setLoading(false);
     }
@@ -185,8 +186,8 @@ export function useCompanies() {
         
         return data as Company;
       }
-    } catch (error: any) {
-      console.error('Error updating Alhadaf company:', error);
+    } catch (error) {
+      logError('useCompanies.updateAlhadafCompany', error);
       toast({
         title: 'Error',
         description: 'Failed to update company',
@@ -239,8 +240,8 @@ export function useCompanies() {
       });
 
       return true;
-    } catch (error: any) {
-      console.error('Error setting active company:', error);
+    } catch (error) {
+      logError('useCompanies.setActiveCompany', error);
       toast({
         title: 'Error',
         description: 'Failed to set active company',

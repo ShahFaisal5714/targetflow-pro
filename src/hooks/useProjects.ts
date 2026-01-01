@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Project, ProjectCategory, ProjectStatus, Company, Milestone } from '@/types/crm';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { logError } from '@/lib/logger';
 
 interface DbProject {
   id: string;
@@ -88,7 +89,7 @@ export function useProjects() {
       const mappedProjects = (data as DbProject[]).map(mapDbToProject);
       setProjects(mappedProjects);
     } catch (error) {
-      console.error('Error fetching projects:', error);
+      logError('useProjects.fetchProjects', error);
       toast({
         title: 'Error',
         description: 'Failed to load projects',
@@ -142,7 +143,7 @@ export function useProjects() {
       
       return newProject;
     } catch (error) {
-      console.error('Error creating project:', error);
+      logError('useProjects.createProject', error);
       toast({
         title: 'Error',
         description: 'Failed to create project',
@@ -185,7 +186,7 @@ export function useProjects() {
       
       return true;
     } catch (error) {
-      console.error('Error updating project:', error);
+      logError('useProjects.updateProject', error);
       toast({
         title: 'Error',
         description: 'Failed to update project',
@@ -207,7 +208,7 @@ export function useProjects() {
       setProjects(prev => prev.filter(p => p.id !== id));
       return true;
     } catch (error) {
-      console.error('Error deleting project:', error);
+      logError('useProjects.deleteProject', error);
       toast({
         title: 'Error',
         description: 'Failed to delete project',

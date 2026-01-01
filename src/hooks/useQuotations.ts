@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { logError } from '@/lib/logger';
 
 export interface QuotationItem {
   productId: string;
@@ -91,8 +92,8 @@ export function useQuotations() {
       if (error) throw error;
 
       setQuotations((data || []).map(mapDbToQuotation));
-    } catch (error: any) {
-      console.error('Error fetching quotations:', error);
+    } catch (error) {
+      logError('useQuotations.fetchQuotations', error);
       toast({
         title: 'Error',
         description: 'Failed to fetch quotations',
@@ -139,8 +140,8 @@ export function useQuotations() {
       });
 
       return newQuotation;
-    } catch (error: any) {
-      console.error('Error creating quotation:', error);
+    } catch (error) {
+      logError('useQuotations.createQuotation', error);
       toast({
         title: 'Error',
         description: 'Failed to create quotation',
@@ -185,8 +186,8 @@ export function useQuotations() {
       });
 
       return updatedQuotation;
-    } catch (error: any) {
-      console.error('Error updating quotation:', error);
+    } catch (error) {
+      logError('useQuotations.updateQuotation', error);
       toast({
         title: 'Error',
         description: 'Failed to update quotation',
@@ -213,8 +214,8 @@ export function useQuotations() {
       });
 
       return true;
-    } catch (error: any) {
-      console.error('Error deleting quotation:', error);
+    } catch (error) {
+      logError('useQuotations.deleteQuotation', error);
       toast({
         title: 'Error',
         description: 'Failed to delete quotation',
