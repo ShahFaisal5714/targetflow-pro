@@ -4,7 +4,7 @@ import Header from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { logError } from '@/lib/logger';
-import { Users as UsersIcon, Shield, Clock, Loader2, Trash2, Plus } from 'lucide-react';
+import { Users as UsersIcon, Shield, Clock, Loader2, Trash2, Plus, Pencil } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth, AppRole, roleLabels } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -41,7 +41,7 @@ interface UserWithRole {
   user_id: string;
   full_name: string;
   avatar_url: string | null;
-  email: string;
+  email: string | null;
   role: AppRole;
   created_at: string;
 }
@@ -69,6 +69,9 @@ export default function Users() {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [showAddUserDialog, setShowAddUserDialog] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [showEditUserDialog, setShowEditUserDialog] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
+  const [isEditingUser, setIsEditingUser] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -98,7 +101,7 @@ export default function Users() {
           user_id: profile.user_id,
           full_name: profile.full_name,
           avatar_url: profile.avatar_url,
-          email: profile.full_name, // We don't have direct access to auth.users email
+          email: profile.email,
           role: (userRole?.role as AppRole) || 'viewer',
           created_at: profile.created_at,
         };
@@ -238,6 +241,63 @@ export default function Users() {
     }
   };
 
+  const handleEditUser = (user: UserWithRole) => {
+    setEditingUser(user);
+    setShowEditUserDialog(true);
+  };
+
+  const handleEditUserSubmit = async (data: {
+    fullName: string;
+    avatarUrl: string;
+    role: AppRole;
+  }) => {
+    if (!isAdmin || !editingUser) {
+      toast.error('Only admins can edit users');
+      return;
+    }
+
+    setIsEditingUser(true);
+    try {
+      // Update profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ 
+          full_name: data.fullName,
+          avatar_url: data.avatarUrl || null,
+        })
+        .eq('user_id', editingUser.user_id);
+
+      if (profileError) throw profileError;
+
+      // Update role if changed
+      if (data.role !== editingUser.role) {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .update({ role: data.role })
+          .eq('user_id', editingUser.user_id);
+
+        if (roleError) throw roleError;
+      }
+
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.user_id === editingUser.user_id
+            ? { ...u, full_name: data.fullName, avatar_url: data.avatarUrl || null, role: data.role }
+            : u
+        )
+      );
+      
+      toast.success('User updated successfully');
+      setShowEditUserDialog(false);
+      setEditingUser(null);
+    } catch (error) {
+      logError('Users.handleEditUser', error);
+      toast.error('Failed to update user');
+    } finally {
+      setIsEditingUser(false);
+    }
+  };
+
   const roleStats = {
     admin: users.filter((u) => u.role === 'admin').length,
     sales: users.filter((u) => u.role === 'sales_manager').length,
@@ -275,6 +335,24 @@ export default function Users() {
         onOpenChange={setShowAddUserDialog}
         onSubmit={handleCreateUser}
         isLoading={isCreatingUser}
+        mode="create"
+      />
+
+      <UserFormDialog
+        open={showEditUserDialog}
+        onOpenChange={(open) => {
+          setShowEditUserDialog(open);
+          if (!open) setEditingUser(null);
+        }}
+        onSubmit={async () => {}}
+        onEditSubmit={handleEditUserSubmit}
+        isLoading={isEditingUser}
+        mode="edit"
+        editData={editingUser ? {
+          fullName: editingUser.full_name,
+          avatarUrl: editingUser.avatar_url,
+          role: editingUser.role,
+        } : undefined}
       />
 
       <div className="p-6 space-y-6">
@@ -335,6 +413,7 @@ export default function Users() {
             <TableHeader>
               <TableRow>
                 <TableHead>User</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead>Actions</TableHead>
@@ -343,7 +422,7 @@ export default function Users() {
             <TableBody>
               {users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     No users found
                   </TableCell>
                 </TableRow>
@@ -353,13 +432,21 @@ export default function Users() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                          <span className="text-sm font-semibold text-primary">
-                            {user.full_name
-                              .split(' ')
-                              .map((n) => n[0])
-                              .join('')
-                              .toUpperCase()}
-                          </span>
+                          {user.avatar_url ? (
+                            <img 
+                              src={user.avatar_url} 
+                              alt={user.full_name} 
+                              className="h-10 w-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-sm font-semibold text-primary">
+                              {user.full_name
+                                .split(' ')
+                                .map((n) => n[0])
+                                .join('')
+                                .toUpperCase()}
+                            </span>
+                          )}
                         </div>
                         <div>
                           <p className="font-medium text-foreground">{user.full_name}</p>
@@ -368,6 +455,11 @@ export default function Users() {
                           </p>
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <p className="text-sm text-muted-foreground">
+                        {user.email || 'No email'}
+                      </p>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -389,6 +481,14 @@ export default function Users() {
                           <span className="text-sm text-muted-foreground">Cannot edit own account</span>
                         ) : isAdmin ? (
                           <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditUser(user)}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
                             <Select
                               value={user.role}
                               onValueChange={(value) => handleRoleChange(user.user_id, value as AppRole)}
