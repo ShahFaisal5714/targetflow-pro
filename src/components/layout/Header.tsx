@@ -1,3 +1,4 @@
+import { ReactNode } from 'react';
 import { Bell, Search, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,10 +9,12 @@ interface HeaderProps {
   action?: {
     label: string;
     onClick: () => void;
-  };
+  } | ReactNode;
 }
 
 export default function Header({ title, subtitle, action }: HeaderProps) {
+  const isActionConfig = action && typeof action === 'object' && 'label' in action && 'onClick' in action;
+
   return (
     <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-sm border-b border-border">
       <div className="flex h-16 items-center justify-between px-6">
@@ -39,10 +42,14 @@ export default function Header({ title, subtitle, action }: HeaderProps) {
 
           {/* Action Button */}
           {action && (
-            <Button onClick={action.onClick} className="gap-2">
-              <Plus className="h-4 w-4" />
-              {action.label}
-            </Button>
+            isActionConfig ? (
+              <Button onClick={(action as { label: string; onClick: () => void }).onClick} className="gap-2">
+                <Plus className="h-4 w-4" />
+                {(action as { label: string; onClick: () => void }).label}
+              </Button>
+            ) : (
+              <>{action}</>
+            )
           )}
         </div>
       </div>
