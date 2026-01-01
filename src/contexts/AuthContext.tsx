@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { logError } from '@/lib/logger';
 
 export type AppRole = 'admin' | 'sales_manager' | 'operations' | 'viewer';
 
@@ -134,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (roleError) throw roleError;
       setRole(roleData.role as AppRole);
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      logError('AuthContext.fetchUserProfile', error);
     } finally {
       setLoading(false);
     }
