@@ -314,15 +314,15 @@ export default function QuotationDetail() {
 
       {/* Quotation Preview */}
       <div className="p-6">
-        <Card className="max-w-5xl mx-auto">
+        <Card className="max-w-5xl mx-auto print-container">
           {/* Company Header */}
-          <div className="p-8 border-b bg-gradient-to-br from-primary/5 to-accent/5">
+          <div className="p-8 border-b bg-gradient-to-br from-primary/5 to-accent/5 print-header print-no-break">
             <div className="flex items-start justify-between mb-6">
-              <div className="bg-white rounded-lg p-4 shadow-sm border border-border/30 flex items-center justify-center" style={{ minWidth: '120px', minHeight: '60px' }}>
+              <div className="print-logo-container bg-white rounded-lg p-4 shadow-sm border border-border/30 flex items-center justify-center" style={{ minWidth: '120px', minHeight: '60px' }}>
                 <img 
                   src={logo} 
                   alt={company.name} 
-                  className="max-h-16 max-w-[160px] object-contain"
+                  className="print-logo max-h-16 max-w-[160px] object-contain"
                   style={{ width: 'auto', height: 'auto' }}
                 />
               </div>
