@@ -318,11 +318,12 @@ export default function QuotationDetail() {
           {/* Company Header */}
           <div className="p-8 border-b bg-gradient-to-br from-primary/5 to-accent/5">
             <div className="flex items-start justify-between mb-6">
-              <div className="bg-white rounded-lg p-3 shadow-sm border border-border/30">
+              <div className="bg-white rounded-lg p-4 shadow-sm border border-border/30 flex items-center justify-center" style={{ minWidth: '120px', minHeight: '60px' }}>
                 <img 
                   src={logo} 
                   alt={company.name} 
-                  className="h-16 w-auto max-w-[180px] object-contain" 
+                  className="max-h-16 max-w-[160px] object-contain"
+                  style={{ width: 'auto', height: 'auto' }}
                 />
               </div>
               <div className="text-right text-sm text-muted-foreground">
