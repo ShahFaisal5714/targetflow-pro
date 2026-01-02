@@ -208,3 +208,131 @@
     to { opacity: 1; transform: scale(1); }
   }
 }
+
+/* Print styles for quotations/invoices */
+@media print {
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    background: white !important;
+  }
+
+  /* Hide non-printable elements */
+  .no-print,
+  header,
+  nav,
+  aside,
+  button,
+  .sidebar,
+  [data-sidebar],
+  .toaster {
+    display: none !important;
+  }
+
+  /* Ensure main content takes full width */
+  main,
+  .print-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Card and container styling for print */
+  .print-container {
+    box-shadow: none !important;
+    border: none !important;
+    background: white !important;
+  }
+
+  /* Logo print optimization */
+  .print-logo {
+    max-height: 60px !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+  }
+
+  .print-logo-container {
+    background: white !important;
+    padding: 8px !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 100px !important;
+    min-height: 50px !important;
+  }
+
+  /* Table styling for print */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  th, td {
+    border: 1px solid #e5e7eb !important;
+    padding: 8px 12px !important;
+  }
+
+  thead {
+    background: #f3f4f6 !important;
+  }
+
+  /* Ensure backgrounds print */
+  .bg-primary,
+  .bg-accent,
+  .bg-muted {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Page break controls */
+  .print-page-break {
+    page-break-before: always;
+  }
+
+  .print-no-break {
+    page-break-inside: avoid;
+  }
+
+  /* Typography for print */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+
+  p, span, div {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* Gradient to solid color fallback for print */
+  .print-header {
+    background: #f8fafc !important;
+    border-bottom: 2px solid hsl(var(--primary)) !important;
+  }
+
+  /* Status badges for print */
+  .print-status {
+    border: 1px solid currentColor !important;
+    padding: 2px 8px !important;
+    border-radius: 4px !important;
+  }
+
+  /* Footer positioning */
+  .print-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 10px;
+    color: #6b7280;
+  }
+}
