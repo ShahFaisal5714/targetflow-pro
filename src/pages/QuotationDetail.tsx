@@ -318,10 +318,16 @@ export default function QuotationDetail() {
           {/* Company Header */}
           <div className="p-8 border-b bg-gradient-to-br from-primary/5 to-accent/5">
             <div className="flex items-start justify-between mb-6">
-              <img src={logo} alt={company.name} className="h-20 w-auto object-contain bg-white rounded p-2" />
+              <div className="bg-white rounded-lg p-3 shadow-sm border border-border/30">
+                <img 
+                  src={logo} 
+                  alt={company.name} 
+                  className="h-16 w-auto max-w-[180px] object-contain" 
+                />
+              </div>
               <div className="text-right text-sm text-muted-foreground">
-                <p className="font-semibold text-foreground">{company.name}</p>
-                {company.address && <p>{company.address}</p>}
+                <p className="font-semibold text-foreground text-lg">{company.name}</p>
+                {company.address && <p className="mt-1">{company.address}</p>}
                 {company.email && <p className="mt-2">Email: {company.email}</p>}
                 {company.website && <p>Web: {company.website}</p>}
                 {company.phone && <p className="mt-2">Contact: {company.phone}</p>}

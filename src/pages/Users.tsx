@@ -4,7 +4,7 @@ import Header from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { logError } from '@/lib/logger';
-import { Users as UsersIcon, Shield, Clock, Loader2, Trash2, Plus, Pencil } from 'lucide-react';
+import { Users as UsersIcon, Shield, Clock, Loader2, Trash2, Plus, Pencil, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth, AppRole, roleLabels } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -72,6 +72,7 @@ export default function Users() {
   const [showEditUserDialog, setShowEditUserDialog] = useState(false);
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [isEditingUser, setIsEditingUser] = useState(false);
+  const [sendingResetTo, setSendingResetTo] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -244,6 +245,34 @@ export default function Users() {
   const handleEditUser = (user: UserWithRole) => {
     setEditingUser(user);
     setShowEditUserDialog(true);
+  };
+
+  const handleSendPasswordReset = async (email: string | null, userId: string) => {
+    if (!isAdmin) {
+      toast.error('Only admins can send password reset emails');
+      return;
+    }
+
+    if (!email) {
+      toast.error('User does not have an email address');
+      return;
+    }
+
+    setSendingResetTo(userId);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth?mode=reset`,
+      });
+
+      if (error) throw error;
+
+      toast.success(`Password reset email sent to ${email}`);
+    } catch (error: any) {
+      logError('Users.handleSendPasswordReset', error);
+      toast.error(error.message || 'Failed to send password reset email');
+    } finally {
+      setSendingResetTo(null);
+    }
   };
 
   const handleEditUserSubmit = async (data: {
@@ -486,8 +515,23 @@ export default function Users() {
                               size="icon"
                               onClick={() => handleEditUser(user)}
                               className="text-muted-foreground hover:text-foreground"
+                              title="Edit user"
                             >
                               <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleSendPasswordReset(user.email, user.user_id)}
+                              className="text-muted-foreground hover:text-primary"
+                              disabled={sendingResetTo === user.user_id || !user.email}
+                              title="Send password reset email"
+                            >
+                              {sendingResetTo === user.user_id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Mail className="h-4 w-4" />
+                              )}
                             </Button>
                             <Select
                               value={user.role}
