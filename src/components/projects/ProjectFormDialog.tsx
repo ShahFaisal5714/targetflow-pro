@@ -116,7 +116,8 @@ export default function ProjectFormDialog({ open, onOpenChange, project, onSubmi
         endDate: '',
         milestones: project?.timeline?.milestones || [],
       },
-      companyId: formData.companyId || undefined,
+      // Don't pass the hardcoded IDs to the database - they expect UUIDs or null
+      companyId: undefined, // Company info stored in project fields, not as FK
       buyerTrn: formData.buyerTrn,
       developer: formData.developerName ? { name: formData.developerName } : null,
       attnTo: formData.attnTo,

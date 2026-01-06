@@ -1,12 +1,18 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Download, FileText, Printer, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Printer, Loader2, Truck } from 'lucide-react';
 import { useQuotations } from '@/hooks/useQuotations';
 import { useProjects } from '@/hooks/useProjects';
+import { useDeliveryOrders } from '@/hooks/useDeliveryOrders';
 import { useCompanies, TARGET_SPECIALTIES, ALHADAF_PROJECTS, Company } from '@/hooks/useCompanies';
 import StatusBadge from '@/components/shared/StatusBadge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import targetLogo from '@/assets/target-logo.jpg';
@@ -17,7 +23,11 @@ export default function QuotationDetail() {
   const navigate = useNavigate();
   const { quotations, loading: quotationsLoading } = useQuotations();
   const { projects, loading: projectsLoading } = useProjects();
+  const { createDeliveryOrder } = useDeliveryOrders();
   const { activeCompanyId, alhadafCompany, loading: companiesLoading } = useCompanies();
+  
+  const [deliveryDialogOpen, setDeliveryDialogOpen] = useState(false);
+  const [deliveryItems, setDeliveryItems] = useState<{ productId: string; productName: string; unit: string; orderedQuantity: number; deliveryQuantity: number }[]>([]);
   
   const quotation = quotations.find(q => q.id === id);
   const project = quotation ? projects.find(p => p.id === quotation.project_id) : null;
@@ -79,6 +89,36 @@ export default function QuotationDetail() {
 
   const afterDiscount = quotation.subtotal - discountAmount;
   const taxAmount = (afterDiscount * quotation.tax.rate) / 100;
+
+  const handleOpenDeliveryDialog = () => {
+    // Pre-populate items from quotation
+    setDeliveryItems(quotation.items.map(item => ({
+      productId: item.productId,
+      productName: item.productName,
+      unit: item.unit,
+      orderedQuantity: item.quantity,
+      deliveryQuantity: item.quantity, // Default to full quantity
+    })));
+    setDeliveryDialogOpen(true);
+  };
+
+  const handleCreateDeliveryOrder = async () => {
+    const result = await createDeliveryOrder({
+      project_id: quotation.project_id || null,
+      items: deliveryItems,
+      status: 'pending',
+      notes: `Generated from quotation ${quotation.id}`,
+    });
+
+    if (result) {
+      setDeliveryDialogOpen(false);
+      toast({
+        title: 'Delivery Order Created',
+        description: `Delivery order ${result.delivery_number} has been created`,
+      });
+      navigate('/delivery-orders');
+    }
+  };
 
   const generatePDF = () => {
     const doc = new jsPDF();
@@ -288,7 +328,7 @@ export default function QuotationDetail() {
       <div className="bg-card border-b border-border">
         <div className="p-6">
           <div className="flex items-center gap-4 mb-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/quotations')}>
+            <Button variant="ghost" size="icon" onClick={() => navigate(quotation.project_id ? `/projects/${quotation.project_id}` : '/projects')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
@@ -299,6 +339,12 @@ export default function QuotationDetail() {
               <p className="text-muted-foreground mt-1">{quotation.project_name}</p>
             </div>
             <div className="flex gap-2">
+              {(quotation.status === 'approved' || quotation.status === 'submitted') && (
+                <Button variant="outline" onClick={handleOpenDeliveryDialog}>
+                  <Truck className="h-4 w-4 mr-2" />
+                  Generate Delivery Order
+                </Button>
+              )}
               <Button variant="outline" onClick={handleExportPDF}>
                 <Download className="h-4 w-4 mr-2" />
                 Export PDF
@@ -469,6 +515,71 @@ export default function QuotationDetail() {
           </div>
         </Card>
       </div>
+
+      {/* Delivery Order Dialog */}
+      <Dialog open={deliveryDialogOpen} onOpenChange={setDeliveryDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Generate Delivery Order from Quotation</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Adjust delivery quantities below. You can deliver partial quantities if the client requested partial material.
+            </p>
+            
+            <div className="space-y-3">
+              {deliveryItems.map((item, index) => (
+                <Card key={item.productId}>
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium">{item.productName}</span>
+                      <span className="text-sm text-muted-foreground">{item.unit}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs">Ordered Quantity</Label>
+                        <Input value={item.orderedQuantity} readOnly className="bg-muted" />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Delivering Quantity</Label>
+                        <Input 
+                          type="number"
+                          value={item.deliveryQuantity}
+                          onChange={(e) => {
+                            const newItems = [...deliveryItems];
+                            newItems[index].deliveryQuantity = Math.min(
+                              parseFloat(e.target.value) || 0,
+                              item.orderedQuantity
+                            );
+                            setDeliveryItems(newItems);
+                          }}
+                          max={item.orderedQuantity}
+                        />
+                      </div>
+                    </div>
+                    {item.deliveryQuantity < item.orderedQuantity && (
+                      <p className="text-xs text-warning mt-2">
+                        Partial delivery: {item.deliveryQuantity} of {item.orderedQuantity} {item.unit}
+                      </p>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeliveryDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateDeliveryOrder}>
+              <Truck className="h-4 w-4 mr-2" />
+              Create Delivery Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

@@ -62,7 +62,13 @@ interface DbCompany {
 export function useCompanies() {
   const { user } = useAuth();
   const [alhadafDetails, setAlhadafDetails] = useState<Partial<Company>>({});
-  const [activeCompanyId, setActiveCompanyIdState] = useState<string>('target-specialties');
+  const [activeCompanyId, setActiveCompanyIdState] = useState<string>(() => {
+    // Try to get from localStorage for immediate display
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('activeCompanyId') || 'target-specialties';
+    }
+    return 'target-specialties';
+  });
   const [loading, setLoading] = useState(true);
 
   const fetchCompanies = async () => {
@@ -102,8 +108,10 @@ export function useCompanies() {
 
       if (defaultData && defaultData.name?.toLowerCase().includes('alhadaf')) {
         setActiveCompanyIdState('alhadaf-projects');
+        localStorage.setItem('activeCompanyId', 'alhadaf-projects');
       } else {
         setActiveCompanyIdState('target-specialties');
+        localStorage.setItem('activeCompanyId', 'target-specialties');
       }
     } catch (error) {
       logError('useCompanies.fetchCompanies', error);
@@ -233,6 +241,7 @@ export function useCompanies() {
       }
 
       setActiveCompanyIdState(companyId);
+      localStorage.setItem('activeCompanyId', companyId);
       
       toast({
         title: 'Success',

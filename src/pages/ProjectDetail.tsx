@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import Header from '@/components/layout/Header';
 import StatusBadge from '@/components/shared/StatusBadge';
@@ -45,6 +45,7 @@ const statusLabels: Record<string, string> = {
 
 export default function ProjectDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { projects, loading, updateProject } = useProjects();
   const { quotations, createQuotation, refetch: refetchQuotations } = useQuotations();
   const project = projects.find((p) => p.id === id);
@@ -312,7 +313,11 @@ export default function ProjectDetail() {
             {projectQuotations.length > 0 ? (
               <div className="space-y-3">
                 {projectQuotations.map((quotation) => (
-                  <Card key={quotation.id} className="hover:border-primary/30 transition-colors cursor-pointer">
+                  <Card 
+                    key={quotation.id} 
+                    className="hover:border-primary/30 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/quotations/${quotation.id}`)}
+                  >
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
@@ -336,6 +341,7 @@ export default function ProjectDetail() {
                             </p>
                           </div>
                           <StatusBadge status={quotation.status as any} />
+                          <Button size="sm" variant="outline">View</Button>
                         </div>
                       </div>
                     </CardContent>
