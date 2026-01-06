@@ -34,6 +34,15 @@ const categoryLabels: Record<string, string> = {
   industrial: 'Industrial',
 };
 
+const statusLabels: Record<string, string> = {
+  lead: 'Lead',
+  active: 'Active',
+  quoted: 'Quoted',
+  in_progress: 'In Progress',
+  delivered: 'Delivered',
+  closed: 'Closed',
+};
+
 export default function ProjectDetail() {
   const { id } = useParams();
   const { projects, loading, updateProject } = useProjects();
@@ -135,34 +144,35 @@ export default function ProjectDetail() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <p className="text-sm text-muted-foreground">Category</p>
+                  <p className="text-sm text-muted-foreground">Status</p>
                   <p className="font-medium text-foreground">
-                    {categoryLabels[project.category]}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Project Value</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    AED {project.value.toLocaleString()}
+                    {statusLabels[project.status] || project.status}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Sales Manager</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{project.salesManager}</span>
+                  <div className="flex flex-col mt-1">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{project.salesManager || 'Unassigned'}</span>
+                    </div>
+                    {(project as any).salesManagerContact && (
+                      <span className="text-sm text-muted-foreground ml-6">{(project as any).salesManagerContact}</span>
+                    )}
                   </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Timeline</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      {new Date(project.timeline.startDate).toLocaleDateString()} -{' '}
-                      {new Date(project.timeline.endDate).toLocaleDateString()}
-                    </span>
+                {(project as any).buyerTrn && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Buyer TRN No</p>
+                    <p className="font-medium text-foreground">{(project as any).buyerTrn}</p>
                   </div>
-                </div>
+                )}
+                {(project as any).attnTo && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Attention To</p>
+                    <p className="font-medium text-foreground">{(project as any).attnTo}</p>
+                  </div>
+                )}
               </div>
 
               {/* Milestones */}

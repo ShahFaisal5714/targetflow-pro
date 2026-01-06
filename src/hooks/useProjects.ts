@@ -20,6 +20,13 @@ interface DbProject {
   user_id: string;
   created_at: string;
   updated_at: string;
+  // New fields
+  buyer_trn?: string | null;
+  developer?: unknown | null;
+  attn_to?: string | null;
+  client_email?: string | null;
+  client_contact?: string | null;
+  sales_manager_contact?: string | null;
 }
 
 const parseCompany = (data: unknown): Company => {
@@ -54,7 +61,7 @@ const parseTimeline = (data: unknown): { startDate: string; endDate: string; mil
   };
 };
 
-const mapDbToProject = (row: DbProject): Project => ({
+const mapDbToProject = (row: DbProject): Project & Record<string, any> => ({
   id: row.id,
   name: row.name,
   category: row.category as ProjectCategory,
@@ -68,6 +75,13 @@ const mapDbToProject = (row: DbProject): Project => ({
   companyId: row.company_id || undefined,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
+  // New fields
+  buyerTrn: row.buyer_trn || '',
+  developer: row.developer ? (row.developer as Record<string, any>) : null,
+  attnTo: row.attn_to || '',
+  clientEmail: row.client_email || '',
+  clientContact: row.client_contact || '',
+  salesManagerContact: row.sales_manager_contact || '',
 });
 
 export function useProjects() {
@@ -111,9 +125,10 @@ export function useProjects() {
     }
 
     try {
+      const extData = projectData as Record<string, any>;
       const insertData = {
         name: projectData.name || '',
-        category: projectData.category || 'residential',
+        category: projectData.category || 'commercial',
         status: projectData.status || 'lead',
         value: projectData.value || 0,
         sales_manager: projectData.salesManager || null,
@@ -123,6 +138,13 @@ export function useProjects() {
         timeline: JSON.parse(JSON.stringify(projectData.timeline || { startDate: '', endDate: '', milestones: [] })),
         company_id: projectData.companyId || null,
         user_id: user.id,
+        // New fields
+        buyer_trn: extData.buyerTrn || null,
+        developer: extData.developer ? JSON.parse(JSON.stringify(extData.developer)) : null,
+        attn_to: extData.attnTo || null,
+        client_email: extData.clientEmail || null,
+        client_contact: extData.clientContact || null,
+        sales_manager_contact: extData.salesManagerContact || null,
       };
 
       const { data, error } = await supabase
@@ -153,7 +175,7 @@ export function useProjects() {
     }
   };
 
-  const updateProject = async (id: string, projectData: Partial<Project>): Promise<boolean> => {
+  const updateProject = async (id: string, projectData: Partial<Project> & Record<string, any>): Promise<boolean> => {
     try {
       const updateData: Record<string, unknown> = {};
       
@@ -167,6 +189,13 @@ export function useProjects() {
       if (projectData.consultant !== undefined) updateData.consultant = projectData.consultant;
       if (projectData.timeline !== undefined) updateData.timeline = projectData.timeline;
       if (projectData.companyId !== undefined) updateData.company_id = projectData.companyId;
+      // New fields
+      if (projectData.buyerTrn !== undefined) updateData.buyer_trn = projectData.buyerTrn;
+      if (projectData.developer !== undefined) updateData.developer = projectData.developer;
+      if (projectData.attnTo !== undefined) updateData.attn_to = projectData.attnTo;
+      if (projectData.clientEmail !== undefined) updateData.client_email = projectData.clientEmail;
+      if (projectData.clientContact !== undefined) updateData.client_contact = projectData.clientContact;
+      if (projectData.salesManagerContact !== undefined) updateData.sales_manager_contact = projectData.salesManagerContact;
 
       const { error } = await supabase
         .from('projects')

@@ -6,10 +6,10 @@ import DataTable from '@/components/shared/DataTable';
 import StatusBadge from '@/components/shared/StatusBadge';
 import ProjectFormDialog from '@/components/projects/ProjectFormDialog';
 import { useProjects } from '@/hooks/useProjects';
-import { Project, ProjectStatus, ProjectCategory } from '@/types/crm';
+import { Project, ProjectStatus } from '@/types/crm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Filter, Building, Calendar, User, Edit, Trash2, Undo2, Loader2 } from 'lucide-react';
+import { Search, Filter, Building, User, Edit, Trash2, Undo2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
@@ -34,12 +34,6 @@ const statusTabs: { key: ProjectStatus | 'all'; label: string }[] = [
   { key: 'delivered', label: 'Delivered' },
   { key: 'closed', label: 'Closed' },
 ];
-
-const categoryLabels: Record<ProjectCategory, string> = {
-  residential: 'Residential',
-  commercial: 'Commercial',
-  industrial: 'Industrial',
-};
 
 export default function Projects() {
   const navigate = useNavigate();
@@ -144,13 +138,6 @@ export default function Projects() {
 
   const columns = [
     {
-      key: 'id',
-      header: 'Project ID',
-      render: (project: Project) => (
-        <span className="font-mono text-sm text-muted-foreground">{project.id.slice(0, 8)}</span>
-      ),
-    },
-    {
       key: 'name',
       header: 'Project',
       render: (project: Project) => (
@@ -160,18 +147,16 @@ export default function Projects() {
           </div>
           <div>
             <p className="font-medium text-foreground">{project.name}</p>
-            <p className="text-sm text-muted-foreground">{project.contractor.name}</p>
+            <p className="text-sm text-muted-foreground">{project.contractor?.name || 'No contractor'}</p>
           </div>
         </div>
       ),
     },
     {
-      key: 'category',
-      header: 'Category',
+      key: 'client',
+      header: 'Client / Contractor',
       render: (project: Project) => (
-        <span className="module-badge bg-secondary text-secondary-foreground">
-          {categoryLabels[project.category]}
-        </span>
+        <span className="text-foreground">{project.contractor?.name || '-'}</span>
       ),
     },
     {
@@ -180,39 +165,28 @@ export default function Projects() {
       render: (project: Project) => <StatusBadge status={project.status} />,
     },
     {
-      key: 'value',
-      header: 'Value',
-      render: (project: Project) => (
-        <span className="font-semibold text-foreground">
-          AED {project.value.toLocaleString()}
-        </span>
-      ),
-    },
-    {
       key: 'salesManager',
       header: 'Sales Manager',
-      render: (project: Project) => (
-        <div className="flex items-center gap-2">
-          <User className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm">{project.salesManager || 'Unassigned'}</span>
-        </div>
-      ),
+      render: (project: Project) => {
+        const extProject = project as Project & { salesManagerContact?: string };
+        return (
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">{project.salesManager || 'Unassigned'}</span>
+            </div>
+            {extProject.salesManagerContact && (
+              <span className="text-xs text-muted-foreground ml-6">{extProject.salesManagerContact}</span>
+            )}
+          </div>
+        );
+      },
     },
     {
-      key: 'timeline',
-      header: 'Timeline',
+      key: 'quotations',
+      header: 'Quotations',
       render: (project: Project) => (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Calendar className="h-4 w-4" />
-          {project.timeline.startDate && project.timeline.endDate ? (
-            <>
-              {new Date(project.timeline.startDate).toLocaleDateString()} -{' '}
-              {new Date(project.timeline.endDate).toLocaleDateString()}
-            </>
-          ) : (
-            'Not set'
-          )}
-        </div>
+        <span className="text-sm text-muted-foreground">View in detail</span>
       ),
     },
     ...(canEdit ? [{
