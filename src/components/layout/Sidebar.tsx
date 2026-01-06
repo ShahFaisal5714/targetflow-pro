@@ -72,6 +72,8 @@ export default function Sidebar() {
   const currentLogo = isAlhadaf ? alhadafLogo : targetLogo;
   const companyDisplayName = isAlhadaf ? 'Al Hadaf' : 'Target';
   const companySubtitle = isAlhadaf ? 'Al Kabeer' : 'Specialties';
+  // Make Alhadaf logo slightly bigger as it appears smaller
+  const logoClass = isAlhadaf ? 'h-10 w-10 object-contain rounded-lg p-0.5' : 'h-10 w-10 object-contain rounded-lg';
 
   return (
     <aside
@@ -83,11 +85,13 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <img 
-            src={currentLogo} 
-            alt={`${companyDisplayName} Logo`} 
-            className="h-10 w-10 object-contain rounded-lg"
-          />
+          <div className={`${isAlhadaf ? 'h-10 w-10 bg-white rounded-lg flex items-center justify-center' : ''}`}>
+            <img 
+              src={currentLogo} 
+              alt={`${companyDisplayName} Logo`} 
+              className={isAlhadaf ? 'h-8 w-8 object-contain' : 'h-10 w-10 object-contain rounded-lg'}
+            />
+          </div>
           {!collapsed && (
             <div className="animate-fade-in">
               <h1 className="text-lg font-bold text-sidebar-foreground">{companyDisplayName}</h1>

@@ -136,7 +136,7 @@ export function useProjects() {
         client: JSON.parse(JSON.stringify(projectData.client || {})),
         consultant: projectData.consultant ? JSON.parse(JSON.stringify(projectData.consultant)) : null,
         timeline: JSON.parse(JSON.stringify(projectData.timeline || { startDate: '', endDate: '', milestones: [] })),
-        company_id: projectData.companyId || null,
+        company_id: null, // Company selection handled via project form, not FK
         user_id: user.id,
         // New fields
         buyer_trn: extData.buyerTrn || null,
