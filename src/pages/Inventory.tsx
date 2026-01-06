@@ -495,7 +495,7 @@ export default function Inventory() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv"
+              accept=".csv,.xlsx,.xls"
               onChange={handleCSVImport}
               className="hidden"
             />
@@ -505,9 +505,10 @@ export default function Inventory() {
               variant="outline" 
               onClick={() => fileInputRef.current?.click()}
               disabled={importing}
+              title="Import inventory from Excel or CSV file (weekly/monthly updates)"
             >
               <Upload className="h-4 w-4 mr-2" />
-              {importing ? 'Importing...' : 'Import CSV'}
+              {importing ? 'Importing...' : 'Import Excel/CSV'}
             </Button>
 
             {/* Export Dropdown */}

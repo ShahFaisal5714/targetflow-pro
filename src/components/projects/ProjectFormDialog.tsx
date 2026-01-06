@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Project, ProjectCategory, ProjectStatus } from '@/types/crm';
+import { Textarea } from '@/components/ui/textarea';
+import { Project } from '@/types/crm';
 import { useToast } from '@/hooks/use-toast';
 import { useCompanies } from '@/hooks/useCompanies';
 
@@ -15,56 +16,67 @@ interface ProjectFormDialogProps {
   onSubmit?: (data: Partial<Project>) => void;
 }
 
+interface ExtendedFormData {
+  companyId: string;
+  name: string;
+  contractorName: string;
+  buyerTrn: string;
+  consultantName: string;
+  developerName: string;
+  attnTo: string;
+  clientEmail: string;
+  clientContact: string;
+  salesManagerName: string;
+  salesManagerContact: string;
+}
+
 export default function ProjectFormDialog({ open, onOpenChange, project, onSubmit }: ProjectFormDialogProps) {
   const { toast } = useToast();
   const { targetSpecialties, alhadafCompany, activeCompanyId } = useCompanies();
   const isEdit = !!project;
 
-  const [formData, setFormData] = useState({
-    name: '',
-    category: 'residential' as ProjectCategory,
-    status: 'lead' as ProjectStatus,
-    value: 0,
-    contractorName: '',
-    contractorContact: '',
-    contractorEmail: '',
-    contractorPhone: '',
-    salesManager: '',
-    startDate: '',
-    endDate: '',
+  const [formData, setFormData] = useState<ExtendedFormData>({
     companyId: '',
+    name: '',
+    contractorName: '',
+    buyerTrn: '',
+    consultantName: '',
+    developerName: '',
+    attnTo: '',
+    clientEmail: '',
+    clientContact: '',
+    salesManagerName: '',
+    salesManagerContact: '',
   });
 
   useEffect(() => {
     if (project) {
       setFormData({
-        name: project.name,
-        category: project.category,
-        status: project.status,
-        value: project.value,
-        contractorName: project.contractor.name,
-        contractorContact: project.contractor.contact,
-        contractorEmail: project.contractor.email,
-        contractorPhone: project.contractor.phone,
-        salesManager: project.salesManager,
-        startDate: project.timeline.startDate,
-        endDate: project.timeline.endDate,
         companyId: project.companyId || activeCompanyId,
+        name: project.name,
+        contractorName: project.contractor?.name || '',
+        buyerTrn: (project as any).buyerTrn || '',
+        consultantName: project.consultant?.name || '',
+        developerName: (project as any).developer?.name || '',
+        attnTo: (project as any).attnTo || '',
+        clientEmail: (project as any).clientEmail || '',
+        clientContact: (project as any).clientContact || '',
+        salesManagerName: project.salesManager || '',
+        salesManagerContact: (project as any).salesManagerContact || '',
       });
     } else {
       setFormData({
-        name: '',
-        category: 'residential',
-        status: 'lead',
-        value: 0,
-        contractorName: '',
-        contractorContact: '',
-        contractorEmail: '',
-        contractorPhone: '',
-        salesManager: '',
-        startDate: '',
-        endDate: '',
         companyId: activeCompanyId,
+        name: '',
+        contractorName: '',
+        buyerTrn: '',
+        consultantName: '',
+        developerName: '',
+        attnTo: '',
+        clientEmail: '',
+        clientContact: '',
+        salesManagerName: '',
+        salesManagerContact: '',
       });
     }
   }, [project, open, activeCompanyId]);
@@ -72,25 +84,45 @@ export default function ProjectFormDialog({ open, onOpenChange, project, onSubmi
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const projectData: Partial<Project> = {
+    const projectData: Partial<Project> & Record<string, any> = {
       name: formData.name,
-      category: formData.category,
-      status: formData.status,
-      value: formData.value,
+      category: 'commercial', // Default category
+      status: 'lead', // Default status
+      value: 0, // Will be calculated from quotations
       contractor: {
-        id: project?.contractor.id || `CONT-${Date.now()}`,
+        id: project?.contractor?.id || `CONT-${Date.now()}`,
         name: formData.contractorName,
-        contact: formData.contractorContact,
-        email: formData.contractorEmail,
-        phone: formData.contractorPhone,
+        contact: formData.attnTo,
+        email: formData.clientEmail,
+        phone: formData.clientContact,
       },
-      salesManager: formData.salesManager,
+      client: {
+        id: project?.client?.id || `CLI-${Date.now()}`,
+        name: formData.contractorName,
+        contact: formData.attnTo,
+        email: formData.clientEmail,
+        phone: formData.clientContact,
+      },
+      consultant: formData.consultantName ? {
+        id: project?.consultant?.id || `CONS-${Date.now()}`,
+        name: formData.consultantName,
+        contact: '',
+        email: '',
+        phone: '',
+      } : undefined,
+      salesManager: formData.salesManagerName,
       timeline: {
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        milestones: project?.timeline.milestones || [],
+        startDate: '',
+        endDate: '',
+        milestones: project?.timeline?.milestones || [],
       },
       companyId: formData.companyId || undefined,
+      buyerTrn: formData.buyerTrn,
+      developer: formData.developerName ? { name: formData.developerName } : null,
+      attnTo: formData.attnTo,
+      clientEmail: formData.clientEmail,
+      clientContact: formData.clientContact,
+      salesManagerContact: formData.salesManagerContact,
       updatedAt: new Date().toISOString(),
     };
 
@@ -107,11 +139,9 @@ export default function ProjectFormDialog({ open, onOpenChange, project, onSubmi
 
   // Build company options
   const companyOptions = [
-    { id: targetSpecialties.id, name: targetSpecialties.name },
+    { id: targetSpecialties.id, name: 'Target Specialties Building Material Trading LLC' },
+    { id: alhadafCompany.id, name: 'Al Hadaf Al Kabeer Metal Contracting' },
   ];
-  if (alhadafCompany) {
-    companyOptions.push({ id: alhadafCompany.id, name: alhadafCompany.name });
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -121,157 +151,135 @@ export default function ProjectFormDialog({ open, onOpenChange, project, onSubmi
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* 1. Company */}
+          <div>
+            <Label htmlFor="company">1. Company *</Label>
+            <Select 
+              value={formData.companyId} 
+              onValueChange={(value) => setFormData(prev => ({ ...prev, companyId: value }))}
+            >
+              <SelectTrigger id="company">
+                <SelectValue placeholder="Select company" />
+              </SelectTrigger>
+              <SelectContent>
+                {companyOptions.map((company) => (
+                  <SelectItem key={company.id} value={company.id}>
+                    {company.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 2. Project Name */}
+          <div>
+            <Label htmlFor="name">2. Project Name *</Label>
+            <Input 
+              id="name" 
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Enter project name" 
+              required 
+            />
+          </div>
+
+          {/* 3. Client / Contractor */}
+          <div>
+            <Label htmlFor="contractor">3. Client / Contractor *</Label>
+            <Input 
+              id="contractor" 
+              value={formData.contractorName}
+              onChange={(e) => setFormData(prev => ({ ...prev, contractorName: e.target.value }))}
+              placeholder="Enter client or contractor company name" 
+              required 
+            />
+          </div>
+
+          {/* 4. Buyer TRN No */}
+          <div>
+            <Label htmlFor="buyerTrn">4. Buyer TRN No:</Label>
+            <Input 
+              id="buyerTrn" 
+              value={formData.buyerTrn}
+              onChange={(e) => setFormData(prev => ({ ...prev, buyerTrn: e.target.value }))}
+              placeholder="Tax Registration Number" 
+            />
+          </div>
+
+          {/* 5. Consultant (Optional) */}
+          <div>
+            <Label htmlFor="consultant">5. Consultant (Optional) <span className="text-xs text-muted-foreground">- Not shown on quotation</span></Label>
+            <Input 
+              id="consultant" 
+              value={formData.consultantName}
+              onChange={(e) => setFormData(prev => ({ ...prev, consultantName: e.target.value }))}
+              placeholder="Consultant name (optional)" 
+            />
+          </div>
+
+          {/* 6. Developer (Optional) */}
+          <div>
+            <Label htmlFor="developer">6. Developer (Optional) <span className="text-xs text-muted-foreground">- Not shown on quotation</span></Label>
+            <Input 
+              id="developer" 
+              value={formData.developerName}
+              onChange={(e) => setFormData(prev => ({ ...prev, developerName: e.target.value }))}
+              placeholder="Developer name (optional)" 
+            />
+          </div>
+
+          {/* 7. Attn. To */}
+          <div>
+            <Label htmlFor="attnTo">7. Attn. To:</Label>
+            <Input 
+              id="attnTo" 
+              value={formData.attnTo}
+              onChange={(e) => setFormData(prev => ({ ...prev, attnTo: e.target.value }))}
+              placeholder="Attention to (contact person)" 
+            />
+          </div>
+
+          {/* 8. Client Email (Optional) */}
+          <div>
+            <Label htmlFor="clientEmail">8. Client Email (Optional) <span className="text-xs text-muted-foreground">- Not shown on quotation</span></Label>
+            <Input 
+              id="clientEmail" 
+              type="email"
+              value={formData.clientEmail}
+              onChange={(e) => setFormData(prev => ({ ...prev, clientEmail: e.target.value }))}
+              placeholder="client@example.com" 
+            />
+          </div>
+
+          {/* 9. Client Contact No */}
+          <div>
+            <Label htmlFor="clientContact">9. Client Contact No:</Label>
+            <Input 
+              id="clientContact" 
+              value={formData.clientContact}
+              onChange={(e) => setFormData(prev => ({ ...prev, clientContact: e.target.value }))}
+              placeholder="+971 XX XXX XXXX" 
+            />
+          </div>
+
+          {/* 10. Sales Manager */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <Label htmlFor="company">Company *</Label>
-              <Select 
-                value={formData.companyId} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, companyId: value }))}
-              >
-                <SelectTrigger id="company">
-                  <SelectValue placeholder="Select company" />
-                </SelectTrigger>
-                <SelectContent>
-                  {companyOptions.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="name">Project Name</Label>
-              <Input 
-                id="name" 
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Enter project name" 
-                required 
-              />
-            </div>
-
             <div>
-              <Label htmlFor="category">Category</Label>
-              <Select 
-                value={formData.category} 
-                onValueChange={(value: ProjectCategory) => setFormData(prev => ({ ...prev, category: value }))}
-              >
-                <SelectTrigger id="category">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="residential">Residential</SelectItem>
-                  <SelectItem value="commercial">Commercial</SelectItem>
-                  <SelectItem value="industrial">Industrial</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="status">Status</Label>
-              <Select 
-                value={formData.status} 
-                onValueChange={(value: ProjectStatus) => setFormData(prev => ({ ...prev, status: value }))}
-              >
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="lead">Lead</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="quoted">Quoted</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="delivered">Delivered</SelectItem>
-                  <SelectItem value="closed">Closed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="value">Project Value (AED)</Label>
-              <Input 
-                id="value" 
-                type="number" 
-                value={formData.value}
-                onChange={(e) => setFormData(prev => ({ ...prev, value: parseFloat(e.target.value) || 0 }))}
-                placeholder="0.00" 
-                required 
-              />
-            </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="contractor">Contractor Company</Label>
-              <Input 
-                id="contractor" 
-                value={formData.contractorName}
-                onChange={(e) => setFormData(prev => ({ ...prev, contractorName: e.target.value }))}
-                placeholder="Enter contractor company name" 
-                required 
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="contractorContact">Contractor Contact Person</Label>
-              <Input 
-                id="contractorContact" 
-                value={formData.contractorContact}
-                onChange={(e) => setFormData(prev => ({ ...prev, contractorContact: e.target.value }))}
-                placeholder="Contact person name" 
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="contractorEmail">Contractor Email</Label>
-              <Input 
-                id="contractorEmail" 
-                type="email"
-                value={formData.contractorEmail}
-                onChange={(e) => setFormData(prev => ({ ...prev, contractorEmail: e.target.value }))}
-                placeholder="email@example.com" 
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="contractorPhone">Contractor Phone</Label>
-              <Input 
-                id="contractorPhone" 
-                value={formData.contractorPhone}
-                onChange={(e) => setFormData(prev => ({ ...prev, contractorPhone: e.target.value }))}
-                placeholder="+971 XX XXX XXXX" 
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="salesManager">Sales Manager</Label>
+              <Label htmlFor="salesManager">10. Sales Manager Name:</Label>
               <Input 
                 id="salesManager" 
-                value={formData.salesManager}
-                onChange={(e) => setFormData(prev => ({ ...prev, salesManager: e.target.value }))}
-                placeholder="Assigned sales manager" 
+                value={formData.salesManagerName}
+                onChange={(e) => setFormData(prev => ({ ...prev, salesManagerName: e.target.value }))}
+                placeholder="Sales manager name" 
               />
             </div>
-
             <div>
-              <Label htmlFor="startDate">Start Date</Label>
+              <Label htmlFor="salesManagerContact">Contact No:</Label>
               <Input 
-                id="startDate" 
-                type="date" 
-                value={formData.startDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                required 
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="endDate">End Date</Label>
-              <Input 
-                id="endDate" 
-                type="date" 
-                value={formData.endDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                required 
+                id="salesManagerContact" 
+                value={formData.salesManagerContact}
+                onChange={(e) => setFormData(prev => ({ ...prev, salesManagerContact: e.target.value }))}
+                placeholder="+971 XX XXX XXXX" 
               />
             </div>
           </div>

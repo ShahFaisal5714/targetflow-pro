@@ -56,6 +56,121 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_orders: {
+        Row: {
+          created_at: string
+          delivery_date: string | null
+          delivery_number: string
+          id: string
+          items: Json
+          notes: string | null
+          project_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_date?: string | null
+          delivery_number: string
+          id?: string
+          items?: Json
+          notes?: string | null
+          project_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delivery_date?: string | null
+          delivery_number?: string
+          id?: string
+          items?: Json
+          notes?: string | null
+          project_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          client_name: string
+          company_id: string | null
+          created_at: string
+          due_date: string | null
+          id: string
+          invoice_number: string
+          items: Json
+          notes: string | null
+          paid_amount: number
+          project_id: string | null
+          status: string
+          subtotal: number
+          tax_amount: number
+          tax_rate: number
+          total: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_name: string
+          company_id?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          invoice_number: string
+          items?: Json
+          notes?: string | null
+          paid_amount?: number
+          project_id?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number
+          total?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_name?: string
+          company_id?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          invoice_number?: string
+          items?: Json
+          notes?: string | null
+          paid_amount?: number
+          project_id?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number
+          total?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string
@@ -139,15 +254,21 @@ export type Database = {
       }
       projects: {
         Row: {
+          attn_to: string | null
+          buyer_trn: string | null
           category: string
           client: Json
+          client_contact: string | null
+          client_email: string | null
           company_id: string | null
           consultant: Json | null
           contractor: Json
           created_at: string
+          developer: Json | null
           id: string
           name: string
           sales_manager: string | null
+          sales_manager_contact: string | null
           status: string
           timeline: Json
           updated_at: string
@@ -155,15 +276,21 @@ export type Database = {
           value: number
         }
         Insert: {
+          attn_to?: string | null
+          buyer_trn?: string | null
           category: string
           client?: Json
+          client_contact?: string | null
+          client_email?: string | null
           company_id?: string | null
           consultant?: Json | null
           contractor?: Json
           created_at?: string
+          developer?: Json | null
           id?: string
           name: string
           sales_manager?: string | null
+          sales_manager_contact?: string | null
           status?: string
           timeline?: Json
           updated_at?: string
@@ -171,15 +298,21 @@ export type Database = {
           value?: number
         }
         Update: {
+          attn_to?: string | null
+          buyer_trn?: string | null
           category?: string
           client?: Json
+          client_contact?: string | null
+          client_email?: string | null
           company_id?: string | null
           consultant?: Json | null
           contractor?: Json
           created_at?: string
+          developer?: Json | null
           id?: string
           name?: string
           sales_manager?: string | null
+          sales_manager_contact?: string | null
           status?: string
           timeline?: Json
           updated_at?: string

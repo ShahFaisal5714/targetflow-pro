@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth, roleLabels, getRolesForPath } from '@/contexts/AuthContext';
+import { useCompanies } from '@/hooks/useCompanies';
 import {
   LayoutDashboard,
   FolderKanban,
-  FileText,
   ShoppingCart,
   Receipt,
   Truck,
@@ -18,6 +18,7 @@ import {
   LogOut
 } from 'lucide-react';
 import targetLogo from '@/assets/target-logo.jpg';
+import alhadafLogo from '@/assets/alhadaf-logo.png';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,10 +30,9 @@ import {
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Projects', href: '/projects', icon: FolderKanban },
-  { name: 'Quotations', href: '/quotations', icon: FileText },
   { name: 'Sales Orders', href: '/sales-orders', icon: ShoppingCart },
   { name: 'Invoices', href: '/invoices', icon: Receipt },
-  { name: 'Deliveries', href: '/deliveries', icon: Truck },
+  { name: 'Delivery Orders', href: '/delivery-orders', icon: Truck },
   { name: 'Inventory', href: '/inventory', icon: Package },
   { name: 'Payments', href: '/payments', icon: CreditCard },
   { name: 'Users', href: '/users', icon: Users },
@@ -42,6 +42,7 @@ const navigation = [
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const { profile, role, signOut, hasAccess } = useAuth();
+  const { activeCompanyId } = useCompanies();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -66,6 +67,12 @@ export default function Sidebar() {
     return hasAccess(allowedRoles);
   });
 
+  // Get the appropriate logo and company name based on active company
+  const isAlhadaf = activeCompanyId === 'alhadaf-projects';
+  const currentLogo = isAlhadaf ? alhadafLogo : targetLogo;
+  const companyDisplayName = isAlhadaf ? 'Al Hadaf' : 'Target';
+  const companySubtitle = isAlhadaf ? 'Al Kabeer' : 'Specialties';
+
   return (
     <aside
       className={cn(
@@ -77,14 +84,14 @@ export default function Sidebar() {
       <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
           <img 
-            src={targetLogo} 
-            alt="Target Specialties Logo" 
+            src={currentLogo} 
+            alt={`${companyDisplayName} Logo`} 
             className="h-10 w-10 object-contain rounded-lg"
           />
           {!collapsed && (
             <div className="animate-fade-in">
-              <h1 className="text-lg font-bold text-sidebar-foreground">Target</h1>
-              <p className="text-xs text-sidebar-foreground/60">Specialties</p>
+              <h1 className="text-lg font-bold text-sidebar-foreground">{companyDisplayName}</h1>
+              <p className="text-xs text-sidebar-foreground/60">{companySubtitle}</p>
             </div>
           )}
         </div>
