@@ -2,14 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompanies } from '@/hooks/useCompanies';
 
-// Get active company ID from localStorage
-const getActiveCompanyId = () => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('activeCompanyId') || 'target-specialties';
-  }
-  return 'target-specialties';
-};
 export interface Product {
   id: string;
   user_id: string;
@@ -46,17 +40,26 @@ export function useProducts() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { getActiveCompanyDbId, activeCompanyId } = useCompanies();
 
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
-      const activeCompanyId = getActiveCompanyId();
+      const companyDbId = getActiveCompanyDbId();
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('products')
         .select('*')
-        .eq('company_id', activeCompanyId)
         .order('created_at', { ascending: false });
+
+      // Filter by company_id - null for Target Specialties, UUID for others
+      if (companyDbId) {
+        query = query.eq('company_id', companyDbId);
+      } else {
+        query = query.is('company_id', null);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setProducts(data || []);
@@ -69,7 +72,7 @@ export function useProducts() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, getActiveCompanyDbId]);
 
   const createProduct = async (input: ProductInput) => {
     if (!user) {
@@ -82,12 +85,13 @@ export function useProducts() {
     }
 
     try {
+      const companyDbId = getActiveCompanyDbId();
       const { data, error } = await supabase
         .from('products')
         .insert({
           ...input,
           user_id: user.id,
-          company_id: getActiveCompanyId(), // Auto-assign active company
+          company_id: companyDbId, // Auto-assign active company
         })
         .select()
         .single();
@@ -166,7 +170,7 @@ export function useProducts() {
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [activeCompanyId]);
 
   return {
     products,

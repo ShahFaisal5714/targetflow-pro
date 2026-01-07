@@ -3,14 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { logError } from '@/lib/logger';
+import { useCompanies } from '@/hooks/useCompanies';
 
-// Get active company ID from localStorage
-const getActiveCompanyId = () => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('activeCompanyId') || 'target-specialties';
-  }
-  return 'target-specialties';
-};
 export interface InvoiceItem {
   productId: string;
   description: string;
@@ -83,6 +77,7 @@ export function useInvoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { getActiveCompanyDbId, activeCompanyId } = useCompanies();
 
   const fetchInvoices = useCallback(async () => {
     if (!user) {
@@ -93,13 +88,21 @@ export function useInvoices() {
 
     try {
       setLoading(true);
-      const activeCompanyId = getActiveCompanyId();
+      const companyDbId = getActiveCompanyDbId();
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('invoices')
         .select('*')
-        .eq('company_id', activeCompanyId)
         .order('created_at', { ascending: false });
+
+      // Filter by company_id - null for Target Specialties, UUID for others
+      if (companyDbId) {
+        query = query.eq('company_id', companyDbId);
+      } else {
+        query = query.is('company_id', null);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -114,7 +117,7 @@ export function useInvoices() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, getActiveCompanyDbId]);
 
   const generateInvoiceNumber = async (): Promise<string> => {
     const year = new Date().getFullYear();
@@ -131,6 +134,7 @@ export function useInvoices() {
 
     try {
       const invoiceNumber = await generateInvoiceNumber();
+      const companyDbId = getActiveCompanyDbId();
       const insertData = {
         user_id: user.id,
         invoice_number: invoiceNumber,
@@ -145,7 +149,7 @@ export function useInvoices() {
         due_date: invoiceData.due_date || null,
         status: invoiceData.status || 'draft',
         notes: invoiceData.notes || null,
-        company_id: getActiveCompanyId(), // Auto-assign active company
+        company_id: companyDbId, // Auto-assign active company
       };
 
       const { data, error } = await supabase
@@ -267,7 +271,7 @@ export function useInvoices() {
 
   useEffect(() => {
     fetchInvoices();
-  }, [user]);
+  }, [user, activeCompanyId]);
 
   return {
     invoices,
