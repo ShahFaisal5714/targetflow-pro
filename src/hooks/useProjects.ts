@@ -1,10 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Project, ProjectCategory, ProjectStatus, Company, Milestone } from '@/types/crm';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { logError } from '@/lib/logger';
 
+// Get active company ID from localStorage
+const getActiveCompanyId = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('activeCompanyId') || 'target-specialties';
+  }
+  return 'target-specialties';
+};
 interface DbProject {
   id: string;
   name: string;
@@ -90,12 +97,15 @@ export function useProjects() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     try {
       setLoading(true);
+      const activeCompanyId = getActiveCompanyId();
+      
       const { data, error } = await supabase
         .from('projects')
         .select('*')
+        .eq('company_id', activeCompanyId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -112,7 +122,7 @@ export function useProjects() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   const createProject = async (projectData: Partial<Project>): Promise<Project | null> => {
     if (!user) {
@@ -136,7 +146,7 @@ export function useProjects() {
         client: JSON.parse(JSON.stringify(projectData.client || {})),
         consultant: projectData.consultant ? JSON.parse(JSON.stringify(projectData.consultant)) : null,
         timeline: JSON.parse(JSON.stringify(projectData.timeline || { startDate: '', endDate: '', milestones: [] })),
-        company_id: null, // Company selection handled via project form, not FK
+        company_id: getActiveCompanyId(), // Auto-assign active company
         user_id: user.id,
         // New fields
         buyer_trn: extData.buyerTrn || null,

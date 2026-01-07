@@ -58,6 +58,7 @@ export type Database = {
       }
       delivery_orders: {
         Row: {
+          company_id: string | null
           created_at: string
           delivery_date: string | null
           delivery_number: string
@@ -70,6 +71,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          company_id?: string | null
           created_at?: string
           delivery_date?: string | null
           delivery_number: string
@@ -82,6 +84,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          company_id?: string | null
           created_at?: string
           delivery_date?: string | null
           delivery_number?: string
@@ -175,6 +178,7 @@ export type Database = {
         Row: {
           category: string
           color: string | null
+          company_id: string | null
           cost: number
           created_at: string
           description: string | null
@@ -191,6 +195,7 @@ export type Database = {
         Insert: {
           category?: string
           color?: string | null
+          company_id?: string | null
           cost?: number
           created_at?: string
           description?: string | null
@@ -207,6 +212,7 @@ export type Database = {
         Update: {
           category?: string
           color?: string | null
+          company_id?: string | null
           cost?: number
           created_at?: string
           description?: string | null

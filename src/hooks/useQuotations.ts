@@ -1,9 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { logError } from '@/lib/logger';
 
+// Get active company ID from localStorage
+const getActiveCompanyId = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('activeCompanyId') || 'target-specialties';
+  }
+  return 'target-specialties';
+};
 export interface QuotationItem {
   productId: string;
   productName: string;
@@ -75,7 +82,7 @@ export function useQuotations() {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  const fetchQuotations = async () => {
+  const fetchQuotations = useCallback(async () => {
     if (!user) {
       setQuotations([]);
       setLoading(false);
@@ -84,9 +91,12 @@ export function useQuotations() {
 
     try {
       setLoading(true);
+      const activeCompanyId = getActiveCompanyId();
+      
       const { data, error } = await supabase
         .from('quotations')
         .select('*')
+        .eq('company_id', activeCompanyId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -102,7 +112,7 @@ export function useQuotations() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   const createQuotation = async (quotationData: Partial<Quotation>) => {
     if (!user) return null;
@@ -119,7 +129,7 @@ export function useQuotations() {
         total: quotationData.total || 0,
         valid_until: quotationData.valid_until || null,
         status: quotationData.status || 'draft',
-        company_id: quotationData.company_id || null,
+        company_id: getActiveCompanyId(), // Auto-assign active company
         version: 1,
       };
 

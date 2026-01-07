@@ -95,7 +95,11 @@ export default function Settings() {
   };
 
   const handleSelectCompany = async (companyId: string) => {
-    await setActiveCompany(companyId);
+    const success = await setActiveCompany(companyId);
+    if (success) {
+      // Reload the page to refresh all data with the new company
+      window.location.reload();
+    }
   };
 
   if (loading || companiesLoading) {

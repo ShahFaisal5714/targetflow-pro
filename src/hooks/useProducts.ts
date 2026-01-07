@@ -1,8 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
+// Get active company ID from localStorage
+const getActiveCompanyId = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('activeCompanyId') || 'target-specialties';
+  }
+  return 'target-specialties';
+};
 export interface Product {
   id: string;
   user_id: string;
@@ -18,6 +25,7 @@ export interface Product {
   unit: string;
   created_at: string;
   updated_at: string;
+  company_id: string | null;
 }
 
 export interface ProductInput {
@@ -39,12 +47,15 @@ export function useProducts() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
+      const activeCompanyId = getActiveCompanyId();
+      
       const { data, error } = await supabase
         .from('products')
         .select('*')
+        .eq('company_id', activeCompanyId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -58,7 +69,7 @@ export function useProducts() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   const createProduct = async (input: ProductInput) => {
     if (!user) {
@@ -76,6 +87,7 @@ export function useProducts() {
         .insert({
           ...input,
           user_id: user.id,
+          company_id: getActiveCompanyId(), // Auto-assign active company
         })
         .select()
         .single();
