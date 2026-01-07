@@ -1,13 +1,21 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { mockSalesData } from '@/data/mockData';
 
-export default function SalesChart() {
+interface SalesData {
+  month: string;
+  revenue: number;
+}
+
+interface SalesChartProps {
+  data: SalesData[];
+}
+
+export default function SalesChart({ data }: SalesChartProps) {
   return (
     <div className="bg-card rounded-xl border border-border/50 p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-lg font-semibold text-foreground">Revenue Overview</h3>
-          <p className="text-sm text-muted-foreground">Monthly revenue for 2024</p>
+          <p className="text-sm text-muted-foreground">Monthly revenue</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
@@ -18,7 +26,7 @@ export default function SalesChart() {
       </div>
       <div className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={mockSalesData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
@@ -36,7 +44,7 @@ export default function SalesChart() {
               axisLine={false}
               tickLine={false}
               tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-              tickFormatter={(value) => `$${value / 1000}k`}
+              tickFormatter={(value) => `AED ${value / 1000}k`}
             />
             <Tooltip
               contentStyle={{
@@ -45,7 +53,7 @@ export default function SalesChart() {
                 borderRadius: '8px',
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
               }}
-              formatter={(value: number) => [`$${value.toLocaleString()}`, 'Revenue']}
+              formatter={(value: number) => [`AED ${value.toLocaleString()}`, 'Revenue']}
             />
             <Area
               type="monotone"
