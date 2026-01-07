@@ -162,21 +162,17 @@ export default function Users() {
 
     setDeletingUserId(userId);
     try {
-      // Delete user role first (due to foreign key constraints if any)
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId);
+      // Call the Edge Function to properly delete the user from auth.users
+      // This will also cascade delete profiles and user_roles
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId },
+      });
 
-      if (roleError) throw roleError;
-
-      // Delete user profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('user_id', userId);
-
-      if (profileError) throw profileError;
+      if (error) throw error;
+      
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
       setUsers((prev) => prev.filter((u) => u.user_id !== userId));
       toast.success('User deleted successfully');
