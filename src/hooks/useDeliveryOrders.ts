@@ -1,9 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { logError } from '@/lib/logger';
 
+// Get active company ID from localStorage
+const getActiveCompanyId = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('activeCompanyId') || 'target-specialties';
+  }
+  return 'target-specialties';
+};
 export interface DeliveryItem {
   productId: string;
   productName: string;
@@ -23,6 +30,7 @@ export interface DeliveryOrder {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  company_id: string | null;
 }
 
 interface DbDeliveryOrder {
@@ -36,6 +44,7 @@ interface DbDeliveryOrder {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  company_id: string | null;
 }
 
 const mapDbToDeliveryOrder = (db: DbDeliveryOrder): DeliveryOrder => ({
@@ -49,6 +58,7 @@ const mapDbToDeliveryOrder = (db: DbDeliveryOrder): DeliveryOrder => ({
   notes: db.notes,
   created_at: db.created_at,
   updated_at: db.updated_at,
+  company_id: db.company_id,
 });
 
 export function useDeliveryOrders() {
@@ -56,7 +66,7 @@ export function useDeliveryOrders() {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  const fetchDeliveryOrders = async () => {
+  const fetchDeliveryOrders = useCallback(async () => {
     if (!user) {
       setDeliveryOrders([]);
       setLoading(false);
@@ -65,9 +75,12 @@ export function useDeliveryOrders() {
 
     try {
       setLoading(true);
+      const activeCompanyId = getActiveCompanyId();
+      
       const { data, error } = await supabase
         .from('delivery_orders')
         .select('*')
+        .eq('company_id', activeCompanyId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -83,7 +96,7 @@ export function useDeliveryOrders() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   const generateDeliveryNumber = async (): Promise<string> => {
     const year = new Date().getFullYear();
@@ -108,6 +121,7 @@ export function useDeliveryOrders() {
         delivery_date: orderData.delivery_date || null,
         status: orderData.status || 'pending',
         notes: orderData.notes || null,
+        company_id: getActiveCompanyId(), // Auto-assign active company
       };
 
       const { data, error } = await supabase

@@ -1,9 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { logError } from '@/lib/logger';
 
+// Get active company ID from localStorage
+const getActiveCompanyId = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('activeCompanyId') || 'target-specialties';
+  }
+  return 'target-specialties';
+};
 export interface InvoiceItem {
   productId: string;
   description: string;
@@ -77,7 +84,7 @@ export function useInvoices() {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  const fetchInvoices = async () => {
+  const fetchInvoices = useCallback(async () => {
     if (!user) {
       setInvoices([]);
       setLoading(false);
@@ -86,9 +93,12 @@ export function useInvoices() {
 
     try {
       setLoading(true);
+      const activeCompanyId = getActiveCompanyId();
+      
       const { data, error } = await supabase
         .from('invoices')
         .select('*')
+        .eq('company_id', activeCompanyId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -104,7 +114,7 @@ export function useInvoices() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   const generateInvoiceNumber = async (): Promise<string> => {
     const year = new Date().getFullYear();
@@ -135,7 +145,7 @@ export function useInvoices() {
         due_date: invoiceData.due_date || null,
         status: invoiceData.status || 'draft',
         notes: invoiceData.notes || null,
-        company_id: invoiceData.company_id || null,
+        company_id: getActiveCompanyId(), // Auto-assign active company
       };
 
       const { data, error } = await supabase
