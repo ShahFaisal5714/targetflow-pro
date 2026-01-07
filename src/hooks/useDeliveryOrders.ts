@@ -3,14 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { logError } from '@/lib/logger';
+import { useCompanies } from '@/hooks/useCompanies';
 
-// Get active company ID from localStorage
-const getActiveCompanyId = () => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('activeCompanyId') || 'target-specialties';
-  }
-  return 'target-specialties';
-};
 export interface DeliveryItem {
   productId: string;
   productName: string;
@@ -65,6 +59,7 @@ export function useDeliveryOrders() {
   const [deliveryOrders, setDeliveryOrders] = useState<DeliveryOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { getActiveCompanyDbId, activeCompanyId } = useCompanies();
 
   const fetchDeliveryOrders = useCallback(async () => {
     if (!user) {
@@ -75,13 +70,21 @@ export function useDeliveryOrders() {
 
     try {
       setLoading(true);
-      const activeCompanyId = getActiveCompanyId();
+      const companyDbId = getActiveCompanyDbId();
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('delivery_orders')
         .select('*')
-        .eq('company_id', activeCompanyId)
         .order('created_at', { ascending: false });
+
+      // Filter by company_id - null for Target Specialties, UUID for others
+      if (companyDbId) {
+        query = query.eq('company_id', companyDbId);
+      } else {
+        query = query.is('company_id', null);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -96,7 +99,7 @@ export function useDeliveryOrders() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, getActiveCompanyDbId]);
 
   const generateDeliveryNumber = async (): Promise<string> => {
     const year = new Date().getFullYear();
@@ -113,6 +116,7 @@ export function useDeliveryOrders() {
 
     try {
       const deliveryNumber = await generateDeliveryNumber();
+      const companyDbId = getActiveCompanyDbId();
       const insertData = {
         user_id: user.id,
         delivery_number: deliveryNumber,
@@ -121,7 +125,7 @@ export function useDeliveryOrders() {
         delivery_date: orderData.delivery_date || null,
         status: orderData.status || 'pending',
         notes: orderData.notes || null,
-        company_id: getActiveCompanyId(), // Auto-assign active company
+        company_id: companyDbId, // Auto-assign active company
       };
 
       const { data, error } = await supabase
@@ -223,7 +227,7 @@ export function useDeliveryOrders() {
 
   useEffect(() => {
     fetchDeliveryOrders();
-  }, [user]);
+  }, [user, activeCompanyId]);
 
   return {
     deliveryOrders,

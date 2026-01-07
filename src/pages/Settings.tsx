@@ -95,11 +95,8 @@ export default function Settings() {
   };
 
   const handleSelectCompany = async (companyId: string) => {
-    const success = await setActiveCompany(companyId);
-    if (success) {
-      // Reload the page to refresh all data with the new company
-      window.location.reload();
-    }
+    await setActiveCompany(companyId);
+    // No need to reload - hooks now auto-refresh when activeCompanyId changes
   };
 
   if (loading || companiesLoading) {
@@ -152,7 +149,7 @@ export default function Settings() {
                 {/* Target Specialties - Always present, hardcoded */}
                 <div 
                   className={`flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-colors ${
-                    activeCompanyId === 'target-specialties' 
+                    activeCompanyId === 'target-specialties' || !activeCompanyId
                       ? 'border-primary bg-primary/5' 
                       : 'bg-card hover:bg-secondary/20'
                   }`}
@@ -165,7 +162,7 @@ export default function Settings() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold truncate">{targetSpecialties.name}</h3>
-                      {activeCompanyId === 'target-specialties' && (
+                      {(activeCompanyId === 'target-specialties' || !activeCompanyId) && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">
                           <Star className="h-3 w-3" />
                           Active
@@ -180,7 +177,7 @@ export default function Settings() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {activeCompanyId === 'target-specialties' ? (
+                    {(activeCompanyId === 'target-specialties' || !activeCompanyId) ? (
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                         <Check className="h-4 w-4 text-primary" />
                       </div>
@@ -195,7 +192,7 @@ export default function Settings() {
                 {/* Alhadaf Projects - Editable */}
                 <div 
                   className={`flex items-start gap-4 p-4 rounded-lg border transition-colors ${
-                    activeCompanyId === 'alhadaf-projects' 
+                    activeCompanyId && activeCompanyId !== 'target-specialties'
                       ? 'border-primary bg-primary/5' 
                       : 'bg-card hover:bg-secondary/20'
                   } ${!editingAlhadaf ? 'cursor-pointer' : ''}`}
@@ -208,7 +205,7 @@ export default function Settings() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="font-semibold truncate">{alhadafCompany.name}</h3>
-                      {activeCompanyId === 'alhadaf-projects' && (
+                      {activeCompanyId && activeCompanyId !== 'target-specialties' && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">
                           <Star className="h-3 w-3" />
                           Active
@@ -284,7 +281,7 @@ export default function Settings() {
                         <Edit className="h-4 w-4" />
                       </Button>
                     )}
-                    {activeCompanyId === 'alhadaf-projects' ? (
+                    {activeCompanyId && activeCompanyId !== 'target-specialties' ? (
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                         <Check className="h-4 w-4 text-primary" />
                       </div>

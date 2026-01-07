@@ -1,7 +1,8 @@
 import { ReactNode } from 'react';
-import { Bell, Search, Plus } from 'lucide-react';
+import { Bell, Search, Plus, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useCompanies } from '@/hooks/useCompanies';
 
 interface HeaderProps {
   title: string;
@@ -13,6 +14,8 @@ interface HeaderProps {
 }
 
 export default function Header({ title, subtitle, action }: HeaderProps) {
+  const { getActiveCompany } = useCompanies();
+  const activeCompany = getActiveCompany();
   const isActionConfig = action && typeof action === 'object' && 'label' in action && 'onClick' in action;
 
   return (
@@ -24,6 +27,12 @@ export default function Header({ title, subtitle, action }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-4">
+          {/* Active Company Badge */}
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
+            <Building2 className="h-4 w-4" />
+            <span className="max-w-[150px] truncate">{activeCompany.name}</span>
+          </div>
+
           {/* Search */}
           <div className="relative hidden md:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

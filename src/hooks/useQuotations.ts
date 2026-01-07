@@ -3,14 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { logError } from '@/lib/logger';
+import { useCompanies } from '@/hooks/useCompanies';
 
-// Get active company ID from localStorage
-const getActiveCompanyId = () => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('activeCompanyId') || 'target-specialties';
-  }
-  return 'target-specialties';
-};
 export interface QuotationItem {
   productId: string;
   productName: string;
@@ -81,6 +75,7 @@ export function useQuotations() {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { getActiveCompanyDbId, activeCompanyId } = useCompanies();
 
   const fetchQuotations = useCallback(async () => {
     if (!user) {
@@ -91,13 +86,21 @@ export function useQuotations() {
 
     try {
       setLoading(true);
-      const activeCompanyId = getActiveCompanyId();
+      const companyDbId = getActiveCompanyDbId();
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('quotations')
         .select('*')
-        .eq('company_id', activeCompanyId)
         .order('created_at', { ascending: false });
+
+      // Filter by company_id - null for Target Specialties, UUID for others
+      if (companyDbId) {
+        query = query.eq('company_id', companyDbId);
+      } else {
+        query = query.is('company_id', null);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -112,12 +115,13 @@ export function useQuotations() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, getActiveCompanyDbId]);
 
   const createQuotation = async (quotationData: Partial<Quotation>) => {
     if (!user) return null;
 
     try {
+      const companyDbId = getActiveCompanyDbId();
       const insertData = {
         user_id: user.id,
         project_id: quotationData.project_id || null,
@@ -129,7 +133,7 @@ export function useQuotations() {
         total: quotationData.total || 0,
         valid_until: quotationData.valid_until || null,
         status: quotationData.status || 'draft',
-        company_id: getActiveCompanyId(), // Auto-assign active company
+        company_id: companyDbId, // Auto-assign active company
         version: 1,
       };
 
@@ -237,7 +241,7 @@ export function useQuotations() {
 
   useEffect(() => {
     fetchQuotations();
-  }, [user]);
+  }, [user, activeCompanyId]);
 
   return {
     quotations,

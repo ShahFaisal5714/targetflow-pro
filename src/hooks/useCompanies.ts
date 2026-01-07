@@ -17,11 +17,11 @@ export interface Company {
   updated_at: string;
 }
 
-// Fixed company data for Target Specialties (hardcoded)
-export const TARGET_SPECIALTIES: Company = {
+// Fixed company data for Target Specialties (hardcoded for display)
+export const TARGET_SPECIALTIES_DISPLAY: Company = {
   id: 'target-specialties',
   name: 'TARGET SPECIALTIES',
-  logo_url: null, // Uses imported asset
+  logo_url: null,
   email: 'Info@targetspecialties.com',
   phone: '+971 50 958 7185',
   address: 'Building Rema plaza | Office no. 1 Aljurf 3 Ajman UAE',
@@ -31,11 +31,11 @@ export const TARGET_SPECIALTIES: Company = {
   updated_at: new Date().toISOString(),
 };
 
-// Fixed company data for Alhadaf Projects (hardcoded)
-export const ALHADAF_PROJECTS: Company = {
+// Fixed company data for Alhadaf Projects (hardcoded for display)
+export const ALHADAF_PROJECTS_DISPLAY: Company = {
   id: 'alhadaf-projects',
   name: 'AL HADAF AL KABEER METAL CONTRACTING',
-  logo_url: null, // Uses imported asset
+  logo_url: null,
   email: null,
   phone: null,
   address: null,
@@ -44,6 +44,10 @@ export const ALHADAF_PROJECTS: Company = {
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
+
+// For backwards compatibility
+export const TARGET_SPECIALTIES = TARGET_SPECIALTIES_DISPLAY;
+export const ALHADAF_PROJECTS = ALHADAF_PROJECTS_DISPLAY;
 
 interface DbCompany {
   id: string;
@@ -59,11 +63,37 @@ interface DbCompany {
   updated_at: string;
 }
 
+// Helper to get active company ID (UUID or null)
+export const getActiveCompanyId = (): string | null => {
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('activeCompanyId');
+    // Return null if it's a legacy string ID or empty
+    if (stored === 'target-specialties' || !stored) {
+      return null; // null means Target Specialties (no company_id in DB)
+    }
+    // Return the actual UUID for Alhadaf or other companies
+    return stored;
+  }
+  return null;
+};
+
+// Helper to get display ID for UI purposes
+export const getActiveDisplayId = (): string => {
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('activeCompanyId');
+    if (stored && stored !== 'target-specialties') {
+      return 'alhadaf-projects';
+    }
+  }
+  return 'target-specialties';
+};
+
 export function useCompanies() {
   const { user } = useAuth();
+  const [companies, setCompanies] = useState<DbCompany[]>([]);
   const [alhadafDetails, setAlhadafDetails] = useState<Partial<Company>>({});
+  const [alhadafDbId, setAlhadafDbId] = useState<string | null>(null);
   const [activeCompanyId, setActiveCompanyIdState] = useState<string>(() => {
-    // Try to get from localStorage for immediate display
     if (typeof window !== 'undefined') {
       return localStorage.getItem('activeCompanyId') || 'target-specialties';
     }
@@ -78,38 +108,41 @@ export function useCompanies() {
     }
     
     try {
-      // Fetch Alhadaf company details from database (if saved)
-      const { data, error } = await supabase
+      // Fetch all companies for this user
+      const { data: allCompanies, error: allError } = await supabase
         .from('companies')
         .select('*')
-        .ilike('name', '%ALHADAF%')
-        .maybeSingle();
+        .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (allError) throw allError;
+      
+      setCompanies(allCompanies || []);
 
-      if (data) {
+      // Find Alhadaf company
+      const alhadaf = allCompanies?.find(c => c.name.toLowerCase().includes('alhadaf'));
+      
+      if (alhadaf) {
+        setAlhadafDbId(alhadaf.id);
         setAlhadafDetails({
-          email: data.email,
-          phone: data.phone,
-          address: data.address,
-          website: data.website,
+          email: alhadaf.email,
+          phone: alhadaf.phone,
+          address: alhadaf.address,
+          website: alhadaf.website,
         });
-        if (data.is_default) {
-          setActiveCompanyIdState('alhadaf-projects');
+        
+        if (alhadaf.is_default) {
+          setActiveCompanyIdState(alhadaf.id);
+          localStorage.setItem('activeCompanyId', alhadaf.id);
         }
       }
 
       // Check which company is default
-      const { data: defaultData } = await supabase
-        .from('companies')
-        .select('name, is_default')
-        .eq('is_default', true)
-        .maybeSingle();
-
-      if (defaultData && defaultData.name?.toLowerCase().includes('alhadaf')) {
-        setActiveCompanyIdState('alhadaf-projects');
-        localStorage.setItem('activeCompanyId', 'alhadaf-projects');
+      const defaultCompany = allCompanies?.find(c => c.is_default);
+      if (defaultCompany) {
+        setActiveCompanyIdState(defaultCompany.id);
+        localStorage.setItem('activeCompanyId', defaultCompany.id);
       } else {
+        // No default set, use Target Specialties (null company_id)
         setActiveCompanyIdState('target-specialties');
         localStorage.setItem('activeCompanyId', 'target-specialties');
       }
@@ -128,14 +161,7 @@ export function useCompanies() {
     if (!user) return null;
 
     try {
-      // Check if Alhadaf exists
-      const { data: existing } = await supabase
-        .from('companies')
-        .select('id')
-        .ilike('name', '%ALHADAF%')
-        .maybeSingle();
-
-      if (existing) {
+      if (alhadafDbId) {
         // Update existing
         const { data, error } = await supabase
           .from('companies')
@@ -145,7 +171,7 @@ export function useCompanies() {
             address: updates.address,
             website: updates.website,
           })
-          .eq('id', existing.id)
+          .eq('id', alhadafDbId)
           .select()
           .single();
 
@@ -169,7 +195,7 @@ export function useCompanies() {
           .from('companies')
           .insert({
             user_id: user.id,
-            name: ALHADAF_PROJECTS.name,
+            name: ALHADAF_PROJECTS_DISPLAY.name,
             email: updates.email || null,
             phone: updates.phone || null,
             address: updates.address || null,
@@ -180,6 +206,8 @@ export function useCompanies() {
           .single();
 
         if (error) throw error;
+        
+        setAlhadafDbId(data.id);
         setAlhadafDetails({
           email: data.email,
           phone: data.phone,
@@ -205,7 +233,7 @@ export function useCompanies() {
     }
   };
 
-  const setActiveCompany = async (companyId: string): Promise<boolean> => {
+  const setActiveCompany = async (displayId: string): Promise<boolean> => {
     if (!user) return false;
 
     try {
@@ -215,37 +243,43 @@ export function useCompanies() {
         .update({ is_default: false })
         .eq('user_id', user.id);
 
-      // If selecting Alhadaf, ensure it exists and set as default
-      if (companyId === 'alhadaf-projects') {
-        const { data: existing } = await supabase
-          .from('companies')
-          .select('id')
-          .ilike('name', '%ALHADAF%')
-          .maybeSingle();
-
-        if (existing) {
+      if (displayId === 'alhadaf-projects') {
+        // Ensure Alhadaf exists and set as default
+        if (alhadafDbId) {
           await supabase
             .from('companies')
             .update({ is_default: true })
-            .eq('id', existing.id);
+            .eq('id', alhadafDbId);
+          
+          setActiveCompanyIdState(alhadafDbId);
+          localStorage.setItem('activeCompanyId', alhadafDbId);
         } else {
           // Create Alhadaf if it doesn't exist
-          await supabase
+          const { data: newCompany, error } = await supabase
             .from('companies')
             .insert({
               user_id: user.id,
-              name: ALHADAF_PROJECTS.name,
+              name: ALHADAF_PROJECTS_DISPLAY.name,
               is_default: true,
-            });
-        }
-      }
+            })
+            .select()
+            .single();
 
-      setActiveCompanyIdState(companyId);
-      localStorage.setItem('activeCompanyId', companyId);
+          if (error) throw error;
+          
+          setAlhadafDbId(newCompany.id);
+          setActiveCompanyIdState(newCompany.id);
+          localStorage.setItem('activeCompanyId', newCompany.id);
+        }
+      } else {
+        // Target Specialties - no company in DB, just reset
+        setActiveCompanyIdState('target-specialties');
+        localStorage.setItem('activeCompanyId', 'target-specialties');
+      }
       
       toast({
         title: 'Success',
-        description: `${companyId === 'target-specialties' ? 'Target Specialties' : 'Alhadaf Projects'} is now active`,
+        description: `${displayId === 'target-specialties' ? 'Target Specialties' : 'Alhadaf Projects'} is now active`,
       });
 
       return true;
@@ -261,30 +295,51 @@ export function useCompanies() {
   };
 
   const getActiveCompany = (): Company => {
-    if (activeCompanyId === 'alhadaf-projects') {
+    // Check if active is a UUID (Alhadaf)
+    if (activeCompanyId && activeCompanyId !== 'target-specialties') {
       return {
-        ...ALHADAF_PROJECTS,
+        ...ALHADAF_PROJECTS_DISPLAY,
+        id: activeCompanyId,
         ...alhadafDetails,
       };
     }
-    return TARGET_SPECIALTIES;
+    return TARGET_SPECIALTIES_DISPLAY;
+  };
+
+  const getActiveDisplayId = (): string => {
+    if (activeCompanyId && activeCompanyId !== 'target-specialties') {
+      return 'alhadaf-projects';
+    }
+    return 'target-specialties';
   };
 
   const getAlhadafWithDetails = (): Company => {
     return {
-      ...ALHADAF_PROJECTS,
+      ...ALHADAF_PROJECTS_DISPLAY,
+      id: alhadafDbId || 'alhadaf-projects',
       ...alhadafDetails,
     };
   };
 
+  // Get actual DB UUID for company_id filtering
+  const getActiveCompanyDbId = (): string | null => {
+    if (activeCompanyId && activeCompanyId !== 'target-specialties') {
+      return activeCompanyId; // This is the actual UUID
+    }
+    return null; // Target Specialties uses null
+  };
+
   return {
-    targetSpecialties: TARGET_SPECIALTIES,
+    targetSpecialties: TARGET_SPECIALTIES_DISPLAY,
     alhadafCompany: getAlhadafWithDetails(),
+    alhadafDbId,
     activeCompanyId,
     loading,
     updateAlhadafCompany,
     setActiveCompany,
     getActiveCompany,
+    getActiveDisplayId,
+    getActiveCompanyDbId,
     refetch: fetchCompanies,
   };
 }

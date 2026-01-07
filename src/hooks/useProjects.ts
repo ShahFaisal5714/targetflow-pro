@@ -4,14 +4,8 @@ import { Project, ProjectCategory, ProjectStatus, Company, Milestone } from '@/t
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { logError } from '@/lib/logger';
+import { useCompanies } from '@/hooks/useCompanies';
 
-// Get active company ID from localStorage
-const getActiveCompanyId = () => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('activeCompanyId') || 'target-specialties';
-  }
-  return 'target-specialties';
-};
 interface DbProject {
   id: string;
   name: string;
@@ -96,17 +90,26 @@ export function useProjects() {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { getActiveCompanyDbId, activeCompanyId } = useCompanies();
 
   const fetchProjects = useCallback(async () => {
     try {
       setLoading(true);
-      const activeCompanyId = getActiveCompanyId();
+      const companyDbId = getActiveCompanyDbId();
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('projects')
         .select('*')
-        .eq('company_id', activeCompanyId)
         .order('created_at', { ascending: false });
+
+      // Filter by company_id - null for Target Specialties, UUID for others
+      if (companyDbId) {
+        query = query.eq('company_id', companyDbId);
+      } else {
+        query = query.is('company_id', null);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       
@@ -122,7 +125,7 @@ export function useProjects() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, getActiveCompanyDbId]);
 
   const createProject = async (projectData: Partial<Project>): Promise<Project | null> => {
     if (!user) {
@@ -136,6 +139,7 @@ export function useProjects() {
 
     try {
       const extData = projectData as Record<string, any>;
+      const companyDbId = getActiveCompanyDbId();
       const insertData = {
         name: projectData.name || '',
         category: projectData.category || 'commercial',
@@ -146,7 +150,7 @@ export function useProjects() {
         client: JSON.parse(JSON.stringify(projectData.client || {})),
         consultant: projectData.consultant ? JSON.parse(JSON.stringify(projectData.consultant)) : null,
         timeline: JSON.parse(JSON.stringify(projectData.timeline || { startDate: '', endDate: '', milestones: [] })),
-        company_id: getActiveCompanyId(), // Auto-assign active company
+        company_id: companyDbId, // Auto-assign active company (UUID or null)
         user_id: user.id,
         // New fields
         buyer_trn: extData.buyerTrn || null,
@@ -261,7 +265,7 @@ export function useProjects() {
     if (user) {
       fetchProjects();
     }
-  }, [user]);
+  }, [user, activeCompanyId]);
 
   return {
     projects,
