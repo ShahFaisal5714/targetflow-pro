@@ -42,7 +42,7 @@ const navigation = [
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const { profile, role, signOut, hasAccess } = useAuth();
-  const { activeCompanyId } = useCompanies();
+  const { activeDisplayId } = useCompanies();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -67,13 +67,11 @@ export default function Sidebar() {
     return hasAccess(allowedRoles);
   });
 
-  // Get the appropriate logo and company name based on active company
-  const isAlhadaf = activeCompanyId === 'alhadaf-projects';
+  // Get the appropriate logo and company name based on active company display ID
+  const isAlhadaf = activeDisplayId === 'alhadaf-projects';
   const currentLogo = isAlhadaf ? alhadafLogo : targetLogo;
   const companyDisplayName = isAlhadaf ? 'Al Hadaf' : 'Target';
   const companySubtitle = isAlhadaf ? 'Al Kabeer' : 'Specialties';
-  // Make Alhadaf logo slightly bigger as it appears smaller
-  const logoClass = isAlhadaf ? 'h-10 w-10 object-contain rounded-lg p-0.5' : 'h-10 w-10 object-contain rounded-lg';
 
   return (
     <aside

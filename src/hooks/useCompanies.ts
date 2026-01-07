@@ -329,11 +329,17 @@ export function useCompanies() {
     return null; // Target Specialties uses null
   };
 
+  // Compute display ID directly from state for reactivity
+  const activeDisplayId = activeCompanyId && activeCompanyId !== 'target-specialties' 
+    ? 'alhadaf-projects' 
+    : 'target-specialties';
+
   return {
     targetSpecialties: TARGET_SPECIALTIES_DISPLAY,
     alhadafCompany: getAlhadafWithDetails(),
     alhadafDbId,
     activeCompanyId,
+    activeDisplayId,
     loading,
     updateAlhadafCompany,
     setActiveCompany,
