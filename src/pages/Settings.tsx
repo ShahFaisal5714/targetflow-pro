@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Bell, Shield, Database, Loader2, Star, Check, Edit } from 'lucide-react';
+import { Building2, Bell, Shield, Database, Loader2, Star, Check, Edit, ArrowLeftRight } from 'lucide-react';
 import { useSettings, CompanySettings, TaxSettings, NotificationSettings } from '@/hooks/useSettings';
 import { useCompanies } from '@/hooks/useCompanies';
+import BulkTransferDialog from '@/components/settings/BulkTransferDialog';
 import targetLogo from '@/assets/target-logo.jpg';
 import alhadafLogo from '@/assets/alhadaf-logo.png';
 
@@ -48,6 +49,7 @@ export default function Settings() {
     website: '',
   });
   const [savingAlhadaf, setSavingAlhadaf] = useState(false);
+  const [bulkTransferOpen, setBulkTransferOpen] = useState(false);
 
   // Update local state when settings are loaded
   useEffect(() => {
@@ -141,9 +143,15 @@ export default function Settings() {
 
           <TabsContent value="companies">
             <Card>
-              <CardHeader>
-                <CardTitle>Company Profiles</CardTitle>
-                <CardDescription>Select which company's branding to use for quotations and invoices</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle>Company Profiles</CardTitle>
+                  <CardDescription>Select which company's branding to use for quotations and invoices</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => setBulkTransferOpen(true)}>
+                  <ArrowLeftRight className="h-4 w-4 mr-2" />
+                  Bulk Transfer
+                </Button>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Target Specialties - Always present, hardcoded */}
@@ -579,6 +587,15 @@ export default function Settings() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <BulkTransferDialog 
+        open={bulkTransferOpen} 
+        onOpenChange={setBulkTransferOpen}
+        onTransferComplete={() => {
+          // Trigger a page refresh to reload all data
+          window.location.reload();
+        }}
+      />
     </MainLayout>
   );
 }
