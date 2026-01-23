@@ -7,10 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Bell, Shield, Database, Loader2, Star, Check, Edit, ArrowLeftRight } from 'lucide-react';
+import { Building2, Bell, Shield, Database, Loader2, Star, Check, Edit, ArrowLeftRight, Download, HardDrive } from 'lucide-react';
 import { useSettings, CompanySettings, TaxSettings, NotificationSettings } from '@/hooks/useSettings';
 import { useCompanies } from '@/hooks/useCompanies';
 import BulkTransferDialog from '@/components/settings/BulkTransferDialog';
+import { useDatabaseExport } from '@/hooks/useDatabaseExport';
 import targetLogo from '@/assets/target-logo.jpg';
 import alhadafLogo from '@/assets/alhadaf-logo.png';
 
@@ -34,6 +35,8 @@ export default function Settings() {
     updateAlhadafCompany,
     setActiveCompany,
   } = useCompanies();
+
+  const { exporting, exportDatabase } = useDatabaseExport();
 
   // Local state for form inputs
   const [company, setCompany] = useState<CompanySettings>(companySettings);
@@ -540,50 +543,82 @@ export default function Settings() {
           </TabsContent>
 
           <TabsContent value="integrations">
-            <Card>
-              <CardHeader>
-                <CardTitle>Connected Integrations</CardTitle>
-                <CardDescription>Manage external service connections</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded bg-blue-100 flex items-center justify-center">
-                      <span className="text-blue-600 font-bold">QB</span>
+            <div className="grid gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Database Export</CardTitle>
+                  <CardDescription>Export your database schema and data as a SQL file</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-card">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
+                        <HardDrive className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Full Database Export</p>
+                        <p className="text-sm text-muted-foreground">
+                          Exports schema, tables, RLS policies, and all data
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">QuickBooks</p>
-                      <p className="text-sm text-muted-foreground">Accounting & Finance</p>
-                    </div>
+                    <Button onClick={exportDatabase} disabled={exporting}>
+                      {exporting ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Download className="h-4 w-4 mr-2" />
+                      )}
+                      {exporting ? 'Exporting...' : 'Export SQL'}
+                    </Button>
                   </div>
-                  <Button variant="outline">Connect</Button>
-                </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded bg-green-100 flex items-center justify-center">
-                      <span className="text-green-600 font-bold">WA</span>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Connected Integrations</CardTitle>
+                  <CardDescription>Manage external service connections</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded bg-accent/20 flex items-center justify-center">
+                        <span className="text-accent-foreground font-bold">QB</span>
+                      </div>
+                      <div>
+                        <p className="font-medium">QuickBooks</p>
+                        <p className="text-sm text-muted-foreground">Accounting & Finance</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">WhatsApp Business</p>
-                      <p className="text-sm text-muted-foreground">Customer Communication</p>
-                    </div>
+                    <Button variant="outline">Connect</Button>
                   </div>
-                  <Button variant="outline">Connect</Button>
-                </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded bg-purple-100 flex items-center justify-center">
-                      <span className="text-purple-600 font-bold">Z</span>
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded bg-success/20 flex items-center justify-center">
+                        <span className="text-success font-bold">WA</span>
+                      </div>
+                      <div>
+                        <p className="font-medium">WhatsApp Business</p>
+                        <p className="text-sm text-muted-foreground">Customer Communication</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">Zoho CRM</p>
-                      <p className="text-sm text-muted-foreground">Customer Management</p>
-                    </div>
+                    <Button variant="outline">Connect</Button>
                   </div>
-                  <Button variant="outline">Connect</Button>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded bg-secondary flex items-center justify-center">
+                        <span className="text-secondary-foreground font-bold">Z</span>
+                      </div>
+                      <div>
+                        <p className="font-medium">Zoho CRM</p>
+                        <p className="text-sm text-muted-foreground">Customer Management</p>
+                      </div>
+                    </div>
+                    <Button variant="outline">Connect</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
