@@ -11,6 +11,7 @@ import { Building2, Bell, Shield, Database, Loader2, Star, Check, Edit, ArrowLef
 import { useSettings, CompanySettings, TaxSettings, NotificationSettings } from '@/hooks/useSettings';
 import { useCompanies } from '@/hooks/useCompanies';
 import BulkTransferDialog from '@/components/settings/BulkTransferDialog';
+import ImportConfirmDialog from '@/components/settings/ImportConfirmDialog';
 import { useDatabaseExport } from '@/hooks/useDatabaseExport';
 import { useDatabaseImport } from '@/hooks/useDatabaseImport';
 import targetLogo from '@/assets/target-logo.jpg';
@@ -40,12 +41,25 @@ export default function Settings() {
   const { exporting, exportDatabase } = useDatabaseExport();
   const { importing, results: importResults, importDatabase } = useDatabaseImport();
 
-  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Import dialog state
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      await importDatabase(file);
+      setPendingImportFile(file);
+      setImportDialogOpen(true);
       // Reset the input so the same file can be selected again
       event.target.value = '';
+    }
+  };
+
+  const handleImportConfirm = async (clearExisting: boolean) => {
+    if (pendingImportFile) {
+      setImportDialogOpen(false);
+      await importDatabase(pendingImportFile, clearExisting);
+      setPendingImportFile(null);
     }
   };
 
@@ -601,7 +615,7 @@ export default function Settings() {
                       <input
                         type="file"
                         accept=".sql"
-                        onChange={handleFileImport}
+                        onChange={handleFileSelect}
                         className="hidden"
                         id="sql-import"
                         disabled={importing}
@@ -708,6 +722,16 @@ export default function Settings() {
           // Trigger a page refresh to reload all data
           window.location.reload();
         }}
+      />
+
+      <ImportConfirmDialog
+        open={importDialogOpen}
+        onOpenChange={(open) => {
+          setImportDialogOpen(open);
+          if (!open) setPendingImportFile(null);
+        }}
+        fileName={pendingImportFile?.name || ''}
+        onConfirm={handleImportConfirm}
       />
     </MainLayout>
   );
