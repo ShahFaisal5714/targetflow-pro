@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Bell, Shield, Database, Loader2, Star, Check, Edit, ArrowLeftRight, Download, HardDrive, Upload, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Building2, Bell, Shield, Database, Loader2, Star, Check, Edit, ArrowLeftRight, Download, HardDrive, Upload, AlertCircle, CheckCircle2, FileJson, FileCode } from 'lucide-react';
 import { useSettings, CompanySettings, TaxSettings, NotificationSettings } from '@/hooks/useSettings';
 import { useCompanies } from '@/hooks/useCompanies';
 import BulkTransferDialog from '@/components/settings/BulkTransferDialog';
@@ -38,17 +38,21 @@ export default function Settings() {
     setActiveCompany,
   } = useCompanies();
 
-  const { exporting, exportDatabase } = useDatabaseExport();
+  const { exporting, exportAsSQL, exportAsJSON } = useDatabaseExport();
   const { importing, results: importResults, importDatabase } = useDatabaseImport();
 
   // Import dialog state
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
+  const [pendingFileContent, setPendingFileContent] = useState<string | null>(null);
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setPendingImportFile(file);
+      // Read file content for preview
+      const content = await file.text();
+      setPendingFileContent(content);
       setImportDialogOpen(true);
       // Reset the input so the same file can be selected again
       event.target.value = '';
@@ -60,6 +64,7 @@ export default function Settings() {
       setImportDialogOpen(false);
       await importDatabase(pendingImportFile, clearExisting);
       setPendingImportFile(null);
+      setPendingFileContent(null);
     }
   };
 
@@ -575,59 +580,82 @@ export default function Settings() {
                   <CardDescription>Export or import your database schema and data</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Export Section */}
+                  {/* SQL Export Section */}
                   <div className="flex items-center justify-between p-4 border rounded-lg bg-card">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
-                        <Download className="h-5 w-5 text-primary" />
+                        <FileCode className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium">Export Database</p>
+                        <p className="font-medium">Export as SQL</p>
                         <p className="text-sm text-muted-foreground">
-                          Download schema, tables, RLS policies, and all data as SQL
+                          Schema, tables, RLS policies, and data as executable SQL
                         </p>
                       </div>
                     </div>
-                    <Button onClick={exportDatabase} disabled={exporting}>
+                    <Button onClick={exportAsSQL} disabled={exporting}>
                       {exporting ? (
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       ) : (
-                        <HardDrive className="h-4 w-4 mr-2" />
+                        <Download className="h-4 w-4 mr-2" />
                       )}
                       {exporting ? 'Exporting...' : 'Export SQL'}
+                    </Button>
+                  </div>
+
+                  {/* JSON Export Section */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-card">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded bg-accent/10 flex items-center justify-center">
+                        <FileJson className="h-5 w-5 text-accent-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Export as JSON</p>
+                        <p className="text-sm text-muted-foreground">
+                          Data only in JSON format for easier manipulation
+                        </p>
+                      </div>
+                    </div>
+                    <Button variant="outline" onClick={exportAsJSON} disabled={exporting}>
+                      {exporting ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Download className="h-4 w-4 mr-2" />
+                      )}
+                      {exporting ? 'Exporting...' : 'Export JSON'}
                     </Button>
                   </div>
 
                   {/* Import Section */}
                   <div className="flex items-center justify-between p-4 border rounded-lg bg-card">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded bg-accent/10 flex items-center justify-center">
-                        <Upload className="h-5 w-5 text-accent-foreground" />
+                      <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
+                        <Upload className="h-5 w-5 text-muted-foreground" />
                       </div>
                       <div>
                         <p className="font-medium">Import Database</p>
                         <p className="text-sm text-muted-foreground">
-                          Restore data from an exported SQL file
+                          Restore data from SQL or JSON export file
                         </p>
                       </div>
                     </div>
                     <div>
                       <input
                         type="file"
-                        accept=".sql"
+                        accept=".sql,.json"
                         onChange={handleFileSelect}
                         className="hidden"
-                        id="sql-import"
+                        id="db-import"
                         disabled={importing}
                       />
                       <Button asChild disabled={importing}>
-                        <label htmlFor="sql-import" className="cursor-pointer">
+                        <label htmlFor="db-import" className="cursor-pointer">
                           {importing ? (
                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
                           ) : (
                             <Upload className="h-4 w-4 mr-2" />
                           )}
-                          {importing ? 'Importing...' : 'Import SQL'}
+                          {importing ? 'Importing...' : 'Import File'}
                         </label>
                       </Button>
                     </div>
@@ -728,9 +756,13 @@ export default function Settings() {
         open={importDialogOpen}
         onOpenChange={(open) => {
           setImportDialogOpen(open);
-          if (!open) setPendingImportFile(null);
+          if (!open) {
+            setPendingImportFile(null);
+            setPendingFileContent(null);
+          }
         }}
         fileName={pendingImportFile?.name || ''}
+        fileContent={pendingFileContent}
         onConfirm={handleImportConfirm}
       />
     </MainLayout>

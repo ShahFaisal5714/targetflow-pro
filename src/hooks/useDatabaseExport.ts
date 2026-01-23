@@ -384,76 +384,92 @@ function generateInsertStatements(tableName: string, rows: Record<string, unknow
   return sql + '\n';
 }
 
+export type ExportFormat = 'sql' | 'json';
+
 export function useDatabaseExport() {
   const [exporting, setExporting] = useState(false);
 
-  const exportDatabase = async () => {
+  const fetchAllData = async () => {
+    const [
+      companiesResult,
+      deliveryOrdersResult,
+      invoicesResult,
+      productsResult,
+      profilesResult,
+      projectsResult,
+      quotationsResult,
+      settingsResult,
+      userRolesResult
+    ] = await Promise.all([
+      supabase.from('companies').select('*'),
+      supabase.from('delivery_orders').select('*'),
+      supabase.from('invoices').select('*'),
+      supabase.from('products').select('*'),
+      supabase.from('profiles').select('*'),
+      supabase.from('projects').select('*'),
+      supabase.from('quotations').select('*'),
+      supabase.from('settings').select('*'),
+      supabase.from('user_roles').select('*')
+    ]);
+
+    return {
+      companies: companiesResult.data || [],
+      delivery_orders: deliveryOrdersResult.data || [],
+      invoices: invoicesResult.data || [],
+      products: productsResult.data || [],
+      profiles: profilesResult.data || [],
+      projects: projectsResult.data || [],
+      quotations: quotationsResult.data || [],
+      settings: settingsResult.data || [],
+      user_roles: userRolesResult.data || []
+    };
+  };
+
+  const exportAsSQL = async () => {
     try {
       setExporting(true);
       
-      // Fetch all data from tables in parallel
-      const [
-        companiesResult,
-        deliveryOrdersResult,
-        invoicesResult,
-        productsResult,
-        profilesResult,
-        projectsResult,
-        quotationsResult,
-        settingsResult,
-        userRolesResult
-      ] = await Promise.all([
-        supabase.from('companies').select('*'),
-        supabase.from('delivery_orders').select('*'),
-        supabase.from('invoices').select('*'),
-        supabase.from('products').select('*'),
-        supabase.from('profiles').select('*'),
-        supabase.from('projects').select('*'),
-        supabase.from('quotations').select('*'),
-        supabase.from('settings').select('*'),
-        supabase.from('user_roles').select('*')
-      ]);
-
-      // Generate the complete SQL file
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      let sql = SCHEMA_SQL.replace('${new Date().toISOString()}', new Date().toISOString());
+      const data = await fetchAllData();
       
-      sql += `-- =============================================
--- DATA EXPORT
--- =============================================
--- IMPORTANT: Replace the user_id values below with your new user IDs
--- before running these INSERT statements.
-
-`;
-
+      // Build the SQL file content
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      let sqlContent = SCHEMA_SQL.replace(
+        '-- Generated on: ${new Date().toISOString()}',
+        `-- Generated on: ${new Date().toISOString()}`
+      );
+      
+      sqlContent += '\n-- =============================================\n';
+      sqlContent += '-- DATA\n';
+      sqlContent += '-- =============================================\n\n';
+      
       // Add INSERT statements for each table
-      sql += generateInsertStatements('profiles', profilesResult.data || []);
-      sql += generateInsertStatements('user_roles', userRolesResult.data || []);
-      sql += generateInsertStatements('companies', companiesResult.data || []);
-      sql += generateInsertStatements('settings', settingsResult.data || []);
-      sql += generateInsertStatements('products', productsResult.data || []);
-      sql += generateInsertStatements('projects', projectsResult.data || []);
-      sql += generateInsertStatements('quotations', quotationsResult.data || []);
-      sql += generateInsertStatements('invoices', invoicesResult.data || []);
-      sql += generateInsertStatements('delivery_orders', deliveryOrdersResult.data || []);
-
+      sqlContent += generateInsertStatements('profiles', data.profiles);
+      sqlContent += generateInsertStatements('user_roles', data.user_roles);
+      sqlContent += generateInsertStatements('companies', data.companies);
+      sqlContent += generateInsertStatements('settings', data.settings);
+      sqlContent += generateInsertStatements('products', data.products);
+      sqlContent += generateInsertStatements('projects', data.projects);
+      sqlContent += generateInsertStatements('quotations', data.quotations);
+      sqlContent += generateInsertStatements('invoices', data.invoices);
+      sqlContent += generateInsertStatements('delivery_orders', data.delivery_orders);
+      
       // Create and download the file
-      const blob = new Blob([sql], { type: 'text/plain;charset=utf-8' });
+      const blob = new Blob([sqlContent], { type: 'application/sql' });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `database-export-${timestamp}.sql`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `database-export-${timestamp}.sql`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
-
+      
       toast({
         title: 'Export Complete',
-        description: 'Your database has been exported successfully.'
+        description: 'Your database has been exported as SQL successfully.'
       });
     } catch (error) {
-      logError('useDatabaseExport.exportDatabase', error);
+      logError('useDatabaseExport.exportAsSQL', error);
       toast({
         title: 'Export Failed',
         description: 'Failed to export database. Please try again.',
@@ -464,8 +480,62 @@ export function useDatabaseExport() {
     }
   };
 
+  const exportAsJSON = async () => {
+    try {
+      setExporting(true);
+      
+      const data = await fetchAllData();
+      
+      // Add metadata
+      const exportData = {
+        _meta: {
+          exportedAt: new Date().toISOString(),
+          format: 'json',
+          version: '1.0'
+        },
+        ...data
+      };
+      
+      // Create and download the file
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `database-export-${timestamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: 'Export Complete',
+        description: 'Your database has been exported as JSON successfully.'
+      });
+    } catch (error) {
+      logError('useDatabaseExport.exportAsJSON', error);
+      toast({
+        title: 'Export Failed',
+        description: 'Failed to export database. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportDatabase = async (format: ExportFormat = 'sql') => {
+    if (format === 'json') {
+      await exportAsJSON();
+    } else {
+      await exportAsSQL();
+    }
+  };
+
   return {
     exporting,
-    exportDatabase
+    exportDatabase,
+    exportAsSQL,
+    exportAsJSON
   };
 }
