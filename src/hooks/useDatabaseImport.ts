@@ -29,6 +29,17 @@ const TABLE_ORDER = [
   'delivery_orders'
 ];
 
+// Tables that can be cleared (excluding profiles and user_roles which are managed by auth)
+const CLEARABLE_TABLES = [
+  'delivery_orders',
+  'invoices',
+  'quotations',
+  'projects',
+  'products',
+  'settings',
+  'companies'
+];
+
 function parseValue(value: string): unknown {
   value = value.trim();
   
@@ -178,7 +189,29 @@ export function useDatabaseImport() {
   const [importing, setImporting] = useState(false);
   const [results, setResults] = useState<ImportResult[]>([]);
 
-  const importDatabase = async (file: File): Promise<boolean> => {
+  const clearExistingData = async (): Promise<boolean> => {
+    if (!user) return false;
+    
+    try {
+      // Delete in reverse order of dependencies
+      for (const tableName of CLEARABLE_TABLES) {
+        const { error } = await supabase
+          .from(tableName as 'companies')
+          .delete()
+          .eq('user_id', user.id);
+        
+        if (error) {
+          console.error(`Error clearing ${tableName}:`, error);
+        }
+      }
+      return true;
+    } catch (error) {
+      logError('useDatabaseImport.clearExistingData', error);
+      return false;
+    }
+  };
+
+  const importDatabase = async (file: File, clearBefore: boolean = false): Promise<boolean> => {
     if (!user) {
       toast({
         title: 'Authentication Required',
@@ -202,6 +235,19 @@ export function useDatabaseImport() {
           variant: 'destructive'
         });
         return false;
+      }
+
+      // Clear existing data if requested
+      if (clearBefore) {
+        const cleared = await clearExistingData();
+        if (!cleared) {
+          toast({
+            title: 'Clear Failed',
+            description: 'Failed to clear existing data. Import cancelled.',
+            variant: 'destructive'
+          });
+          return false;
+        }
       }
       
       const importResults: ImportResult[] = [];
