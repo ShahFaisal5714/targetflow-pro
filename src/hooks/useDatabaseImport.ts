@@ -38,7 +38,11 @@ export function useDatabaseImport() {
     }
   };
 
-  const importDatabase = async (file: File, clearBefore: boolean = false): Promise<boolean> => {
+  const importDatabase = async (
+    file: File, 
+    clearBefore: boolean = false,
+    selectedTables?: string[]
+  ): Promise<boolean> => {
     if (!user) {
       toast({
         title: 'Authentication Required',
@@ -80,8 +84,13 @@ export function useDatabaseImport() {
       
       const importResults: ImportResult[] = [];
       
+      // Filter to selected tables if provided
+      const tablesToImport = selectedTables 
+        ? TABLE_ORDER.filter(t => selectedTables.includes(t))
+        : TABLE_ORDER;
+      
       // Process tables in order
-      for (const tableName of TABLE_ORDER) {
+      for (const tableName of tablesToImport) {
         const rows = dataByTable.get(tableName);
         if (!rows || rows.length === 0) continue;
         
