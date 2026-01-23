@@ -12,6 +12,7 @@ import { useSettings, CompanySettings, TaxSettings, NotificationSettings } from 
 import { useCompanies } from '@/hooks/useCompanies';
 import BulkTransferDialog from '@/components/settings/BulkTransferDialog';
 import ImportConfirmDialog from '@/components/settings/ImportConfirmDialog';
+import BackupScheduleCard from '@/components/settings/BackupScheduleCard';
 import { useDatabaseExport } from '@/hooks/useDatabaseExport';
 import { useDatabaseImport } from '@/hooks/useDatabaseImport';
 import targetLogo from '@/assets/target-logo.jpg';
@@ -59,10 +60,10 @@ export default function Settings() {
     }
   };
 
-  const handleImportConfirm = async (clearExisting: boolean) => {
+  const handleImportConfirm = async (clearExisting: boolean, selectedTables: string[]) => {
     if (pendingImportFile) {
       setImportDialogOpen(false);
-      await importDatabase(pendingImportFile, clearExisting);
+      await importDatabase(pendingImportFile, clearExisting, selectedTables);
       setPendingImportFile(null);
       setPendingFileContent(null);
     }
@@ -574,6 +575,8 @@ export default function Settings() {
 
           <TabsContent value="integrations">
             <div className="grid gap-6">
+              {/* Scheduled Backups */}
+              <BackupScheduleCard />
               <Card>
                 <CardHeader>
                   <CardTitle>Database Backup & Restore</CardTitle>

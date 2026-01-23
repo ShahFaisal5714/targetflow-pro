@@ -21,10 +21,18 @@ interface ImportConfirmDialogProps {
   onOpenChange: (open: boolean) => void;
   fileName: string;
   fileContent: string | null;
-  onConfirm: (clearExisting: boolean) => void;
+  onConfirm: (clearExisting: boolean, selectedTables: string[]) => void;
 }
 
-function TablePreview({ tableData }: { tableData: ParsedTableData }) {
+function TablePreview({ 
+  tableData, 
+  selected, 
+  onToggle 
+}: { 
+  tableData: ParsedTableData; 
+  selected: boolean;
+  onToggle: (table: string) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const previewCount = 3;
   const records = tableData.records;
@@ -38,18 +46,28 @@ function TablePreview({ tableData }: { tableData: ParsedTableData }) {
   const displayRecords = expanded ? records : records.slice(0, previewCount);
   
   return (
-    <div className="border rounded-lg overflow-hidden bg-card">
-      <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b">
+    <div className={`border rounded-lg overflow-hidden transition-colors ${selected ? 'bg-card border-primary/50' : 'bg-muted/30 border-muted'}`}>
+      <div 
+        className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b cursor-pointer"
+        onClick={() => onToggle(tableData.table)}
+      >
         <div className="flex items-center gap-2">
+          <Checkbox 
+            checked={selected}
+            onCheckedChange={() => onToggle(tableData.table)}
+            onClick={(e) => e.stopPropagation()}
+          />
           <Database className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="font-mono text-sm font-medium">{tableData.table}</span>
+          <span className={`font-mono text-sm font-medium ${!selected ? 'text-muted-foreground' : ''}`}>
+            {tableData.table}
+          </span>
         </div>
-        <Badge variant="secondary" className="text-xs">
+        <Badge variant={selected ? "secondary" : "outline"} className="text-xs">
           {records.length} {records.length === 1 ? 'record' : 'records'}
         </Badge>
       </div>
       
-      {records.length > 0 && (
+      {records.length > 0 && selected && (
         <div className="p-2">
           <div className="space-y-1">
             {displayRecords.map((record, idx) => {
@@ -92,6 +110,7 @@ export default function ImportConfirmDialog({
   const [clearExisting, setClearExisting] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedData | null>(null);
   const [parsing, setParsing] = useState(false);
+  const [selectedTables, setSelectedTables] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (open && fileContent && fileName) {
@@ -100,26 +119,57 @@ export default function ImportConfirmDialog({
       setTimeout(() => {
         const data = parseFileContent(fileContent, fileName);
         setParsedData(data);
+        // Select all tables by default
+        setSelectedTables(new Set(data.tables.map(t => t.table)));
         setParsing(false);
       }, 0);
     } else {
       setParsedData(null);
+      setSelectedTables(new Set());
     }
   }, [open, fileContent, fileName]);
 
+  const handleToggleTable = (table: string) => {
+    setSelectedTables(prev => {
+      const next = new Set(prev);
+      if (next.has(table)) {
+        next.delete(table);
+      } else {
+        next.add(table);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (parsedData) {
+      setSelectedTables(new Set(parsedData.tables.map(t => t.table)));
+    }
+  };
+
+  const handleSelectNone = () => {
+    setSelectedTables(new Set());
+  };
+
   const handleConfirm = () => {
-    onConfirm(clearExisting);
+    onConfirm(clearExisting, Array.from(selectedTables));
     setClearExisting(false);
     setParsedData(null);
+    setSelectedTables(new Set());
   };
 
   const handleCancel = () => {
     onOpenChange(false);
     setClearExisting(false);
     setParsedData(null);
+    setSelectedTables(new Set());
   };
 
   const FormatIcon = parsedData?.format === 'json' ? FileJson : FileCode;
+  
+  const selectedRecordCount = parsedData?.tables
+    .filter(t => selectedTables.has(t.table))
+    .reduce((sum, t) => sum + t.records.length, 0) || 0;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -154,16 +204,38 @@ export default function ImportConfirmDialog({
           ) : parsedData ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">Data Preview</span>
+                <div className="flex items-center gap-3">
+                  <span className="font-medium">Select Tables to Import</span>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={handleSelectAll}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Select all
+                    </button>
+                    <span className="text-muted-foreground">•</span>
+                    <button 
+                      onClick={handleSelectNone}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Select none
+                    </button>
+                  </div>
+                </div>
                 <span className="text-muted-foreground">
-                  {parsedData.totalRecords} total records in {parsedData.tables.length} tables
+                  {selectedRecordCount} of {parsedData.totalRecords} records selected
                 </span>
               </div>
               
               <ScrollArea className="h-[250px] pr-4">
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {parsedData.tables.map((tableData) => (
-                    <TablePreview key={tableData.table} tableData={tableData} />
+                    <TablePreview 
+                      key={tableData.table} 
+                      tableData={tableData}
+                      selected={selectedTables.has(tableData.table)}
+                      onToggle={handleToggleTable}
+                    />
                   ))}
                 </div>
               </ScrollArea>
@@ -211,10 +283,10 @@ export default function ImportConfirmDialog({
           <AlertDialogCancel onClick={handleCancel}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
-            disabled={!parsedData || parsedData.totalRecords === 0}
+            disabled={!parsedData || selectedTables.size === 0}
             className={clearExisting ? 'bg-destructive hover:bg-destructive/90' : ''}
           >
-            {clearExisting ? 'Clear & Import' : 'Import Data'}
+            {clearExisting ? 'Clear & Import' : `Import ${selectedTables.size} Tables`}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
