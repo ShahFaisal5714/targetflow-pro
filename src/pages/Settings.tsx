@@ -7,11 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Bell, Shield, Database, Loader2, Star, Check, Edit, ArrowLeftRight, Download, HardDrive } from 'lucide-react';
+import { Building2, Bell, Shield, Database, Loader2, Star, Check, Edit, ArrowLeftRight, Download, HardDrive, Upload, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useSettings, CompanySettings, TaxSettings, NotificationSettings } from '@/hooks/useSettings';
 import { useCompanies } from '@/hooks/useCompanies';
 import BulkTransferDialog from '@/components/settings/BulkTransferDialog';
 import { useDatabaseExport } from '@/hooks/useDatabaseExport';
+import { useDatabaseImport } from '@/hooks/useDatabaseImport';
 import targetLogo from '@/assets/target-logo.jpg';
 import alhadafLogo from '@/assets/alhadaf-logo.png';
 
@@ -37,6 +38,16 @@ export default function Settings() {
   } = useCompanies();
 
   const { exporting, exportDatabase } = useDatabaseExport();
+  const { importing, results: importResults, importDatabase } = useDatabaseImport();
+
+  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      await importDatabase(file);
+      // Reset the input so the same file can be selected again
+      event.target.value = '';
+    }
+  };
 
   // Local state for form inputs
   const [company, setCompany] = useState<CompanySettings>(companySettings);
@@ -546,19 +557,20 @@ export default function Settings() {
             <div className="grid gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Database Export</CardTitle>
-                  <CardDescription>Export your database schema and data as a SQL file</CardDescription>
+                  <CardTitle>Database Backup & Restore</CardTitle>
+                  <CardDescription>Export or import your database schema and data</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  {/* Export Section */}
                   <div className="flex items-center justify-between p-4 border rounded-lg bg-card">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
-                        <HardDrive className="h-5 w-5 text-primary" />
+                        <Download className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium">Full Database Export</p>
+                        <p className="font-medium">Export Database</p>
                         <p className="text-sm text-muted-foreground">
-                          Exports schema, tables, RLS policies, and all data
+                          Download schema, tables, RLS policies, and all data as SQL
                         </p>
                       </div>
                     </div>
@@ -566,11 +578,77 @@ export default function Settings() {
                       {exporting ? (
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       ) : (
-                        <Download className="h-4 w-4 mr-2" />
+                        <HardDrive className="h-4 w-4 mr-2" />
                       )}
                       {exporting ? 'Exporting...' : 'Export SQL'}
                     </Button>
                   </div>
+
+                  {/* Import Section */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-card">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded bg-accent/10 flex items-center justify-center">
+                        <Upload className="h-5 w-5 text-accent-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Import Database</p>
+                        <p className="text-sm text-muted-foreground">
+                          Restore data from an exported SQL file
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      <input
+                        type="file"
+                        accept=".sql"
+                        onChange={handleFileImport}
+                        className="hidden"
+                        id="sql-import"
+                        disabled={importing}
+                      />
+                      <Button asChild disabled={importing}>
+                        <label htmlFor="sql-import" className="cursor-pointer">
+                          {importing ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : (
+                            <Upload className="h-4 w-4 mr-2" />
+                          )}
+                          {importing ? 'Importing...' : 'Import SQL'}
+                        </label>
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Import Results */}
+                  {importResults.length > 0 && (
+                    <div className="mt-4 p-4 border rounded-lg bg-muted/50">
+                      <h4 className="font-medium mb-3 flex items-center gap-2">
+                        <Database className="h-4 w-4" />
+                        Import Results
+                      </h4>
+                      <div className="space-y-2">
+                        {importResults.map((result) => (
+                          <div key={result.table} className="flex items-center justify-between text-sm">
+                            <span className="font-mono">{result.table}</span>
+                            <div className="flex items-center gap-3">
+                              {result.inserted > 0 && (
+                                <span className="flex items-center gap-1 text-success">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  {result.inserted} imported
+                                </span>
+                              )}
+                              {result.errors > 0 && (
+                                <span className="flex items-center gap-1 text-destructive">
+                                  <AlertCircle className="h-3 w-3" />
+                                  {result.errors} errors
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
