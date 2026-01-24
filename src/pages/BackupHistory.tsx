@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -31,7 +32,8 @@ import {
   FileText,
   Calendar,
   HardDrive,
-  RefreshCw
+  RefreshCw,
+  Filter
 } from 'lucide-react';
 import { useBackupHistory, BackupRecord } from '@/hooks/useBackupHistory';
 import { useDatabaseImport } from '@/hooks/useDatabaseImport';
@@ -54,6 +56,15 @@ export default function BackupHistory() {
   const [selectedBackup, setSelectedBackup] = useState<BackupRecord | null>(null);
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [restoreBackup, setRestoreBackup] = useState<BackupRecord | null>(null);
+  const [companyFilter, setCompanyFilter] = useState<string>('all');
+
+  // Filter backups by company
+  const filteredBackups = backups.filter(backup => {
+    if (companyFilter === 'all') return true;
+    if (companyFilter === 'target') return backup.company_name === 'Target Specialties';
+    if (companyFilter === 'alhadaf') return backup.company_name === 'Al Hadaf Al Kabeer';
+    return true;
+  });
 
   const handleDeleteClick = (backup: BackupRecord) => {
     setSelectedBackup(backup);
@@ -93,14 +104,29 @@ export default function BackupHistory() {
               View, download, and restore from previous backups
             </p>
           </div>
-          <Button 
-            variant="outline" 
-            onClick={refreshBackups}
-            disabled={loading}
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by company" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Companies</SelectItem>
+                  <SelectItem value="target">Target Specialties</SelectItem>
+                  <SelectItem value="alhadaf">Al Hadaf Al Kabeer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={refreshBackups}
+              disabled={loading}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -111,7 +137,14 @@ export default function BackupHistory() {
               <Database className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{backups.length}</div>
+              <div className="text-2xl font-bold">
+                {filteredBackups.length}
+                {companyFilter !== 'all' && (
+                  <span className="text-sm font-normal text-muted-foreground ml-2">
+                    of {backups.length}
+                  </span>
+                )}
+              </div>
             </CardContent>
           </Card>
           <Card>
@@ -121,7 +154,7 @@ export default function BackupHistory() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {formatBytes(backups.reduce((acc, b) => acc + b.size_bytes, 0))}
+                {formatBytes(filteredBackups.reduce((acc, b) => acc + b.size_bytes, 0))}
               </div>
             </CardContent>
           </Card>
@@ -132,8 +165,8 @@ export default function BackupHistory() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {backups.length > 0 
-                  ? format(new Date(backups[0].created_at), 'MMM d, yyyy')
+                {filteredBackups.length > 0 
+                  ? format(new Date(filteredBackups[0].created_at), 'MMM d, yyyy')
                   : 'Never'}
               </div>
             </CardContent>
@@ -164,12 +197,16 @@ export default function BackupHistory() {
                   </div>
                 ))}
               </div>
-            ) : backups.length === 0 ? (
+            ) : filteredBackups.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Database className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                <p className="text-lg font-medium">No backups yet</p>
+                <p className="text-lg font-medium">
+                  {companyFilter !== 'all' ? 'No backups for this company' : 'No backups yet'}
+                </p>
                 <p className="text-sm">
-                  Create your first backup from the Settings page
+                  {companyFilter !== 'all' 
+                    ? 'Try selecting a different company filter'
+                    : 'Create your first backup from the Settings page'}
                 </p>
               </div>
             ) : (
@@ -188,7 +225,7 @@ export default function BackupHistory() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {backups.map((backup) => (
+                  {filteredBackups.map((backup) => (
                     <TableRow key={backup.id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
