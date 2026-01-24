@@ -398,7 +398,12 @@ export interface ExportResult {
 export function useDatabaseExport() {
   const [exporting, setExporting] = useState(false);
 
-  const fetchAllData = async () => {
+  const fetchAllData = async (companyId?: string | null) => {
+    // If companyId is provided, filter company-specific data
+    // companyId === null means "Target Specialties" (uses null company_id in database)
+    // companyId === undefined means "All Companies" (no filtering)
+    const shouldFilterByCompany = companyId !== undefined;
+    
     const [
       companiesResult,
       deliveryOrdersResult,
@@ -411,12 +416,32 @@ export function useDatabaseExport() {
       userRolesResult
     ] = await Promise.all([
       supabase.from('companies').select('*'),
-      supabase.from('delivery_orders').select('*'),
-      supabase.from('invoices').select('*'),
-      supabase.from('products').select('*'),
+      shouldFilterByCompany 
+        ? (companyId === null 
+            ? supabase.from('delivery_orders').select('*').is('company_id', null)
+            : supabase.from('delivery_orders').select('*').eq('company_id', companyId))
+        : supabase.from('delivery_orders').select('*'),
+      shouldFilterByCompany 
+        ? (companyId === null 
+            ? supabase.from('invoices').select('*').is('company_id', null)
+            : supabase.from('invoices').select('*').eq('company_id', companyId))
+        : supabase.from('invoices').select('*'),
+      shouldFilterByCompany 
+        ? (companyId === null 
+            ? supabase.from('products').select('*').is('company_id', null)
+            : supabase.from('products').select('*').eq('company_id', companyId))
+        : supabase.from('products').select('*'),
       supabase.from('profiles').select('*'),
-      supabase.from('projects').select('*'),
-      supabase.from('quotations').select('*'),
+      shouldFilterByCompany 
+        ? (companyId === null 
+            ? supabase.from('projects').select('*').is('company_id', null)
+            : supabase.from('projects').select('*').eq('company_id', companyId))
+        : supabase.from('projects').select('*'),
+      shouldFilterByCompany 
+        ? (companyId === null 
+            ? supabase.from('quotations').select('*').is('company_id', null)
+            : supabase.from('quotations').select('*').eq('company_id', companyId))
+        : supabase.from('quotations').select('*'),
       supabase.from('settings').select('*'),
       supabase.from('user_roles').select('*')
     ]);
@@ -434,11 +459,11 @@ export function useDatabaseExport() {
     };
   };
 
-  const exportAsSQL = async (saveToHistory?: (result: ExportResult) => Promise<void>, companyName?: string): Promise<ExportResult | null> => {
+  const exportAsSQL = async (saveToHistory?: (result: ExportResult) => Promise<void>, companyName?: string, companyId?: string | null): Promise<ExportResult | null> => {
     try {
       setExporting(true);
       
-      const data = await fetchAllData();
+      const data = await fetchAllData(companyId);
       
       // Build the SQL file content
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -516,11 +541,11 @@ export function useDatabaseExport() {
     }
   };
 
-  const exportAsJSON = async (saveToHistory?: (result: ExportResult) => Promise<void>, companyName?: string): Promise<ExportResult | null> => {
+  const exportAsJSON = async (saveToHistory?: (result: ExportResult) => Promise<void>, companyName?: string, companyId?: string | null): Promise<ExportResult | null> => {
     try {
       setExporting(true);
       
-      const data = await fetchAllData();
+      const data = await fetchAllData(companyId);
       
       // Add metadata
       const exportData = {
@@ -589,11 +614,11 @@ export function useDatabaseExport() {
     }
   };
 
-  const exportDatabase = async (format: ExportFormat = 'sql', saveToHistory?: (result: ExportResult) => Promise<void>, companyName?: string) => {
+  const exportDatabase = async (format: ExportFormat = 'sql', saveToHistory?: (result: ExportResult) => Promise<void>, companyName?: string, companyId?: string | null) => {
     if (format === 'json') {
-      return await exportAsJSON(saveToHistory, companyName);
+      return await exportAsJSON(saveToHistory, companyName, companyId);
     } else {
-      return await exportAsSQL(saveToHistory, companyName);
+      return await exportAsSQL(saveToHistory, companyName, companyId);
     }
   };
 

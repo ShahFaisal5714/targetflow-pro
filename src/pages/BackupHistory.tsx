@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -33,7 +34,9 @@ import {
   Calendar,
   HardDrive,
   RefreshCw,
-  Filter
+  Filter,
+  Search,
+  X
 } from 'lucide-react';
 import { useBackupHistory, BackupRecord } from '@/hooks/useBackupHistory';
 import { useDatabaseImport } from '@/hooks/useDatabaseImport';
@@ -57,14 +60,27 @@ export default function BackupHistory() {
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [restoreBackup, setRestoreBackup] = useState<BackupRecord | null>(null);
   const [companyFilter, setCompanyFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Filter backups by company
-  const filteredBackups = backups.filter(backup => {
-    if (companyFilter === 'all') return true;
-    if (companyFilter === 'target') return backup.company_name === 'Target Specialties';
-    if (companyFilter === 'alhadaf') return backup.company_name === 'Al Hadaf Al Kabeer';
-    return true;
-  });
+  // Filter backups by company and search query
+  const filteredBackups = useMemo(() => {
+    return backups.filter(backup => {
+      // Company filter
+      if (companyFilter === 'target' && backup.company_name !== 'Target Specialties') return false;
+      if (companyFilter === 'alhadaf' && backup.company_name !== 'Al Hadaf Al Kabeer') return false;
+      
+      // Search filter (filename or date)
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesFilename = backup.filename.toLowerCase().includes(query);
+        const matchesDate = format(new Date(backup.created_at), 'MMM d, yyyy HH:mm').toLowerCase().includes(query);
+        const matchesDateAlt = format(new Date(backup.created_at), 'yyyy-MM-dd').toLowerCase().includes(query);
+        if (!matchesFilename && !matchesDate && !matchesDateAlt) return false;
+      }
+      
+      return true;
+    });
+  }, [backups, companyFilter, searchQuery]);
 
   const handleDeleteClick = (backup: BackupRecord) => {
     setSelectedBackup(backup);
@@ -104,7 +120,26 @@ export default function BackupHistory() {
               View, download, and restore from previous backups
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search filename or date..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 w-[220px]"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+                  onClick={() => setSearchQuery('')}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
               <Select value={companyFilter} onValueChange={setCompanyFilter}>
