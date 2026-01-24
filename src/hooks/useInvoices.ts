@@ -29,6 +29,7 @@ export interface Invoice {
   status: string;
   notes: string | null;
   company_id: string | null;
+  terms_conditions: string[]; // Array of selected term IDs
   created_at: string;
   updated_at: string;
 }
@@ -49,6 +50,7 @@ interface DbInvoice {
   status: string;
   notes: string | null;
   company_id: string | null;
+  terms_conditions: unknown;
   created_at: string;
   updated_at: string;
 }
@@ -69,6 +71,7 @@ const mapDbToInvoice = (db: DbInvoice): Invoice => ({
   status: db.status,
   notes: db.notes,
   company_id: db.company_id,
+  terms_conditions: (db.terms_conditions as string[]) || [],
   created_at: db.created_at,
   updated_at: db.updated_at,
 });
