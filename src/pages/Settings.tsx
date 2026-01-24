@@ -36,6 +36,7 @@ export default function Settings() {
     targetSpecialties,
     alhadafCompany,
     activeCompanyId,
+    alhadafDbId,
     loading: companiesLoading,
     updateAlhadafCompany,
     setActiveCompany,
@@ -46,10 +47,11 @@ export default function Settings() {
   const { saveBackup } = useBackupHistory();
 
   // Wrapper to save backup to history with company info
+  // IMPORTANT: Use actual DB UUID (alhadafDbId) not display ID for company_id
   const handleSaveToHistory = async (result: ExportResult) => {
-    const activeCompany = activeCompanyId === 'target-specialties' 
-      ? { id: null, name: 'Target Specialties' }
-      : { id: alhadafCompany?.id || null, name: alhadafCompany?.name || 'Al Hadaf Al Kabeer' };
+    const isTargetSpecialties = activeCompanyId === 'target-specialties' || !activeCompanyId;
+    const companyDbId = isTargetSpecialties ? null : alhadafDbId;
+    const companyName = isTargetSpecialties ? 'Target Specialties' : (alhadafCompany?.name || 'Al Hadaf Al Kabeer');
     
     await saveBackup({
       filename: result.filename,
@@ -60,8 +62,8 @@ export default function Settings() {
       backup_type: 'manual',
       status: 'completed',
       content: result.content,
-      company_id: activeCompany.id,
-      company_name: activeCompany.name,
+      company_id: companyDbId,
+      company_name: companyName,
     });
   };
 
@@ -74,9 +76,10 @@ export default function Settings() {
 
   const getActiveCompanyIdForExport = (): string | null => {
     // Target Specialties uses null company_id in database
-    return activeCompanyId === 'target-specialties' 
+    // Use actual DB UUID (alhadafDbId) not display ID
+    return (activeCompanyId === 'target-specialties' || !activeCompanyId)
       ? null 
-      : alhadafCompany?.id || null;
+      : alhadafDbId || null;
   };
 
   const handleExportSQL = () => exportAsSQL(handleSaveToHistory, getActiveCompanyName(), getActiveCompanyIdForExport());

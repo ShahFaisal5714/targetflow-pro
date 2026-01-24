@@ -21,11 +21,13 @@ export const TABLE_ORDER = [
   'projects',
   'quotations',
   'invoices',
-  'delivery_orders'
+  'delivery_orders',
+  'backup_history'
 ];
 
 // Tables that can be cleared (excluding profiles and user_roles which are managed by auth)
 export const CLEARABLE_TABLES = [
+  'backup_history',
   'delivery_orders',
   'invoices',
   'quotations',
