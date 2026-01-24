@@ -15,6 +15,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import targetLogo from '@/assets/target-logo.jpg';
 import alhadafLogo from '@/assets/alhadaf-logo.png';
+import { INVOICE_TERMS } from '@/data/invoiceTerms';
 
 export default function InvoiceDetail() {
   const { id } = useParams();
@@ -380,6 +381,22 @@ export default function InvoiceDetail() {
               </div>
             </div>
           </div>
+
+          {/* Terms & Conditions */}
+          {invoice.terms_conditions && invoice.terms_conditions.length > 0 && (
+            <div className="p-8 border-b">
+              <h3 className="font-bold text-foreground mb-3">Terms & Conditions</h3>
+              <div className="space-y-2 text-xs text-muted-foreground">
+                {invoice.terms_conditions.map((termId, index) => {
+                  const term = INVOICE_TERMS.find(t => t.id === termId);
+                  if (!term) return null;
+                  return (
+                    <p key={termId}>{index + 1}. {term.text}</p>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Payment Status */}
           <div className="p-8">
