@@ -7,14 +7,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Bell, Shield, Database, Loader2, Star, Check, Edit, ArrowLeftRight, Download, HardDrive, Upload, AlertCircle, CheckCircle2, FileJson, FileCode } from 'lucide-react';
+import { Building2, Bell, Shield, Database, Loader2, Star, Check, Edit, ArrowLeftRight, Download, HardDrive, Upload, AlertCircle, CheckCircle2, FileJson, FileCode, History } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useSettings, CompanySettings, TaxSettings, NotificationSettings } from '@/hooks/useSettings';
 import { useCompanies } from '@/hooks/useCompanies';
 import BulkTransferDialog from '@/components/settings/BulkTransferDialog';
 import ImportConfirmDialog from '@/components/settings/ImportConfirmDialog';
 import BackupScheduleCard from '@/components/settings/BackupScheduleCard';
-import { useDatabaseExport } from '@/hooks/useDatabaseExport';
+import { useDatabaseExport, ExportResult } from '@/hooks/useDatabaseExport';
 import { useDatabaseImport } from '@/hooks/useDatabaseImport';
+import { useBackupHistory } from '@/hooks/useBackupHistory';
 import targetLogo from '@/assets/target-logo.jpg';
 import alhadafLogo from '@/assets/alhadaf-logo.png';
 
@@ -41,6 +43,24 @@ export default function Settings() {
 
   const { exporting, exportAsSQL, exportAsJSON } = useDatabaseExport();
   const { importing, results: importResults, importDatabase } = useDatabaseImport();
+  const { saveBackup } = useBackupHistory();
+
+  // Wrapper to save backup to history
+  const handleSaveToHistory = async (result: ExportResult) => {
+    await saveBackup({
+      filename: result.filename,
+      format: result.format,
+      size_bytes: result.sizeBytes,
+      tables_included: result.tables,
+      record_count: result.recordCount,
+      backup_type: 'manual',
+      status: 'completed',
+      content: result.content,
+    });
+  };
+
+  const handleExportSQL = () => exportAsSQL(handleSaveToHistory);
+  const handleExportJSON = () => exportAsJSON(handleSaveToHistory);
 
   // Import dialog state
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -578,9 +598,17 @@ export default function Settings() {
               {/* Scheduled Backups */}
               <BackupScheduleCard />
               <Card>
-                <CardHeader>
-                  <CardTitle>Database Backup & Restore</CardTitle>
-                  <CardDescription>Export or import your database schema and data</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <div>
+                    <CardTitle>Database Backup & Restore</CardTitle>
+                    <CardDescription>Export or import your database schema and data</CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/backup-history">
+                      <History className="h-4 w-4 mr-2" />
+                      View History
+                    </Link>
+                  </Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* SQL Export Section */}
@@ -596,7 +624,7 @@ export default function Settings() {
                         </p>
                       </div>
                     </div>
-                    <Button onClick={exportAsSQL} disabled={exporting}>
+                    <Button onClick={handleExportSQL} disabled={exporting}>
                       {exporting ? (
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       ) : (
@@ -619,7 +647,7 @@ export default function Settings() {
                         </p>
                       </div>
                     </div>
-                    <Button variant="outline" onClick={exportAsJSON} disabled={exporting}>
+                    <Button variant="outline" onClick={handleExportJSON} disabled={exporting}>
                       {exporting ? (
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       ) : (

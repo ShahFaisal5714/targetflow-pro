@@ -18,6 +18,7 @@ import Inventory from "./pages/Inventory";
 import Payments from "./pages/Payments";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
+import BackupHistory from "./pages/BackupHistory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
             <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/backup-history" element={<ProtectedRoute><BackupHistory /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

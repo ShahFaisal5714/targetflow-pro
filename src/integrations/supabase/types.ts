@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      backup_history: {
+        Row: {
+          backup_type: string
+          content: string | null
+          created_at: string
+          filename: string
+          format: string
+          id: string
+          record_count: number
+          size_bytes: number
+          status: string
+          tables_included: string[]
+          user_id: string
+        }
+        Insert: {
+          backup_type?: string
+          content?: string | null
+          created_at?: string
+          filename: string
+          format?: string
+          id?: string
+          record_count?: number
+          size_bytes?: number
+          status?: string
+          tables_included?: string[]
+          user_id: string
+        }
+        Update: {
+          backup_type?: string
+          content?: string | null
+          created_at?: string
+          filename?: string
+          format?: string
+          id?: string
+          record_count?: number
+          size_bytes?: number
+          status?: string
+          tables_included?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           address: string | null

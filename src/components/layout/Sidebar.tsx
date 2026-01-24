@@ -15,7 +15,8 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  LogOut
+  LogOut,
+  History
 } from 'lucide-react';
 import targetLogo from '@/assets/target-logo.jpg';
 import alhadafLogo from '@/assets/alhadaf-logo.png';
@@ -36,6 +37,7 @@ const navigation = [
   { name: 'Inventory', href: '/inventory', icon: Package },
   { name: 'Payments', href: '/payments', icon: CreditCard },
   { name: 'Users', href: '/users', icon: Users },
+  { name: 'Backup History', href: '/backup-history', icon: History },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
