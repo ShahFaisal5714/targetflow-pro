@@ -91,8 +91,19 @@ export function useDatabaseImport() {
       
       // Process tables in order
       for (const tableName of tablesToImport) {
+        // CRITICAL: Skip user_roles entirely to prevent role overwrite attacks
+        if (tableName === 'user_roles') {
+          console.log('Skipping user_roles import to preserve current user role');
+          continue;
+        }
+        
         const rows = dataByTable.get(tableName);
-        if (!rows || rows.length === 0) continue;
+        if (!rows || rows.length === 0) {
+          console.log(`No data found for table: ${tableName}`);
+          continue;
+        }
+        
+        console.log(`Processing ${tableName}: ${rows.length} rows`);
         
         let inserted = 0;
         let errors = 0;
@@ -102,13 +113,6 @@ export function useDatabaseImport() {
           const rowData = { ...row };
           if ('user_id' in rowData) {
             rowData.user_id = user.id;
-          }
-          
-          // CRITICAL: Never import user_roles to prevent role overwrite attacks
-          // The current user's role should never be modified by an import
-          if (tableName === 'user_roles') {
-            console.log('Skipping user_roles import to preserve current user role');
-            continue;
           }
           
           // Skip importing profiles for the current user (they already exist)
@@ -139,6 +143,7 @@ export function useDatabaseImport() {
           }
           
           // Remove the id field to let database generate new ones
+          // Keep project_id and company_id as they might be valid references
           const { id, ...insertData } = rowData;
           
           // Use type assertion for dynamic table insertion
@@ -147,14 +152,16 @@ export function useDatabaseImport() {
             .insert(insertData as never);
           
           if (error) {
-            console.error(`Error inserting into ${tableName}:`, error);
+            console.error(`Error inserting into ${tableName}:`, error, insertData);
             errors++;
           } else {
             inserted++;
           }
         }
         
-        importResults.push({ table: tableName, inserted, errors });
+        if (inserted > 0 || errors > 0) {
+          importResults.push({ table: tableName, inserted, errors });
+        }
       }
       
       setResults(importResults);
