@@ -45,8 +45,12 @@ export default function Settings() {
   const { importing, results: importResults, importDatabase } = useDatabaseImport();
   const { saveBackup } = useBackupHistory();
 
-  // Wrapper to save backup to history
+  // Wrapper to save backup to history with company info
   const handleSaveToHistory = async (result: ExportResult) => {
+    const activeCompany = activeCompanyId === 'target-specialties' 
+      ? { id: null, name: 'Target Specialties' }
+      : { id: alhadafCompany?.id || null, name: alhadafCompany?.name || 'Al Hadaf Al Kabeer' };
+    
     await saveBackup({
       filename: result.filename,
       format: result.format,
@@ -56,6 +60,8 @@ export default function Settings() {
       backup_type: 'manual',
       status: 'completed',
       content: result.content,
+      company_id: activeCompany.id,
+      company_name: activeCompany.name,
     });
   };
 

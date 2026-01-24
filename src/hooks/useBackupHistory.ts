@@ -15,6 +15,8 @@ export interface BackupRecord {
   status: 'completed' | 'failed';
   content: string | null;
   created_at: string;
+  company_id: string | null;
+  company_name: string | null;
 }
 
 export function useBackupHistory() {
@@ -62,6 +64,8 @@ export function useBackupHistory() {
           backup_type: backup.backup_type,
           status: backup.status,
           content: backup.content,
+          company_id: backup.company_id,
+          company_name: backup.company_name,
         })
         .select()
         .single();

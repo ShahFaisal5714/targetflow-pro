@@ -17,6 +17,8 @@ export type Database = {
       backup_history: {
         Row: {
           backup_type: string
+          company_id: string | null
+          company_name: string | null
           content: string | null
           created_at: string
           filename: string
@@ -30,6 +32,8 @@ export type Database = {
         }
         Insert: {
           backup_type?: string
+          company_id?: string | null
+          company_name?: string | null
           content?: string | null
           created_at?: string
           filename: string
@@ -43,6 +47,8 @@ export type Database = {
         }
         Update: {
           backup_type?: string
+          company_id?: string | null
+          company_name?: string | null
           content?: string | null
           created_at?: string
           filename?: string

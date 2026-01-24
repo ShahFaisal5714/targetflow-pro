@@ -177,6 +177,7 @@ export default function BackupHistory() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Filename</TableHead>
+                    <TableHead>Company</TableHead>
                     <TableHead>Format</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Size</TableHead>
@@ -198,6 +199,11 @@ export default function BackupHistory() {
                           )}
                           {backup.filename}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {backup.company_name || 'All Companies'}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="uppercase">
