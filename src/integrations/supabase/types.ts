@@ -170,6 +170,7 @@ export type Database = {
           subtotal: number
           tax_amount: number
           tax_rate: number
+          terms_conditions: string[] | null
           total: number
           updated_at: string
           user_id: string
@@ -189,6 +190,7 @@ export type Database = {
           subtotal?: number
           tax_amount?: number
           tax_rate?: number
+          terms_conditions?: string[] | null
           total?: number
           updated_at?: string
           user_id: string
@@ -208,6 +210,7 @@ export type Database = {
           subtotal?: number
           tax_amount?: number
           tax_rate?: number
+          terms_conditions?: string[] | null
           total?: number
           updated_at?: string
           user_id?: string

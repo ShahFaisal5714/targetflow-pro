@@ -9,14 +9,15 @@ import { useProjects } from '@/hooks/useProjects';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Search, Filter, Receipt, Calendar, Download, DollarSign, Loader2, Plus } from 'lucide-react';
+import { Search, Filter, Receipt, Calendar, DollarSign, Loader2, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { Trash2 } from 'lucide-react';
+import InvoiceTermsSelector from '@/components/invoices/InvoiceTermsSelector';
+import { getDefaultTerms } from '@/data/invoiceTerms';
 
 type InvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'overdue' | 'all';
 
@@ -45,6 +46,7 @@ export default function Invoices() {
     clientName: '',
     dueDate: '',
     items: [] as { productId: string; description: string; quantity: number; unitPrice: number; total: number }[],
+    termsConditions: getDefaultTerms(),
   });
 
   const filteredInvoices = invoices.filter((invoice) => {
@@ -112,10 +114,11 @@ export default function Invoices() {
       paid_amount: 0,
       due_date: formData.dueDate || null,
       status: 'draft',
+      terms_conditions: formData.termsConditions,
     });
 
     setIsFormOpen(false);
-    setFormData({ projectId: '', clientName: '', dueDate: '', items: [] });
+    setFormData({ projectId: '', clientName: '', dueDate: '', items: [], termsConditions: getDefaultTerms() });
   };
 
   const columns = [
@@ -440,6 +443,14 @@ export default function Invoices() {
                 </div>
               </div>
             )}
+
+            {/* Terms & Conditions Selector */}
+            <div className="border rounded-lg p-4">
+              <InvoiceTermsSelector
+                selectedTerms={formData.termsConditions}
+                onTermsChange={(terms) => setFormData(prev => ({ ...prev, termsConditions: terms }))}
+              />
+            </div>
           </div>
 
           <DialogFooter>

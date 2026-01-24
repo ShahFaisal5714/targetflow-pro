@@ -50,7 +50,7 @@ interface DbInvoice {
   status: string;
   notes: string | null;
   company_id: string | null;
-  terms_conditions: unknown;
+  terms_conditions?: unknown;
   created_at: string;
   updated_at: string;
 }
@@ -109,7 +109,7 @@ export function useInvoices() {
 
       if (error) throw error;
 
-      setInvoices((data || []).map(mapDbToInvoice));
+      setInvoices((data || []).map((d) => mapDbToInvoice(d as DbInvoice)));
     } catch (error) {
       logError('useInvoices.fetchInvoices', error);
       toast({
@@ -153,6 +153,7 @@ export function useInvoices() {
         status: invoiceData.status || 'draft',
         notes: invoiceData.notes || null,
         company_id: companyDbId, // Auto-assign active company
+        terms_conditions: invoiceData.terms_conditions || [],
       };
 
       const { data, error } = await supabase
@@ -163,7 +164,7 @@ export function useInvoices() {
 
       if (error) throw error;
 
-      const newInvoice = mapDbToInvoice(data);
+      const newInvoice = mapDbToInvoice(data as DbInvoice);
       setInvoices((prev) => [newInvoice, ...prev]);
 
       toast({
@@ -198,6 +199,7 @@ export function useInvoices() {
         status: updates.status,
         notes: updates.notes,
         company_id: updates.company_id,
+        terms_conditions: updates.terms_conditions,
       };
 
       const { data, error } = await supabase
@@ -209,7 +211,7 @@ export function useInvoices() {
 
       if (error) throw error;
 
-      const updatedInvoice = mapDbToInvoice(data);
+      const updatedInvoice = mapDbToInvoice(data as DbInvoice);
       setInvoices((prev) =>
         prev.map((inv) => (inv.id === id ? updatedInvoice : inv))
       );
