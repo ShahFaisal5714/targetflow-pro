@@ -104,8 +104,15 @@ export function useDatabaseImport() {
             rowData.user_id = user.id;
           }
           
-          // Skip importing profiles and user_roles for the current user (they already exist)
-          if (tableName === 'profiles' || tableName === 'user_roles') {
+          // CRITICAL: Never import user_roles to prevent role overwrite attacks
+          // The current user's role should never be modified by an import
+          if (tableName === 'user_roles') {
+            console.log('Skipping user_roles import to preserve current user role');
+            continue;
+          }
+          
+          // Skip importing profiles for the current user (they already exist)
+          if (tableName === 'profiles') {
             // Check if record already exists
             const { data: existing } = await supabase
               .from(tableName)
@@ -114,8 +121,8 @@ export function useDatabaseImport() {
               .maybeSingle();
             
             if (existing) {
-              // Update instead of insert
-              const { id, ...updateData } = rowData;
+              // Update instead of insert (but don't change user_id)
+              const { id, user_id, ...updateData } = rowData;
               const { error } = await supabase
                 .from(tableName)
                 .update(updateData)
