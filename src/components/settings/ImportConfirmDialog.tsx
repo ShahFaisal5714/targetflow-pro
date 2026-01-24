@@ -173,8 +173,8 @@ export default function ImportConfirmDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
-        <AlertDialogHeader>
+      <AlertDialogContent className="max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
+        <AlertDialogHeader className="flex-shrink-0">
           <AlertDialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-warning" />
             Confirm Database Import
@@ -194,16 +194,16 @@ export default function ImportConfirmDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        {/* Data Preview */}
-        <div className="flex-1 min-h-0 my-4">
+        {/* Data Preview - Scrollable area */}
+        <div className="flex-1 min-h-0 overflow-hidden my-4">
           {parsing ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
               <span className="ml-2 text-sm text-muted-foreground">Parsing file...</span>
             </div>
           ) : parsedData ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
+            <div className="flex flex-col h-full">
+              <div className="flex items-center justify-between text-sm flex-shrink-0 mb-3">
                 <div className="flex items-center gap-3">
                   <span className="font-medium">Select Tables to Import</span>
                   <div className="flex gap-2">
@@ -227,7 +227,7 @@ export default function ImportConfirmDialog({
                 </span>
               </div>
               
-              <ScrollArea className="h-[250px] pr-4">
+              <ScrollArea className="flex-1 min-h-0 pr-4">
                 <div className="space-y-2">
                   {parsedData.tables.map((tableData) => (
                     <TablePreview 
@@ -247,7 +247,8 @@ export default function ImportConfirmDialog({
           )}
         </div>
 
-        <div className="py-3 border-y">
+        {/* Options section - Fixed at bottom */}
+        <div className="flex-shrink-0 py-3 border-y">
           <div className="flex items-start space-x-3">
             <Checkbox
               id="clear-existing"
@@ -270,7 +271,7 @@ export default function ImportConfirmDialog({
         </div>
 
         {clearExisting && (
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+          <div className="flex-shrink-0 flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
             <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
             <p className="text-sm text-destructive">
               <strong>Warning:</strong> All existing data will be permanently deleted. 
@@ -279,7 +280,7 @@ export default function ImportConfirmDialog({
           </div>
         )}
 
-        <AlertDialogFooter className="mt-2">
+        <AlertDialogFooter className="flex-shrink-0 mt-2">
           <AlertDialogCancel onClick={handleCancel}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
