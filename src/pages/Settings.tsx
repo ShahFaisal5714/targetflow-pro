@@ -65,8 +65,15 @@ export default function Settings() {
     });
   };
 
-  const handleExportSQL = () => exportAsSQL(handleSaveToHistory);
-  const handleExportJSON = () => exportAsJSON(handleSaveToHistory);
+  // Get active company name for filename
+  const getActiveCompanyName = () => {
+    return activeCompanyId === 'target-specialties' 
+      ? 'Target Specialties' 
+      : alhadafCompany?.name || 'Al Hadaf Al Kabeer';
+  };
+
+  const handleExportSQL = () => exportAsSQL(handleSaveToHistory, getActiveCompanyName());
+  const handleExportJSON = () => exportAsJSON(handleSaveToHistory, getActiveCompanyName());
 
   // Import dialog state
   const [importDialogOpen, setImportDialogOpen] = useState(false);

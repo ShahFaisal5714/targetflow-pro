@@ -434,7 +434,7 @@ export function useDatabaseExport() {
     };
   };
 
-  const exportAsSQL = async (saveToHistory?: (result: ExportResult) => Promise<void>): Promise<ExportResult | null> => {
+  const exportAsSQL = async (saveToHistory?: (result: ExportResult) => Promise<void>, companyName?: string): Promise<ExportResult | null> => {
     try {
       setExporting(true);
       
@@ -462,7 +462,11 @@ export function useDatabaseExport() {
       sqlContent += generateInsertStatements('invoices', data.invoices);
       sqlContent += generateInsertStatements('delivery_orders', data.delivery_orders);
       
-      const filename = `database-export-${timestamp}.sql`;
+      // Generate filename with company prefix
+      const companyPrefix = companyName 
+        ? companyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+        : 'all';
+      const filename = `${companyPrefix}-backup-${timestamp}.sql`;
       const blob = new Blob([sqlContent], { type: 'application/sql' });
       
       // Calculate metadata
@@ -512,7 +516,7 @@ export function useDatabaseExport() {
     }
   };
 
-  const exportAsJSON = async (saveToHistory?: (result: ExportResult) => Promise<void>): Promise<ExportResult | null> => {
+  const exportAsJSON = async (saveToHistory?: (result: ExportResult) => Promise<void>, companyName?: string): Promise<ExportResult | null> => {
     try {
       setExporting(true);
       
@@ -523,14 +527,19 @@ export function useDatabaseExport() {
         _meta: {
           exportedAt: new Date().toISOString(),
           format: 'json',
-          version: '1.0'
+          version: '1.0',
+          company: companyName || 'all'
         },
         ...data
       };
       
       // Create and download the file
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `database-export-${timestamp}.json`;
+      // Generate filename with company prefix
+      const companyPrefix = companyName 
+        ? companyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+        : 'all';
+      const filename = `${companyPrefix}-backup-${timestamp}.json`;
       const content = JSON.stringify(exportData, null, 2);
       const blob = new Blob([content], { type: 'application/json' });
       
@@ -580,11 +589,11 @@ export function useDatabaseExport() {
     }
   };
 
-  const exportDatabase = async (format: ExportFormat = 'sql', saveToHistory?: (result: ExportResult) => Promise<void>) => {
+  const exportDatabase = async (format: ExportFormat = 'sql', saveToHistory?: (result: ExportResult) => Promise<void>, companyName?: string) => {
     if (format === 'json') {
-      return await exportAsJSON(saveToHistory);
+      return await exportAsJSON(saveToHistory, companyName);
     } else {
-      return await exportAsSQL(saveToHistory);
+      return await exportAsSQL(saveToHistory, companyName);
     }
   };
 
