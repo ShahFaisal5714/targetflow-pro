@@ -386,6 +386,15 @@ function generateInsertStatements(tableName: string, rows: Record<string, unknow
 
 export type ExportFormat = 'sql' | 'json';
 
+export interface ExportResult {
+  content: string;
+  filename: string;
+  format: ExportFormat;
+  tables: string[];
+  recordCount: number;
+  sizeBytes: number;
+}
+
 export function useDatabaseExport() {
   const [exporting, setExporting] = useState(false);
 
@@ -425,7 +434,7 @@ export function useDatabaseExport() {
     };
   };
 
-  const exportAsSQL = async () => {
+  const exportAsSQL = async (saveToHistory?: (result: ExportResult) => Promise<void>): Promise<ExportResult | null> => {
     try {
       setExporting(true);
       
@@ -453,12 +462,32 @@ export function useDatabaseExport() {
       sqlContent += generateInsertStatements('invoices', data.invoices);
       sqlContent += generateInsertStatements('delivery_orders', data.delivery_orders);
       
-      // Create and download the file
+      const filename = `database-export-${timestamp}.sql`;
       const blob = new Blob([sqlContent], { type: 'application/sql' });
+      
+      // Calculate metadata
+      const tables = Object.keys(data).filter(key => (data as Record<string, unknown[]>)[key]?.length > 0);
+      const recordCount = Object.values(data).reduce((sum, arr) => sum + (arr as unknown[]).length, 0);
+      
+      const result: ExportResult = {
+        content: sqlContent,
+        filename,
+        format: 'sql',
+        tables,
+        recordCount,
+        sizeBytes: blob.size
+      };
+      
+      // Save to history if callback provided
+      if (saveToHistory) {
+        await saveToHistory(result);
+      }
+      
+      // Create and download the file
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `database-export-${timestamp}.sql`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -468,6 +497,8 @@ export function useDatabaseExport() {
         title: 'Export Complete',
         description: 'Your database has been exported as SQL successfully.'
       });
+      
+      return result;
     } catch (error) {
       logError('useDatabaseExport.exportAsSQL', error);
       toast({
@@ -475,12 +506,13 @@ export function useDatabaseExport() {
         description: 'Failed to export database. Please try again.',
         variant: 'destructive'
       });
+      return null;
     } finally {
       setExporting(false);
     }
   };
 
-  const exportAsJSON = async () => {
+  const exportAsJSON = async (saveToHistory?: (result: ExportResult) => Promise<void>): Promise<ExportResult | null> => {
     try {
       setExporting(true);
       
@@ -498,11 +530,32 @@ export function useDatabaseExport() {
       
       // Create and download the file
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const filename = `database-export-${timestamp}.json`;
+      const content = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([content], { type: 'application/json' });
+      
+      // Calculate metadata
+      const tables = Object.keys(data).filter(key => (data as Record<string, unknown[]>)[key]?.length > 0);
+      const recordCount = Object.values(data).reduce((sum, arr) => sum + (arr as unknown[]).length, 0);
+      
+      const result: ExportResult = {
+        content,
+        filename,
+        format: 'json',
+        tables,
+        recordCount,
+        sizeBytes: blob.size
+      };
+      
+      // Save to history if callback provided
+      if (saveToHistory) {
+        await saveToHistory(result);
+      }
+      
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `database-export-${timestamp}.json`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -512,6 +565,8 @@ export function useDatabaseExport() {
         title: 'Export Complete',
         description: 'Your database has been exported as JSON successfully.'
       });
+      
+      return result;
     } catch (error) {
       logError('useDatabaseExport.exportAsJSON', error);
       toast({
@@ -519,16 +574,17 @@ export function useDatabaseExport() {
         description: 'Failed to export database. Please try again.',
         variant: 'destructive'
       });
+      return null;
     } finally {
       setExporting(false);
     }
   };
 
-  const exportDatabase = async (format: ExportFormat = 'sql') => {
+  const exportDatabase = async (format: ExportFormat = 'sql', saveToHistory?: (result: ExportResult) => Promise<void>) => {
     if (format === 'json') {
-      await exportAsJSON();
+      return await exportAsJSON(saveToHistory);
     } else {
-      await exportAsSQL();
+      return await exportAsSQL(saveToHistory);
     }
   };
 

@@ -38,8 +38,9 @@ export function useDatabaseImport() {
     }
   };
 
-  const importDatabase = async (
-    file: File, 
+  const importFromContent = async (
+    content: string,
+    format: 'sql' | 'json',
     clearBefore: boolean = false,
     selectedTables?: string[]
   ): Promise<boolean> => {
@@ -56,8 +57,7 @@ export function useDatabaseImport() {
       setImporting(true);
       setResults([]);
       
-      const content = await file.text();
-      const isJson = file.name.toLowerCase().endsWith('.json');
+      const isJson = format === 'json';
       const dataByTable = isJson ? parseJSON(content) : parseSQL(content);
       
       if (dataByTable.size === 0) {
@@ -170,7 +170,7 @@ export function useDatabaseImport() {
       
       return totalErrors === 0;
     } catch (error) {
-      logError('useDatabaseImport.importDatabase', error);
+      logError('useDatabaseImport.importFromContent', error);
       toast({
         title: 'Import Failed',
         description: 'Failed to import database. Please check the file format.',
@@ -182,9 +182,20 @@ export function useDatabaseImport() {
     }
   };
 
+  const importDatabase = async (
+    file: File, 
+    clearBefore: boolean = false,
+    selectedTables?: string[]
+  ): Promise<boolean> => {
+    const content = await file.text();
+    const isJson = file.name.toLowerCase().endsWith('.json');
+    return importFromContent(content, isJson ? 'json' : 'sql', clearBefore, selectedTables);
+  };
+
   return {
     importing,
     results,
-    importDatabase
+    importDatabase,
+    importFromContent
   };
 }
