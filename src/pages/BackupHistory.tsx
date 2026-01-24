@@ -36,12 +36,14 @@ import {
   RefreshCw,
   Filter,
   Search,
-  X
+  X,
+  GitCompare
 } from 'lucide-react';
 import { useBackupHistory, BackupRecord } from '@/hooks/useBackupHistory';
 import { useDatabaseImport } from '@/hooks/useDatabaseImport';
 import { format } from 'date-fns';
 import ImportConfirmDialog from '@/components/settings/ImportConfirmDialog';
+import CompareBackupsDialog from '@/components/settings/CompareBackupsDialog';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -61,6 +63,7 @@ export default function BackupHistory() {
   const [restoreBackup, setRestoreBackup] = useState<BackupRecord | null>(null);
   const [companyFilter, setCompanyFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [compareDialogOpen, setCompareDialogOpen] = useState(false);
 
   // Filter backups by company and search query
   const filteredBackups = useMemo(() => {
@@ -153,6 +156,14 @@ export default function BackupHistory() {
                 </SelectContent>
               </Select>
             </div>
+            <Button 
+              variant="outline"
+              onClick={() => setCompareDialogOpen(true)}
+              disabled={backups.filter(b => b.content).length < 2}
+            >
+              <GitCompare className="mr-2 h-4 w-4" />
+              Compare
+            </Button>
             <Button 
               variant="outline" 
               onClick={refreshBackups}
@@ -368,6 +379,13 @@ export default function BackupHistory() {
           fileName={restoreBackup.filename}
         />
       )}
+
+      {/* Compare Backups Dialog */}
+      <CompareBackupsDialog
+        open={compareDialogOpen}
+        onOpenChange={setCompareDialogOpen}
+        backups={backups}
+      />
     </MainLayout>
   );
 }
