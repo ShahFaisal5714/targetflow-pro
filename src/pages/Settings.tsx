@@ -65,15 +65,22 @@ export default function Settings() {
     });
   };
 
-  // Get active company name for filename
+  // Get active company name and ID for export
   const getActiveCompanyName = () => {
     return activeCompanyId === 'target-specialties' 
       ? 'Target Specialties' 
       : alhadafCompany?.name || 'Al Hadaf Al Kabeer';
   };
 
-  const handleExportSQL = () => exportAsSQL(handleSaveToHistory, getActiveCompanyName());
-  const handleExportJSON = () => exportAsJSON(handleSaveToHistory, getActiveCompanyName());
+  const getActiveCompanyIdForExport = (): string | null => {
+    // Target Specialties uses null company_id in database
+    return activeCompanyId === 'target-specialties' 
+      ? null 
+      : alhadafCompany?.id || null;
+  };
+
+  const handleExportSQL = () => exportAsSQL(handleSaveToHistory, getActiveCompanyName(), getActiveCompanyIdForExport());
+  const handleExportJSON = () => exportAsJSON(handleSaveToHistory, getActiveCompanyName(), getActiveCompanyIdForExport());
 
   // Import dialog state
   const [importDialogOpen, setImportDialogOpen] = useState(false);
