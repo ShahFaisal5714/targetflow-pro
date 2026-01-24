@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,9 +12,18 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertTriangle, Database, FileJson, FileCode, Loader2 } from 'lucide-react';
+import { AlertTriangle, Database, FileJson, FileCode, Loader2, ShieldAlert, Info } from 'lucide-react';
 import { parseFileContent, type ParsedData, type ParsedTableData } from '@/hooks/useDataParser';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
+// Tables that are protected and will be skipped during import
+const PROTECTED_TABLES = ['user_roles'] as const;
+
+// Reasons for skipping each protected table
+const SKIP_REASONS: Record<string, string> = {
+  user_roles: 'Your current permissions will be preserved. Importing roles could lock you out of the system.',
+};
 
 interface ImportConfirmDialogProps {
   open: boolean;
@@ -171,6 +180,18 @@ export default function ImportConfirmDialog({
     .filter(t => selectedTables.has(t.table))
     .reduce((sum, t) => sum + t.records.length, 0) || 0;
 
+  // Check for protected tables in the parsed data
+  const skippedTables = useMemo(() => {
+    if (!parsedData) return [];
+    return parsedData.tables
+      .filter(t => PROTECTED_TABLES.includes(t.table as typeof PROTECTED_TABLES[number]))
+      .map(t => ({
+        table: t.table,
+        recordCount: t.records.length,
+        reason: SKIP_REASONS[t.table] || 'This table is protected for security reasons.'
+      }));
+  }, [parsedData]);
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
@@ -229,7 +250,42 @@ export default function ImportConfirmDialog({
               
               <ScrollArea className="flex-1 min-h-0 pr-4">
                 <div className="space-y-2">
-                  {parsedData.tables.map((tableData) => (
+                  {/* Skipped tables warning */}
+                  {skippedTables.length > 0 && (
+                    <div className="p-3 rounded-lg bg-warning/10 border border-warning/20 mb-3">
+                      <div className="flex items-start gap-2">
+                        <ShieldAlert className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                        <div className="space-y-2 flex-1">
+                          <p className="text-sm font-medium text-warning">Protected Tables (will be skipped)</p>
+                          <div className="space-y-1.5">
+                            {skippedTables.map((skipped) => (
+                              <div key={skipped.table} className="flex items-center gap-2">
+                                <Database className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span className="font-mono text-xs">{skipped.table}</span>
+                                <Badge variant="outline" className="text-xs">
+                                  {skipped.recordCount} records
+                                </Badge>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right" className="max-w-xs">
+                                      <p className="text-xs">{skipped.reason}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {parsedData.tables
+                    .filter(t => !PROTECTED_TABLES.includes(t.table as typeof PROTECTED_TABLES[number]))
+                    .map((tableData) => (
                     <TablePreview 
                       key={tableData.table} 
                       tableData={tableData}
