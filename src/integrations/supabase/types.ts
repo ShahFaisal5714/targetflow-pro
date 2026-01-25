@@ -104,6 +104,33 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_invoice_terms: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          text: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          text: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          text?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       delivery_orders: {
         Row: {
           company_id: string | null
