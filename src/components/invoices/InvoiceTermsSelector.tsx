@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { INVOICE_TERMS, InvoiceTerm } from '@/data/invoiceTerms';
 import { useCustomInvoiceTerms } from '@/hooks/useCustomInvoiceTerms';
-import { Plus, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Loader2, Pencil, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface InvoiceTermsSelectorProps {
@@ -36,10 +36,13 @@ export default function InvoiceTermsSelector({
   selectedTerms, 
   onTermsChange 
 }: InvoiceTermsSelectorProps) {
-  const { customTerms, loading, createCustomTerm, deleteCustomTerm } = useCustomInvoiceTerms();
+  const { customTerms, loading, createCustomTerm, updateCustomTerm, deleteCustomTerm } = useCustomInvoiceTerms();
   const [newTermText, setNewTermText] = useState('');
   const [newTermCategory, setNewTermCategory] = useState<string>('general');
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const handleToggle = (termId: string) => {
     if (selectedTerms.includes(termId)) {
@@ -66,6 +69,28 @@ export default function InvoiceTermsSelector({
       onTermsChange(selectedTerms.filter(termId => termId !== `custom-${id}`));
     }
     await deleteCustomTerm(id);
+  };
+
+  const handleStartEdit = (id: string, text: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(id);
+    setEditText(text);
+  };
+
+  const handleCancelEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(null);
+    setEditText('');
+  };
+
+  const handleSaveEdit = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!editText.trim()) return;
+    setIsUpdating(true);
+    await updateCustomTerm(id, editText.trim());
+    setEditingId(null);
+    setEditText('');
+    setIsUpdating(false);
   };
 
   const groupedTerms = INVOICE_TERMS.reduce((acc, term) => {
@@ -134,21 +159,65 @@ export default function InvoiceTermsSelector({
                         checked={selectedTerms.includes(`custom-${term.id}`)}
                         onCheckedChange={() => handleToggle(`custom-${term.id}`)}
                         className="mt-0.5"
+                        disabled={editingId === term.id}
                       />
-                      <Label
-                        htmlFor={`custom-${term.id}`}
-                        className="text-xs text-muted-foreground cursor-pointer leading-relaxed flex-1"
-                      >
-                        {term.text}
-                      </Label>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => handleDeleteCustomTerm(term.id, e)}
-                      >
-                        <Trash2 className="h-3 w-3 text-destructive" />
-                      </Button>
+                      {editingId === term.id ? (
+                        <div className="flex-1 flex items-center gap-1">
+                          <Input
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            className="h-6 text-xs flex-1"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveEdit(term.id, e as any);
+                              if (e.key === 'Escape') handleCancelEdit(e as any);
+                            }}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5"
+                            onClick={(e) => handleSaveEdit(term.id, e)}
+                            disabled={isUpdating || !editText.trim()}
+                          >
+                            {isUpdating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3 text-primary" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5"
+                            onClick={handleCancelEdit}
+                            disabled={isUpdating}
+                          >
+                            <X className="h-3 w-3 text-muted-foreground" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <Label
+                            htmlFor={`custom-${term.id}`}
+                            className="text-xs text-muted-foreground cursor-pointer leading-relaxed flex-1"
+                          >
+                            {term.text}
+                          </Label>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => handleStartEdit(term.id, term.text, e)}
+                          >
+                            <Pencil className="h-3 w-3 text-muted-foreground" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => handleDeleteCustomTerm(term.id, e)}
+                          >
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   ))}
                   {customTerms.length === 0 && (
