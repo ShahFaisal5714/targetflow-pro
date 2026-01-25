@@ -10,19 +10,20 @@ import { useProjects } from '@/hooks/useProjects';
 import { useCompanies, TARGET_SPECIALTIES, ALHADAF_PROJECTS, Company } from '@/hooks/useCompanies';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import targetLogo from '@/assets/target-logo.jpg';
 import alhadafLogo from '@/assets/alhadaf-logo.png';
 import { INVOICE_TERMS } from '@/data/invoiceTerms';
-
+import { useCustomInvoiceTerms } from '@/hooks/useCustomInvoiceTerms';
 export default function InvoiceDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { invoices, loading: invoicesLoading, recordPayment } = useInvoices();
   const { projects, loading: projectsLoading } = useProjects();
   const { activeCompanyId, alhadafCompany, loading: companiesLoading } = useCompanies();
+  const { customTerms } = useCustomInvoiceTerms();
   
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -30,6 +31,22 @@ export default function InvoiceDetail() {
 
   const invoice = invoices.find(inv => inv.id === id);
   const project = invoice ? projects.find(p => p.id === invoice.project_id) : null;
+
+  // Get selected terms text for display/PDF
+  const selectedTermsText = useMemo(() => {
+    if (!invoice?.terms_conditions) return [];
+    return invoice.terms_conditions.map(termId => {
+      // Check if it's a custom term
+      if (termId.startsWith('custom-')) {
+        const customId = termId.replace('custom-', '');
+        const customTerm = customTerms.find(t => t.id === customId);
+        return customTerm?.text || null;
+      }
+      // Otherwise it's a predefined term
+      const predefinedTerm = INVOICE_TERMS.find(t => t.id === termId);
+      return predefinedTerm?.text || null;
+    }).filter(Boolean) as string[];
+  }, [invoice?.terms_conditions, customTerms]);
 
   const getInvoiceCompany = (): { company: Company; logo: string } => {
     const invoiceCompanyId = invoice?.company_id;
@@ -214,6 +231,34 @@ export default function InvoiceDetail() {
     doc.setTextColor(220, 53, 69);
     doc.text('Outstanding (AED):', totalsLabelX, finalY + 32);
     doc.text(outstandingAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }), totalsValueX, finalY + 32, { align: 'right' });
+
+    // Terms & Conditions
+    if (selectedTermsText.length > 0) {
+      let termsY = finalY + 50;
+      
+      // Check if we need a new page
+      const pageHeight = doc.internal.pageSize.getHeight();
+      if (termsY + (selectedTermsText.length * 5) + 20 > pageHeight - 20) {
+        doc.addPage();
+        termsY = 20;
+      }
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Terms & Conditions:', margin, termsY);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(60, 60, 60);
+      
+      selectedTermsText.forEach((term, index) => {
+        const termY = termsY + 8 + (index * 6);
+        // Wrap long text
+        const splitText = doc.splitTextToSize(`${index + 1}. ${term}`, contentWidth);
+        doc.text(splitText, margin, termY);
+      });
+    }
 
     return doc;
   };
