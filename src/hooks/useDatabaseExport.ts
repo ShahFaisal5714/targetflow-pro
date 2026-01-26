@@ -167,6 +167,33 @@ CREATE TABLE IF NOT EXISTS public.user_roles (
   created_at timestamp with time zone NOT NULL DEFAULT now()
 );
 
+-- Custom Invoice Terms table
+CREATE TABLE IF NOT EXISTS public.custom_invoice_terms (
+  id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid NOT NULL,
+  text text NOT NULL,
+  category text NOT NULL DEFAULT 'general'::text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
+-- Backup History table
+CREATE TABLE IF NOT EXISTS public.backup_history (
+  id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid NOT NULL,
+  filename text NOT NULL,
+  format text NOT NULL DEFAULT 'sql'::text,
+  size_bytes bigint NOT NULL DEFAULT 0,
+  tables_included text[] NOT NULL DEFAULT '{}'::text[],
+  record_count integer NOT NULL DEFAULT 0,
+  backup_type text NOT NULL DEFAULT 'manual'::text,
+  status text NOT NULL DEFAULT 'completed'::text,
+  content text,
+  company_id uuid,
+  company_name text,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
 -- =============================================
 -- DATABASE FUNCTIONS
 -- =============================================
@@ -253,6 +280,8 @@ ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.quotations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.custom_invoice_terms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.backup_history ENABLE ROW LEVEL SECURITY;
 
 -- Companies policies
 DROP POLICY IF EXISTS "Users can view their own companies" ON public.companies;
@@ -352,6 +381,24 @@ CREATE POLICY "Admins can delete user_roles" ON public.user_roles FOR DELETE USI
 DROP POLICY IF EXISTS "Admins can update any user_role" ON public.user_roles;
 CREATE POLICY "Admins can update any user_role" ON public.user_roles FOR UPDATE USING (has_role(auth.uid(), 'admin'::app_role)) WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
 
+-- Custom Invoice Terms policies
+DROP POLICY IF EXISTS "Users can view their own custom terms" ON public.custom_invoice_terms;
+CREATE POLICY "Users can view their own custom terms" ON public.custom_invoice_terms FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can create their own custom terms" ON public.custom_invoice_terms;
+CREATE POLICY "Users can create their own custom terms" ON public.custom_invoice_terms FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update their own custom terms" ON public.custom_invoice_terms;
+CREATE POLICY "Users can update their own custom terms" ON public.custom_invoice_terms FOR UPDATE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can delete their own custom terms" ON public.custom_invoice_terms;
+CREATE POLICY "Users can delete their own custom terms" ON public.custom_invoice_terms FOR DELETE USING (auth.uid() = user_id);
+
+-- Backup History policies
+DROP POLICY IF EXISTS "Users can view their own backup history" ON public.backup_history;
+CREATE POLICY "Users can view their own backup history" ON public.backup_history FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can create their own backups" ON public.backup_history;
+CREATE POLICY "Users can create their own backups" ON public.backup_history FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can delete their own backups" ON public.backup_history;
+CREATE POLICY "Users can delete their own backups" ON public.backup_history FOR DELETE USING (auth.uid() = user_id);
+
 `;
 
 function escapeSQL(value: unknown): string {
@@ -413,7 +460,9 @@ export function useDatabaseExport() {
       projectsResult,
       quotationsResult,
       settingsResult,
-      userRolesResult
+      userRolesResult,
+      customInvoiceTermsResult,
+      backupHistoryResult
     ] = await Promise.all([
       supabase.from('companies').select('*'),
       shouldFilterByCompany 
@@ -443,7 +492,9 @@ export function useDatabaseExport() {
             : supabase.from('quotations').select('*').eq('company_id', companyId))
         : supabase.from('quotations').select('*'),
       supabase.from('settings').select('*'),
-      supabase.from('user_roles').select('*')
+      supabase.from('user_roles').select('*'),
+      supabase.from('custom_invoice_terms').select('*'),
+      supabase.from('backup_history').select('*')
     ]);
 
     return {
@@ -455,7 +506,9 @@ export function useDatabaseExport() {
       projects: projectsResult.data || [],
       quotations: quotationsResult.data || [],
       settings: settingsResult.data || [],
-      user_roles: userRolesResult.data || []
+      user_roles: userRolesResult.data || [],
+      custom_invoice_terms: customInvoiceTermsResult.data || [],
+      backup_history: backupHistoryResult.data || []
     };
   };
 
@@ -486,6 +539,8 @@ export function useDatabaseExport() {
       sqlContent += generateInsertStatements('quotations', data.quotations);
       sqlContent += generateInsertStatements('invoices', data.invoices);
       sqlContent += generateInsertStatements('delivery_orders', data.delivery_orders);
+      sqlContent += generateInsertStatements('custom_invoice_terms', data.custom_invoice_terms);
+      sqlContent += generateInsertStatements('backup_history', data.backup_history);
       
       // Generate filename with company prefix
       const companyPrefix = companyName 

@@ -14,6 +14,7 @@ const TABLE_ORDER = [
   'quotations',
   'invoices',
   'delivery_orders',
+  'custom_invoice_terms',
   'backup_history',
   'settings'
 ];
