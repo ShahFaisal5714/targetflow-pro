@@ -6,10 +6,11 @@ import DataTable from '@/components/shared/DataTable';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useInvoices, Invoice } from '@/hooks/useInvoices';
 import { useProjects } from '@/hooks/useProjects';
+import { useProducts } from '@/hooks/useProducts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Search, Filter, Receipt, Calendar, DollarSign, Loader2, Plus, Trash2 } from 'lucide-react';
+import { Search, Filter, Receipt, Calendar, DollarSign, Loader2, Plus, Trash2, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -35,6 +36,7 @@ export default function Invoices() {
   const { role } = useAuth();
   const { invoices, loading, createInvoice } = useInvoices();
   const { projects } = useProjects();
+  const { products } = useProducts();
   const canEdit = role !== 'viewer';
   
   const [activeTab, setActiveTab] = useState<InvoiceStatus>('all');
@@ -45,7 +47,7 @@ export default function Invoices() {
     projectId: '',
     clientName: '',
     dueDate: '',
-    items: [] as { productId: string; description: string; quantity: number; unitPrice: number; total: number }[],
+    items: [] as { productId: string; description: string; quantity: number; unitPrice: number; total: number; unit: string }[],
     termsConditions: getDefaultTerms(),
   });
 
@@ -65,12 +67,53 @@ export default function Invoices() {
     setFormData(prev => ({
       ...prev,
       items: [...prev.items, {
-        productId: `item-${Date.now()}`,
+        productId: '',
         description: '',
         quantity: 1,
         unitPrice: 0,
         total: 0,
+        unit: '',
       }],
+    }));
+  };
+
+  const handleProductSelect = (index: number, productId: string) => {
+    if (productId === 'manual') {
+      // Reset to manual entry
+      setFormData(prev => ({
+        ...prev,
+        items: prev.items.map((item, i) => {
+          if (i !== index) return item;
+          return {
+            ...item,
+            productId: '',
+            description: '',
+            unitPrice: 0,
+            unit: '',
+            total: item.quantity * 0,
+          };
+        }),
+      }));
+      return;
+    }
+
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    setFormData(prev => ({
+      ...prev,
+      items: prev.items.map((item, i) => {
+        if (i !== index) return item;
+        const unitPrice = product.price;
+        return {
+          ...item,
+          productId: product.id,
+          description: product.name + (product.color ? ` - ${product.color}` : ''),
+          unitPrice,
+          unit: product.unit,
+          total: item.quantity * unitPrice,
+        };
+      }),
     }));
   };
 
@@ -373,8 +416,46 @@ export default function Invoices() {
               ) : (
                 <div className="space-y-3">
                   {formData.items.map((item, index) => (
-                    <Card key={item.productId}>
-                      <CardContent className="p-3">
+                    <Card key={index}>
+                      <CardContent className="p-3 space-y-2">
+                        {/* Product Selection Row */}
+                        <div className="flex items-center gap-2">
+                          <Package className="h-4 w-4 text-muted-foreground" />
+                          <Select
+                            value={item.productId || 'manual'}
+                            onValueChange={(value) => handleProductSelect(index, value)}
+                          >
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Select from inventory or enter manually" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="manual">✏️ Enter manually</SelectItem>
+                              {products.length > 0 && (
+                                <>
+                                  <SelectItem value="separator" disabled>
+                                    ── Inventory Products ──
+                                  </SelectItem>
+                                  {products.map(product => (
+                                    <SelectItem key={product.id} value={product.id}>
+                                      {product.name} - {product.sku} (AED {product.price.toFixed(2)}/{product.unit})
+                                    </SelectItem>
+                                  ))}
+                                </>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <Button 
+                            type="button" 
+                            size="sm" 
+                            variant="ghost" 
+                            className="text-destructive"
+                            onClick={() => handleRemoveItem(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        
+                        {/* Item Details Row */}
                         <div className="grid grid-cols-12 gap-2 items-end">
                           <div className="col-span-5">
                             <Label className="text-xs">Description</Label>
@@ -408,16 +489,8 @@ export default function Invoices() {
                               className="bg-muted"
                             />
                           </div>
-                          <div className="col-span-1">
-                            <Button 
-                              type="button" 
-                              size="sm" 
-                              variant="ghost" 
-                              className="text-destructive"
-                              onClick={() => handleRemoveItem(index)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                          <div className="col-span-1 text-xs text-muted-foreground text-center">
+                            {item.unit || '-'}
                           </div>
                         </div>
                       </CardContent>
