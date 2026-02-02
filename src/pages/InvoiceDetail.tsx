@@ -114,33 +114,36 @@ export default function InvoiceDetail() {
     const margin = 14;
     const contentWidth = pageWidth - (margin * 2);
     
-    // Add logo - on the left side
+    // Add logo - on the left side (larger for Alhadaf)
     const img = new Image();
     img.src = logo;
-    doc.addImage(img, 'PNG', margin, 10, 55, 35);
+    const isAlhadaf = company.name.toLowerCase().includes('hadaf');
+    const logoWidth = isAlhadaf ? 65 : 55;
+    const logoHeight = isAlhadaf ? 42 : 35;
+    doc.addImage(img, 'PNG', margin, 8, logoWidth, logoHeight);
 
-    // Company Header - on the right side
+    // Company Header - on the right side with BOLD text
     const rightAlignX = pageWidth - margin;
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
     doc.text(company.name, rightAlignX, 15, { align: 'right' });
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(60, 60, 60);
-    doc.text(company.address || '', rightAlignX, 21, { align: 'right' });
-    doc.text(`Email: ${company.email || 'N/A'} | Web: ${company.website || 'N/A'}`, rightAlignX, 27, { align: 'right' });
-    doc.text(`Contact No: ${company.phone || 'N/A'}`, rightAlignX, 33, { align: 'right' });
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40, 40, 40);
+    doc.text(company.address || '', rightAlignX, 22, { align: 'right' });
+    doc.text(`Email: ${company.email || 'N/A'}`, rightAlignX, 29, { align: 'right' });
+    doc.text(`Web: ${company.website || 'N/A'}`, rightAlignX, 36, { align: 'right' });
+    doc.text(`Contact No: ${company.phone || 'N/A'}`, rightAlignX, 43, { align: 'right' });
     if (company.taxInfo?.trn) {
-      doc.setFont('helvetica', 'bold');
-      doc.text(`TRN: ${company.taxInfo.trn}`, rightAlignX, 39, { align: 'right' });
+      doc.text(`TRN: ${company.taxInfo.trn}`, rightAlignX, 50, { align: 'right' });
     }
 
     // Title - centered below header
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
-    doc.text('TAX INVOICE', pageWidth / 2, 52, { align: 'center' });
+    doc.text('TAX INVOICE', pageWidth / 2, 58, { align: 'center' });
 
     // Invoice details
     doc.setFontSize(9);
@@ -150,7 +153,7 @@ export default function InvoiceDetail() {
     const rightColLabel = pageWidth / 2 + 5;
     const rightColValue = pageWidth / 2 + 35;
     
-    let detailsY = 60;
+    let detailsY = 68;
     
     doc.setFont('helvetica', 'bold');
     doc.text('Invoice No:', leftColLabel, detailsY);
@@ -191,8 +194,8 @@ export default function InvoiceDetail() {
     doc.setFont('helvetica', 'normal');
     doc.text(invoice.status.toUpperCase(), rightColValue, detailsY + 14);
 
-    // Items table
-    const tableStartY = buyerTrn ? 90 : 85;
+    // Items table - adjusted for larger header
+    const tableStartY = buyerTrn ? 100 : 95;
     const tableData = invoice.items.map((item, index) => [
       index + 1,
       item.description.toUpperCase(),
@@ -280,10 +283,32 @@ export default function InvoiceDetail() {
     return doc;
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     const doc = generatePDF();
-    // Use invoice number as filename
-    doc.save(`${invoice.invoice_number}.pdf`);
+    const pdfBlob = doc.output('blob');
+    const filename = `${invoice.invoice_number}.pdf`;
+    
+    // Try to use File System Access API for save-as dialog
+    if ('showSaveFilePicker' in window) {
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: filename,
+          types: [{
+            description: 'PDF Document',
+            accept: { 'application/pdf': ['.pdf'] },
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(pdfBlob);
+        await writable.close();
+        return;
+      } catch (err: any) {
+        // User cancelled or API not supported - fall back to download
+        if (err.name === 'AbortError') return;
+      }
+    }
+    // Fallback for browsers without File System Access API
+    doc.save(filename);
   };
 
   const handleDownloadPDF = () => {

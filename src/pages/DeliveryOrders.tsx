@@ -10,12 +10,17 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Search, Truck, Plus, Edit, Trash2, Package, Calendar, Loader2 } from 'lucide-react';
+import { Search, Truck, Plus, Edit, Trash2, Package, Calendar, Loader2, Download, Printer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProjects } from '@/hooks/useProjects';
+import { useCompanies, TARGET_SPECIALTIES, ALHADAF_PROJECTS, Company } from '@/hooks/useCompanies';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import targetLogo from '@/assets/target-logo.jpg';
+import alhadafLogo from '@/assets/alhadaf-logo.png';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,7 +50,26 @@ interface DeliveryOrder {
   delivery_date: string | null;
   notes: string | null;
   created_at: string;
+  company_id: string | null;
 }
+
+// Helper to get company for a delivery order
+const getDeliveryCompany = (
+  order: DeliveryOrder,
+  activeCompanyId: string,
+  alhadafCompany: Partial<Company> | undefined
+): { company: Company; logo: string } => {
+  const isAlhadaf = order.company_id && order.company_id !== 'target-specialties';
+  
+  if (isAlhadaf) {
+    return { 
+      company: { ...ALHADAF_PROJECTS, ...alhadafCompany } as Company,
+      logo: alhadafLogo 
+    };
+  }
+  
+  return { company: TARGET_SPECIALTIES, logo: targetLogo };
+};
 
 const statusTabs: { key: string; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -57,6 +81,7 @@ const statusTabs: { key: string; label: string }[] = [
 export default function DeliveryOrders() {
   const { user, role } = useAuth();
   const { projects } = useProjects();
+  const { activeCompanyId, alhadafCompany, getActiveCompanyDbId } = useCompanies();
   const { toast } = useToast();
   const canEdit = role !== 'viewer';
 
@@ -100,6 +125,7 @@ export default function DeliveryOrders() {
           delivery_date: order.delivery_date,
           notes: order.notes,
           created_at: order.created_at,
+          company_id: order.company_id,
         } as DeliveryOrder;
       });
 
@@ -171,6 +197,7 @@ export default function DeliveryOrders() {
         if (error) throw error;
         toast({ title: 'Success', description: 'Delivery order updated' });
       } else {
+        const companyDbId = getActiveCompanyDbId();
         const { error } = await supabase
           .from('delivery_orders')
           .insert({
@@ -181,6 +208,7 @@ export default function DeliveryOrders() {
             notes: formData.notes || null,
             items: formData.items as any,
             status: 'pending',
+            company_id: companyDbId,
           });
 
         if (error) throw error;
@@ -237,6 +265,189 @@ export default function DeliveryOrders() {
       fetchDeliveryOrders();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  // PDF Generation for Delivery Order
+  const generateDeliveryPDF = (order: DeliveryOrder) => {
+    const { company, logo } = getDeliveryCompany(order, activeCompanyId, alhadafCompany);
+    const project = projects.find(p => p.id === order.project_id);
+    
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 14;
+    const contentWidth = pageWidth - (margin * 2);
+    
+    // Add logo - on the left side (larger for Alhadaf)
+    const img = new Image();
+    img.src = logo;
+    const isAlhadaf = company.name.toLowerCase().includes('hadaf');
+    const logoWidth = isAlhadaf ? 65 : 55;
+    const logoHeight = isAlhadaf ? 42 : 35;
+    doc.addImage(img, 'PNG', margin, 8, logoWidth, logoHeight);
+
+    // Company Header - on the right side with BOLD text
+    const rightAlignX = pageWidth - margin;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text(company.name, rightAlignX, 15, { align: 'right' });
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40, 40, 40);
+    doc.text(company.address || '', rightAlignX, 22, { align: 'right' });
+    doc.text(`Email: ${company.email || 'N/A'}`, rightAlignX, 29, { align: 'right' });
+    doc.text(`Web: ${company.website || 'N/A'}`, rightAlignX, 36, { align: 'right' });
+    doc.text(`Contact No: ${company.phone || 'N/A'}`, rightAlignX, 43, { align: 'right' });
+
+    // Title - centered below header
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('DELIVERY ORDER', pageWidth / 2, 56, { align: 'center' });
+
+    // Order details section
+    doc.setFontSize(9);
+    const leftColLabel = margin;
+    const leftColValue = margin + 35;
+    const rightColLabel = pageWidth / 2 + 5;
+    const rightColValue = pageWidth / 2 + 35;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Delivery No:', leftColLabel, 70);
+    doc.setFont('helvetica', 'normal');
+    doc.text(order.delivery_number, leftColValue, 70);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Project:', leftColLabel, 77);
+    doc.setFont('helvetica', 'normal');
+    doc.text(order.project_name || 'N/A', leftColValue, 77);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Status:', leftColLabel, 84);
+    doc.setFont('helvetica', 'normal');
+    doc.text(order.status.toUpperCase(), leftColValue, 84);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Date:', rightColLabel, 70);
+    doc.setFont('helvetica', 'normal');
+    doc.text(new Date(order.created_at).toLocaleDateString('en-GB'), rightColValue, 70);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Delivery Date:', rightColLabel, 77);
+    doc.setFont('helvetica', 'normal');
+    doc.text(order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('en-GB') : 'Not set', rightColValue, 77);
+
+    if (project?.contractor?.name) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Contractor:', rightColLabel, 84);
+      doc.setFont('helvetica', 'normal');
+      doc.text(project.contractor.name, rightColValue, 84);
+    }
+
+    // Items table
+    const tableData = order.items.map((item, index) => [
+      index + 1,
+      item.productName.toUpperCase(),
+      item.unit,
+      item.quantity.toString(),
+      item.deliveredQuantity.toString(),
+    ]);
+
+    autoTable(doc, {
+      startY: 95,
+      head: [['S No', 'Product Name', 'Unit', 'Ordered Qty', 'Delivering Qty']],
+      body: tableData,
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { 
+        fillColor: [41, 98, 255], 
+        textColor: 255, 
+        fontStyle: 'bold',
+        halign: 'center'
+      },
+      margin: { left: margin, right: margin },
+      tableWidth: contentWidth,
+      columnStyles: {
+        0: { cellWidth: 15, halign: 'center' },
+        1: { cellWidth: 80 },
+        2: { cellWidth: 25, halign: 'center' },
+        3: { cellWidth: 30, halign: 'right' },
+        4: { cellWidth: 30, halign: 'right' }
+      }
+    });
+
+    // Notes section
+    if (order.notes) {
+      const finalY = (doc as any).lastAutoTable.finalY + 15;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('Notes:', margin, finalY);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      const splitNotes = doc.splitTextToSize(order.notes, contentWidth);
+      doc.text(splitNotes, margin, finalY + 7);
+    }
+
+    // Signature section
+    const signatureY = (doc as any).lastAutoTable.finalY + (order.notes ? 40 : 20);
+    if (signatureY < 260) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('Received By:', margin, signatureY);
+      doc.line(margin + 25, signatureY, margin + 80, signatureY);
+      
+      doc.text('Date:', pageWidth / 2, signatureY);
+      doc.line(pageWidth / 2 + 15, signatureY, pageWidth / 2 + 60, signatureY);
+      
+      doc.text('Signature:', margin, signatureY + 15);
+      doc.line(margin + 25, signatureY + 15, margin + 80, signatureY + 15);
+    }
+
+    return doc;
+  };
+
+  const handleExportPDF = async (order: DeliveryOrder) => {
+    const doc = generateDeliveryPDF(order);
+    const pdfBlob = doc.output('blob');
+    const filename = `${order.delivery_number}.pdf`;
+    
+    // Try to use File System Access API for save-as dialog
+    if ('showSaveFilePicker' in window) {
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: filename,
+          types: [{
+            description: 'PDF Document',
+            accept: { 'application/pdf': ['.pdf'] },
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(pdfBlob);
+        await writable.close();
+        toast({
+          title: 'Success',
+          description: `PDF saved successfully`,
+        });
+        return;
+      } catch (err: any) {
+        // User cancelled or API not supported - fall back to download
+        if (err.name === 'AbortError') return;
+      }
+    }
+    // Fallback for browsers without File System Access API
+    doc.save(filename);
+  };
+
+  const handlePrintPDF = (order: DeliveryOrder) => {
+    const doc = generateDeliveryPDF(order);
+    const pdfBlob = doc.output('blob');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    const printWindow = window.open(pdfUrl, '_blank');
+    if (printWindow) {
+      printWindow.onload = () => {
+        printWindow.print();
+      };
     }
   };
 
@@ -307,6 +518,12 @@ export default function DeliveryOrders() {
               Mark Delivered
             </Button>
           )}
+          <Button size="sm" variant="outline" onClick={() => handleExportPDF(order)} title="Export PDF">
+            <Download className="h-4 w-4" />
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => handlePrintPDF(order)} title="Print">
+            <Printer className="h-4 w-4" />
+          </Button>
           {canEdit && (
             <>
               <Button size="sm" variant="outline" onClick={() => handleEdit(order)}>
