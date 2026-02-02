@@ -435,9 +435,9 @@ export default function Invoices() {
                                   <SelectItem value="separator" disabled>
                                     ── Inventory Products ──
                                   </SelectItem>
-                                  {products.map(product => (
+                              {products.map(product => (
                                     <SelectItem key={product.id} value={product.id}>
-                                      {product.name} - {product.sku} (AED {product.price.toFixed(2)}/{product.unit})
+                                      {product.name} - {product.sku} (AED {product.price.toFixed(2)}/{product.unit}) • Stock: {product.stock_quantity}
                                     </SelectItem>
                                   ))}
                                 </>
