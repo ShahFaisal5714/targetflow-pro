@@ -84,8 +84,41 @@ const normalizeCsvHeader = (header: string) => {
     .replace(/^\uFEFF/, '') // strip BOM
     .trim()
     .replace(/^"|"$/g, '')
-    .toLowerCase();
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, ""); // Remove accents
   return cleaned.replace(/[\s\-]+/g, '_');
+};
+
+// Map common header variations to standard field names
+const HEADER_ALIASES: Record<string, string[]> = {
+  name: ['name', 'product_name', 'product'],
+  sku: ['sku', 'item_code', 'product_code', 'code'],
+  category: ['category', 'type', 'product_category'],
+  price: ['price', 'unit_price', 'selling_price', 'sale_price'],
+  cost: ['cost', 'unit_cost', 'purchase_price', 'buying_price'],
+  stock_quantity: ['stock_quantity', 'stock', 'quantity', 'qty', 'stock_qty', 'quantity_on_hand'],
+  reorder_level: ['reorder_level', 'reorder', 'min_stock', 'minimum_stock', 'min_quantity'],
+  unit: ['unit', 'uom', 'unit_of_measure'],
+  description: ['description', 'desc', 'details', 'product_description'],
+  color: ['color', 'colour', 'variant'],
+};
+
+const findStandardHeader = (rawHeader: string): string => {
+  const normalized = normalizeCsvHeader(rawHeader);
+  
+  for (const [standard, aliases] of Object.entries(HEADER_ALIASES)) {
+    if (aliases.includes(normalized)) {
+      return standard;
+    }
+    // Also check if normalized starts with or contains the alias
+    for (const alias of aliases) {
+      if (normalized.startsWith(alias) || normalized === alias) {
+        return standard;
+      }
+    }
+  }
+  return normalized;
 };
 
 // Minimal CSV parser that supports quoted values and commas inside quotes.
@@ -205,15 +238,19 @@ export default function Inventory() {
         const text = e.target?.result as string;
         const lines = text.split('\n').filter(line => line.trim());
         const rawHeaderCells = parseCsvLine(lines[0]);
-        const headers = rawHeaderCells.map(normalizeCsvHeader);
+        // Map raw headers to standard field names
+        const headers = rawHeaderCells.map(findStandardHeader);
         
-        const requiredHeaders = ['name', 'sku', 'category', 'price', 'cost', 'stock_quantity', 'unit'];
+        console.log('CSV Import - Raw headers:', rawHeaderCells);
+        console.log('CSV Import - Mapped headers:', headers);
+        
+        const requiredHeaders = ['name', 'sku'];
         const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
         
         if (missingHeaders.length > 0) {
           toast({
             title: 'Invalid CSV Format',
-            description: `Missing required columns: ${missingHeaders.join(', ')}`,
+            description: `Missing required columns: ${missingHeaders.join(', ')}. Found: ${headers.join(', ')}`,
             variant: 'destructive',
           });
           setImporting(false);
@@ -225,22 +262,24 @@ export default function Inventory() {
 
         for (let i = 1; i < lines.length; i++) {
           const values = parseCsvLine(lines[i]);
+          if (values.every(v => !v.trim())) continue; // Skip empty rows
+          
           const rowData: Record<string, string> = {};
           headers.forEach((header, index) => {
             rowData[header] = values[index] || '';
           });
 
           const productInput: ProductInput = {
-            name: rowData.name,
-            sku: rowData.sku,
-            category: rowData.category || 'other',
+            name: rowData.name?.trim(),
+            sku: rowData.sku?.trim(),
+            category: rowData.category?.trim() || 'other',
             price: parseFloat(rowData.price) || 0,
             cost: parseFloat(rowData.cost) || 0,
             stock_quantity: parseInt(rowData.stock_quantity) || 0,
             reorder_level: parseInt(rowData.reorder_level) || 10,
-            unit: rowData.unit || 'piece',
-            description: rowData.description,
-            color: rowData.color,
+            unit: rowData.unit?.trim() || 'piece',
+            description: rowData.description?.trim(),
+            color: rowData.color?.trim(),
           };
 
           if (productInput.name && productInput.sku) {
@@ -268,13 +307,13 @@ export default function Inventory() {
     reader.readAsText(file);
   };
 
-  // CSV Export Handler
+  // CSV Export Handler - uses normalized snake_case headers for round-trip compatibility
   const exportToCSV = () => {
-    const headers = ['SKU', 'Name', 'Category', 'Color', 'Price', 'Cost', 'Stock Quantity', 'Reorder Level', 'Unit', 'Description'];
+    const headers = ['sku', 'name', 'category', 'color', 'price', 'cost', 'stock_quantity', 'reorder_level', 'unit', 'description'];
     const csvContent = [
       headers.join(','),
       ...filteredProducts.map(p => [
-        p.sku,
+        `"${p.sku}"`,
         `"${p.name}"`,
         p.category,
         p.color || '',
@@ -283,11 +322,11 @@ export default function Inventory() {
         p.stock_quantity,
         p.reorder_level,
         p.unit,
-        `"${p.description || ''}"`,
+        `"${(p.description || '').replace(/"/g, '""')}"`,
       ].join(','))
     ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `inventory_${new Date().toISOString().split('T')[0]}.csv`;

@@ -7,6 +7,16 @@ import { logError } from '@/lib/logger';
 const normalizeCompanyName = (name: string) =>
   (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
+const isTargetSpecialtiesName = (name: string) => {
+  const normalized = normalizeCompanyName(name);
+  return normalized.includes('target') || normalized.includes('specialties');
+};
+
+const isAlhadafName = (name: string) => {
+  const normalized = normalizeCompanyName(name);
+  return normalized.includes('alhadaf') || normalized.includes('hadaf') || normalized.includes('kabeer');
+};
+
 export interface BankDetails {
   bankName: string;
   accountTitle: string;
@@ -169,10 +179,10 @@ export function useCompanies() {
       };
 
       const targetCandidates = (allCompanies || []).filter((c) =>
-        normalizeCompanyName(c.name).includes('target')
+        isTargetSpecialtiesName(c.name)
       );
       const alhadafCandidates = (allCompanies || []).filter((c) =>
-        normalizeCompanyName(c.name).includes('alhadaf')
+        isAlhadafName(c.name)
       );
 
       // Find Target Specialties company
