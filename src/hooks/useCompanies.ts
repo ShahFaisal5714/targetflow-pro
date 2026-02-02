@@ -132,6 +132,8 @@ export function useCompanies() {
   const [companies, setCompanies] = useState<DbCompany[]>([]);
   const [alhadafDetails, setAlhadafDetails] = useState<Partial<Company>>({});
   const [alhadafDbId, setAlhadafDbId] = useState<string | null>(null);
+  const [targetDbId, setTargetDbId] = useState<string | null>(null);
+  const [targetDetails, setTargetDetails] = useState<Partial<Company>>({});
   const [activeCompanyId, setActiveCompanyIdState] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('activeCompanyId') || 'target-specialties';
@@ -156,6 +158,18 @@ export function useCompanies() {
       if (allError) throw allError;
       
       setCompanies(allCompanies || []);
+
+      // Find Target Specialties company
+      const target = allCompanies?.find(c => c.name.toLowerCase().includes('target'));
+      if (target) {
+        setTargetDbId(target.id);
+        setTargetDetails({
+          email: target.email,
+          phone: target.phone,
+          address: target.address,
+          website: target.website,
+        });
+      }
 
       // Find Alhadaf company
       const alhadaf = allCompanies?.find(c => c.name.toLowerCase().includes('alhadaf'));
@@ -195,6 +209,82 @@ export function useCompanies() {
   useEffect(() => {
     fetchCompanies();
   }, [user]);
+
+  const updateTargetCompany = async (updates: Partial<Company>): Promise<Company | null> => {
+    if (!user) return null;
+
+    try {
+      if (targetDbId) {
+        // Update existing
+        const { data, error } = await supabase
+          .from('companies')
+          .update({
+            email: updates.email,
+            phone: updates.phone,
+            address: updates.address,
+            website: updates.website,
+          })
+          .eq('id', targetDbId)
+          .select()
+          .single();
+
+        if (error) throw error;
+        setTargetDetails({
+          email: data.email,
+          phone: data.phone,
+          address: data.address,
+          website: data.website,
+        });
+        
+        toast({
+          title: 'Success',
+          description: 'Target Specialties details updated',
+        });
+        
+        return data as Company;
+      } else {
+        // Create new
+        const { data, error } = await supabase
+          .from('companies')
+          .insert({
+            user_id: user.id,
+            name: TARGET_SPECIALTIES_DISPLAY.name,
+            email: updates.email || null,
+            phone: updates.phone || null,
+            address: updates.address || null,
+            website: updates.website || null,
+            is_default: false,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        
+        setTargetDbId(data.id);
+        setTargetDetails({
+          email: data.email,
+          phone: data.phone,
+          address: data.address,
+          website: data.website,
+        });
+        
+        toast({
+          title: 'Success',
+          description: 'Target Specialties created',
+        });
+        
+        return data as Company;
+      }
+    } catch (error) {
+      logError('useCompanies.updateTargetCompany', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update company',
+        variant: 'destructive',
+      });
+      return null;
+    }
+  };
 
   const updateAlhadafCompany = async (updates: Partial<Company>): Promise<Company | null> => {
     if (!user) return null;
@@ -342,7 +432,18 @@ export function useCompanies() {
         ...alhadafDetails,
       };
     }
-    return TARGET_SPECIALTIES_DISPLAY;
+    return {
+      ...TARGET_SPECIALTIES_DISPLAY,
+      ...targetDetails,
+    };
+  };
+
+  const getTargetWithDetails = (): Company => {
+    return {
+      ...TARGET_SPECIALTIES_DISPLAY,
+      id: targetDbId || 'target-specialties',
+      ...targetDetails,
+    };
   };
 
   const getActiveDisplayId = (): string => {
@@ -374,12 +475,14 @@ export function useCompanies() {
     : 'target-specialties';
 
   return {
-    targetSpecialties: TARGET_SPECIALTIES_DISPLAY,
+    targetSpecialties: getTargetWithDetails(),
     alhadafCompany: getAlhadafWithDetails(),
     alhadafDbId,
+    targetDbId,
     activeCompanyId,
     activeDisplayId,
     loading,
+    updateTargetCompany,
     updateAlhadafCompany,
     setActiveCompany,
     getActiveCompany,

@@ -197,7 +197,10 @@ export default function QuotationDetail() {
     doc.setFont('helvetica', 'bold');
     doc.text('Quotation No:', rightColLabel, 72);
     doc.setFont('helvetica', 'normal');
-    doc.text(quotation.id, rightColValue, 72);
+    // Use company-prefixed quotation number
+    const companyPrefix = quotation.company_id ? 'AH' : 'TS';
+    const quotationNo = `${companyPrefix}-QT-${quotation.id.slice(0, 8).toUpperCase()}`;
+    doc.text(quotationNo, rightColValue, 72);
 
     doc.setFont('helvetica', 'bold');
     doc.text('Phone No:', rightColLabel, 79);
@@ -331,7 +334,21 @@ export default function QuotationDetail() {
     return doc;
   };
 
+  // Generate quotation number with company prefix
+  const getQuotationNumber = () => {
+    const companyPrefix = quotation.company_id ? 'AH' : 'TS';
+    return `${companyPrefix}-QT-${quotation.id.slice(0, 8).toUpperCase()}`;
+  };
+
+  const quotationNumber = getQuotationNumber();
+
   const handleExportPDF = () => {
+    const doc = generatePDF();
+    // Use quotation number as filename
+    doc.save(`${quotationNumber}.pdf`);
+  };
+
+  const handleDownloadPDF = () => {
     const doc = generatePDF();
     const pdfBlob = doc.output('blob');
     const pdfUrl = URL.createObjectURL(pdfBlob);
@@ -361,7 +378,7 @@ export default function QuotationDetail() {
             </Button>
             <div className="flex-1">
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-foreground">{quotation.id}</h1>
+                <h1 className="text-2xl font-bold text-foreground">{quotationNumber}</h1>
                 <StatusBadge status={quotation.status as any} />
               </div>
               <p className="text-muted-foreground mt-1">{quotation.project_name}</p>
@@ -453,7 +470,7 @@ export default function QuotationDetail() {
               </div>
               <div>
                 <p className="text-xs font-semibold text-muted-foreground">Quotation No:</p>
-                <p className="text-sm text-foreground font-mono font-semibold">{quotation.id}</p>
+                <p className="text-sm text-foreground font-mono font-semibold">{quotationNumber}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-muted-foreground">Phone No:</p>

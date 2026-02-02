@@ -39,6 +39,7 @@ export default function Settings() {
     alhadafDbId,
     loading: companiesLoading,
     updateAlhadafCompany,
+    updateTargetCompany,
     setActiveCompany,
   } = useCompanies();
 
@@ -162,6 +163,17 @@ export default function Settings() {
     }
   }, [alhadafCompany]);
 
+  useEffect(() => {
+    if (targetSpecialties) {
+      setTargetForm({
+        email: targetSpecialties.email || '',
+        phone: targetSpecialties.phone || '',
+        address: targetSpecialties.address || '',
+        website: targetSpecialties.website || '',
+      });
+    }
+  }, [targetSpecialties]);
+
   const handleSaveCompany = () => {
     saveCompanySettings(company);
   };
@@ -181,6 +193,13 @@ export default function Settings() {
     await updateAlhadafCompany(alhadafForm);
     setSavingAlhadaf(false);
     setEditingAlhadaf(false);
+  };
+
+  const handleSaveTarget = async () => {
+    setSavingTarget(true);
+    await updateTargetCompany(targetForm);
+    setSavingTarget(false);
+    setEditingTarget(false);
   };
 
   const handleSelectCompany = async (companyId: string) => {
@@ -306,7 +325,7 @@ export default function Settings() {
                           />
                         </div>
                         <div className="flex gap-2 pt-2">
-                          <Button size="sm" onClick={() => { setSavingTarget(true); setTimeout(() => { setSavingTarget(false); setEditingTarget(false); }, 500); }} disabled={savingTarget}>
+                          <Button size="sm" onClick={handleSaveTarget} disabled={savingTarget}>
                             {savingTarget && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
                             Save
                           </Button>

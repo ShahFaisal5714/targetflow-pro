@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import Header from '@/components/layout/Header';
@@ -10,7 +10,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Search, Filter, Receipt, Calendar, DollarSign, Loader2, Plus, Trash2, Package } from 'lucide-react';
+import { Search, Filter, Receipt, Calendar, DollarSign, Loader2, Plus, Trash2, Package, Undo2, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -19,6 +19,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import InvoiceTermsSelector from '@/components/invoices/InvoiceTermsSelector';
 import { getDefaultTerms } from '@/data/invoiceTerms';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { ToastAction } from '@/components/ui/toast';
+import { useToast } from '@/hooks/use-toast';
 
 type InvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'overdue' | 'all';
 
@@ -34,14 +46,20 @@ const statusTabs: { key: InvoiceStatus; label: string }[] = [
 export default function Invoices() {
   const navigate = useNavigate();
   const { role } = useAuth();
-  const { invoices, loading, createInvoice } = useInvoices();
+  const { toast, dismiss } = useToast();
+  const { invoices, loading, createInvoice, deleteInvoice } = useInvoices();
   const { projects } = useProjects();
   const { products } = useProducts();
   const canEdit = role !== 'viewer';
+  const isAdmin = role === 'admin';
   
   const [activeTab, setActiveTab] = useState<InvoiceStatus>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
+  const [pendingDeletes, setPendingDeletes] = useState<string[]>([]);
+  const undoTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   
   const [formData, setFormData] = useState({
     projectId: '',
@@ -52,6 +70,7 @@ export default function Invoices() {
   });
 
   const filteredInvoices = invoices.filter((invoice) => {
+    if (pendingDeletes.includes(invoice.id)) return false;
     const matchesStatus = activeTab === 'all' || invoice.status === activeTab;
     const matchesSearch =
       invoice.invoice_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -164,6 +183,62 @@ export default function Invoices() {
     setFormData({ projectId: '', clientName: '', dueDate: '', items: [], termsConditions: getDefaultTerms() });
   };
 
+  const handleDeleteInvoice = (invoice: Invoice, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setInvoiceToDelete(invoice);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleUndoDelete = (invoiceId: string, toastId: string) => {
+    const timeout = undoTimeoutRef.current.get(invoiceId);
+    if (timeout) {
+      clearTimeout(timeout);
+      undoTimeoutRef.current.delete(invoiceId);
+    }
+    
+    setPendingDeletes(prev => prev.filter(id => id !== invoiceId));
+    dismiss(toastId);
+    
+    toast({
+      title: 'Invoice Restored',
+      description: `Invoice has been restored successfully.`,
+    });
+  };
+
+  const confirmDelete = async () => {
+    if (invoiceToDelete) {
+      const invoiceId = invoiceToDelete.id;
+      
+      setPendingDeletes(prev => [...prev, invoiceId]);
+      setDeleteDialogOpen(false);
+      setInvoiceToDelete(null);
+      
+      const { id: toastId } = toast({
+        title: 'Invoice Deleted',
+        description: `Invoice has been deleted.`,
+        duration: 8000,
+        action: (
+          <ToastAction 
+            altText="Undo delete" 
+            onClick={() => handleUndoDelete(invoiceId, toastId)}
+            className="gap-1"
+          >
+            <Undo2 className="h-4 w-4" />
+            Undo
+          </ToastAction>
+        ),
+      });
+      
+      const timeout = setTimeout(async () => {
+        await deleteInvoice(invoiceId);
+        setPendingDeletes(prev => prev.filter(id => id !== invoiceId));
+        undoTimeoutRef.current.delete(invoiceId);
+      }, 8000);
+      
+      undoTimeoutRef.current.set(invoiceId, timeout);
+    }
+  };
+
   const columns = [
     {
       key: 'invoiceNumber',
@@ -247,6 +322,16 @@ export default function Invoices() {
           <Button size="sm" variant="outline" onClick={() => navigate(`/invoices/${invoice.id}`)}>
             View
           </Button>
+          {isAdmin && (
+            <>
+              <Button size="sm" variant="outline" onClick={() => navigate(`/invoices/${invoice.id}`)}>
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={(e) => handleDeleteInvoice(invoice, e)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
       ),
     },
@@ -347,6 +432,24 @@ export default function Invoices() {
           emptyMessage="No invoices found"
         />
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{invoiceToDelete?.invoice_number}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Create Invoice Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>

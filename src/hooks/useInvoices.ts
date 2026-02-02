@@ -123,13 +123,26 @@ export function useInvoices() {
   }, [user, getActiveCompanyDbId]);
 
   const generateInvoiceNumber = async (): Promise<string> => {
+    const companyDbId = getActiveCompanyDbId();
     const year = new Date().getFullYear();
-    const { count } = await supabase
+    
+    // Get company prefix - TS for Target Specialties, AH for Alhadaf
+    const companyPrefix = companyDbId ? 'AH' : 'TS';
+    
+    // Count only invoices for this company
+    let countQuery = supabase
       .from('invoices')
       .select('*', { count: 'exact', head: true });
     
+    if (companyDbId) {
+      countQuery = countQuery.eq('company_id', companyDbId);
+    } else {
+      countQuery = countQuery.is('company_id', null);
+    }
+    
+    const { count } = await countQuery;
     const nextNumber = (count || 0) + 1;
-    return `INV-${year}-${String(nextNumber).padStart(4, '0')}`;
+    return `${companyPrefix}-INV-${year}-${String(nextNumber).padStart(4, '0')}`;
   };
 
   const createInvoice = async (invoiceData: Partial<Invoice>) => {

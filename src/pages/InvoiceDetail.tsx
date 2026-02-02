@@ -281,6 +281,12 @@ export default function InvoiceDetail() {
 
   const handleExportPDF = () => {
     const doc = generatePDF();
+    // Use invoice number as filename
+    doc.save(`${invoice.invoice_number}.pdf`);
+  };
+
+  const handleDownloadPDF = () => {
+    const doc = generatePDF();
     const pdfBlob = doc.output('blob');
     const pdfUrl = URL.createObjectURL(pdfBlob);
     window.open(pdfUrl, '_blank');
