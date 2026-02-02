@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -173,10 +173,16 @@ export function useCompanies() {
       
       setCompanies(allCompanies || []);
 
-      const pickBest = (list: DbCompany[]) => {
-        const defaultOne = list.find((c) => c.is_default);
-        return defaultOne || list[0];
-      };
+       const pickBest = (list: DbCompany[]) => {
+         // Prefer default, then prefer records that actually have details,
+         // otherwise fall back to the most recently returned one.
+         const score = (c: DbCompany) => {
+           const hasDetails = Boolean(c.email || c.phone || c.address || c.website);
+           return (c.is_default ? 10 : 0) + (hasDetails ? 5 : 0);
+         };
+
+         return [...list].sort((a, b) => score(b) - score(a))[0];
+       };
 
       const targetCandidates = (allCompanies || []).filter((c) =>
         isTargetSpecialtiesName(c.name)
@@ -240,52 +246,25 @@ export function useCompanies() {
     if (!user) return null;
 
     try {
-      if (targetDbId) {
-        // Update existing
-        const { data, error } = await supabase
-          .from('companies')
-          .update({
-            email: updates.email,
-            phone: updates.phone,
-            address: updates.address,
-            website: updates.website,
-          })
-          .eq('id', targetDbId)
-          .select()
-          .single();
+      const payload = {
+        email: updates.email ?? null,
+        phone: updates.phone ?? null,
+        address: updates.address ?? null,
+        website: updates.website ?? null,
+      };
 
-        if (error) throw error;
-        setTargetDetails({
-          email: data.email,
-          phone: data.phone,
-          address: data.address,
-          website: data.website,
-        });
-        
-        toast({
-          title: 'Success',
-          description: 'Target Specialties details updated',
-        });
-        
-        return data as Company;
-      } else {
-        // Create new
-        const { data, error } = await supabase
-          .from('companies')
-          .insert({
-            user_id: user.id,
-            name: TARGET_SPECIALTIES_DISPLAY.name,
-            email: updates.email || null,
-            phone: updates.phone || null,
-            address: updates.address || null,
-            website: updates.website || null,
-            is_default: false,
-          })
-          .select()
-          .single();
+      // Update ALL matching "Target" rows (prevents duplicates causing "not saved" UI)
+      const { data: updatedRows, error: updateError } = await supabase
+        .from('companies')
+        .update(payload)
+        .eq('user_id', user.id)
+        .eq('name', TARGET_SPECIALTIES_DISPLAY.name)
+        .select();
 
-        if (error) throw error;
-        
+      if (updateError) throw updateError;
+
+      if (updatedRows && updatedRows.length > 0) {
+        const data = updatedRows[0] as unknown as DbCompany;
         setTargetDbId(data.id);
         setTargetDetails({
           email: data.email,
@@ -293,14 +272,43 @@ export function useCompanies() {
           address: data.address,
           website: data.website,
         });
-        
+
         toast({
           title: 'Success',
-          description: 'Target Specialties created',
+          description: 'Target Specialties details updated',
         });
-        
-        return data as Company;
+
+        return data as unknown as Company;
       }
+
+      // No existing Target row found → create one
+      const { data: created, error: insertError } = await supabase
+        .from('companies')
+        .insert({
+          user_id: user.id,
+          name: TARGET_SPECIALTIES_DISPLAY.name,
+          ...payload,
+          is_default: false,
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      setTargetDbId(created.id);
+      setTargetDetails({
+        email: created.email,
+        phone: created.phone,
+        address: created.address,
+        website: created.website,
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Target Specialties details updated',
+      });
+
+      return created as Company;
     } catch (error) {
       logError('useCompanies.updateTargetCompany', error);
       toast({
@@ -316,52 +324,25 @@ export function useCompanies() {
     if (!user) return null;
 
     try {
-      if (alhadafDbId) {
-        // Update existing
-        const { data, error } = await supabase
-          .from('companies')
-          .update({
-            email: updates.email,
-            phone: updates.phone,
-            address: updates.address,
-            website: updates.website,
-          })
-          .eq('id', alhadafDbId)
-          .select()
-          .single();
+      const payload = {
+        email: updates.email ?? null,
+        phone: updates.phone ?? null,
+        address: updates.address ?? null,
+        website: updates.website ?? null,
+      };
 
-        if (error) throw error;
-        setAlhadafDetails({
-          email: data.email,
-          phone: data.phone,
-          address: data.address,
-          website: data.website,
-        });
-        
-        toast({
-          title: 'Success',
-          description: 'Alhadaf Projects details updated',
-        });
-        
-        return data as Company;
-      } else {
-        // Create new
-        const { data, error } = await supabase
-          .from('companies')
-          .insert({
-            user_id: user.id,
-            name: ALHADAF_PROJECTS_DISPLAY.name,
-            email: updates.email || null,
-            phone: updates.phone || null,
-            address: updates.address || null,
-            website: updates.website || null,
-            is_default: false,
-          })
-          .select()
-          .single();
+      // Update ALL matching "Alhadaf" rows (prevents duplicates causing "not saved" UI)
+      const { data: updatedRows, error: updateError } = await supabase
+        .from('companies')
+        .update(payload)
+        .eq('user_id', user.id)
+        .eq('name', ALHADAF_PROJECTS_DISPLAY.name)
+        .select();
 
-        if (error) throw error;
-        
+      if (updateError) throw updateError;
+
+      if (updatedRows && updatedRows.length > 0) {
+        const data = updatedRows[0] as unknown as DbCompany;
         setAlhadafDbId(data.id);
         setAlhadafDetails({
           email: data.email,
@@ -369,14 +350,43 @@ export function useCompanies() {
           address: data.address,
           website: data.website,
         });
-        
+
         toast({
           title: 'Success',
-          description: 'Alhadaf Projects created',
+          description: 'Alhadaf Projects details updated',
         });
-        
-        return data as Company;
+
+        return data as unknown as Company;
       }
+
+      // No existing Alhadaf row found → create one
+      const { data: created, error: insertError } = await supabase
+        .from('companies')
+        .insert({
+          user_id: user.id,
+          name: ALHADAF_PROJECTS_DISPLAY.name,
+          ...payload,
+          is_default: false,
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      setAlhadafDbId(created.id);
+      setAlhadafDetails({
+        email: created.email,
+        phone: created.phone,
+        address: created.address,
+        website: created.website,
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Alhadaf Projects details updated',
+      });
+
+      return created as Company;
     } catch (error) {
       logError('useCompanies.updateAlhadafCompany', error);
       toast({
@@ -399,17 +409,22 @@ export function useCompanies() {
         .eq('user_id', user.id);
 
       if (displayId === 'alhadaf-projects') {
-        // Ensure Alhadaf exists and set as default
-        if (alhadafDbId) {
-          await supabase
+        // Ensure Alhadaf exists and set as default (avoid creating duplicates)
+        let companyIdToActivate = alhadafDbId;
+
+        if (!companyIdToActivate) {
+          const { data: existing, error: findError } = await supabase
             .from('companies')
-            .update({ is_default: true })
-            .eq('id', alhadafDbId);
-          
-          setActiveCompanyIdState(alhadafDbId);
-          localStorage.setItem('activeCompanyId', alhadafDbId);
-        } else {
-          // Create Alhadaf if it doesn't exist
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('name', ALHADAF_PROJECTS_DISPLAY.name)
+            .limit(1);
+
+          if (findError) throw findError;
+          companyIdToActivate = existing?.[0]?.id ?? null;
+        }
+
+        if (!companyIdToActivate) {
           const { data: newCompany, error } = await supabase
             .from('companies')
             .insert({
@@ -421,11 +436,17 @@ export function useCompanies() {
             .single();
 
           if (error) throw error;
-          
-          setAlhadafDbId(newCompany.id);
-          setActiveCompanyIdState(newCompany.id);
-          localStorage.setItem('activeCompanyId', newCompany.id);
+          companyIdToActivate = newCompany.id;
+        } else {
+          await supabase
+            .from('companies')
+            .update({ is_default: true })
+            .eq('id', companyIdToActivate);
         }
+
+        setAlhadafDbId(companyIdToActivate);
+        setActiveCompanyIdState(companyIdToActivate);
+        localStorage.setItem('activeCompanyId', companyIdToActivate);
       } else {
         // Target Specialties - no company in DB, just reset
         setActiveCompanyIdState('target-specialties');
@@ -449,8 +470,23 @@ export function useCompanies() {
     }
   };
 
-  const getActiveCompany = (): Company => {
-    // Check if active is a UUID (Alhadaf)
+  const targetWithDetails = useMemo<Company>(() => {
+    return {
+      ...TARGET_SPECIALTIES_DISPLAY,
+      id: targetDbId || 'target-specialties',
+      ...targetDetails,
+    };
+  }, [targetDbId, targetDetails]);
+
+  const alhadafWithDetails = useMemo<Company>(() => {
+    return {
+      ...ALHADAF_PROJECTS_DISPLAY,
+      id: alhadafDbId || 'alhadaf-projects',
+      ...alhadafDetails,
+    };
+  }, [alhadafDbId, alhadafDetails]);
+
+  const activeCompany = useMemo<Company>(() => {
     if (activeCompanyId && activeCompanyId !== 'target-specialties') {
       return {
         ...ALHADAF_PROJECTS_DISPLAY,
@@ -462,38 +498,22 @@ export function useCompanies() {
       ...TARGET_SPECIALTIES_DISPLAY,
       ...targetDetails,
     };
-  };
+  }, [activeCompanyId, alhadafDetails, targetDetails]);
 
-  const getTargetWithDetails = (): Company => {
-    return {
-      ...TARGET_SPECIALTIES_DISPLAY,
-      id: targetDbId || 'target-specialties',
-      ...targetDetails,
-    };
-  };
+  const getActiveCompany = useCallback((): Company => activeCompany, [activeCompany]);
+  const getTargetWithDetails = useCallback((): Company => targetWithDetails, [targetWithDetails]);
+  const getAlhadafWithDetails = useCallback((): Company => alhadafWithDetails, [alhadafWithDetails]);
 
-  const getActiveDisplayId = (): string => {
-    if (activeCompanyId && activeCompanyId !== 'target-specialties') {
-      return 'alhadaf-projects';
-    }
+  const getActiveDisplayId = useCallback((): string => {
+    if (activeCompanyId && activeCompanyId !== 'target-specialties') return 'alhadaf-projects';
     return 'target-specialties';
-  };
-
-  const getAlhadafWithDetails = (): Company => {
-    return {
-      ...ALHADAF_PROJECTS_DISPLAY,
-      id: alhadafDbId || 'alhadaf-projects',
-      ...alhadafDetails,
-    };
-  };
+  }, [activeCompanyId]);
 
   // Get actual DB UUID for company_id filtering
-  const getActiveCompanyDbId = (): string | null => {
-    if (activeCompanyId && activeCompanyId !== 'target-specialties') {
-      return activeCompanyId; // This is the actual UUID
-    }
-    return null; // Target Specialties uses null
-  };
+  const getActiveCompanyDbId = useCallback((): string | null => {
+    if (activeCompanyId && activeCompanyId !== 'target-specialties') return activeCompanyId;
+    return null;
+  }, [activeCompanyId]);
 
   // Compute display ID directly from state for reactivity
   const activeDisplayId = activeCompanyId && activeCompanyId !== 'target-specialties' 
@@ -501,8 +521,8 @@ export function useCompanies() {
     : 'target-specialties';
 
   return {
-    targetSpecialties: getTargetWithDetails(),
-    alhadafCompany: getAlhadafWithDetails(),
+    targetSpecialties: targetWithDetails,
+    alhadafCompany: alhadafWithDetails,
     alhadafDbId,
     targetDbId,
     activeCompanyId,
