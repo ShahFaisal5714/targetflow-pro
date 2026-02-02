@@ -114,32 +114,33 @@ export default function InvoiceDetail() {
     const margin = 14;
     const contentWidth = pageWidth - (margin * 2);
     
-    // Add logo - larger size for better visibility
+    // Add logo - on the left side
     const img = new Image();
     img.src = logo;
-    doc.addImage(img, 'PNG', margin, 6, 70, 42);
+    doc.addImage(img, 'PNG', margin, 10, 55, 35);
 
-    // Company Header
+    // Company Header - on the right side
+    const rightAlignX = pageWidth - margin;
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
-    doc.text(company.name, pageWidth / 2, 15, { align: 'center' });
+    doc.text(company.name, rightAlignX, 15, { align: 'right' });
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 60, 60);
-    doc.text(company.address || '', pageWidth / 2, 21, { align: 'center' });
-    doc.text(`Email: ${company.email || 'N/A'} | Web: ${company.website || 'N/A'}`, pageWidth / 2, 26, { align: 'center' });
-    doc.text(`Contact No: ${company.phone || 'N/A'}`, pageWidth / 2, 31, { align: 'center' });
+    doc.text(company.address || '', rightAlignX, 21, { align: 'right' });
+    doc.text(`Email: ${company.email || 'N/A'} | Web: ${company.website || 'N/A'}`, rightAlignX, 27, { align: 'right' });
+    doc.text(`Contact No: ${company.phone || 'N/A'}`, rightAlignX, 33, { align: 'right' });
     if (company.taxInfo?.trn) {
       doc.setFont('helvetica', 'bold');
-      doc.text(`TRN: ${company.taxInfo.trn}`, pageWidth / 2, 36, { align: 'center' });
+      doc.text(`TRN: ${company.taxInfo.trn}`, rightAlignX, 39, { align: 'right' });
     }
 
-    // Title
+    // Title - centered below header
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
-    doc.text('TAX INVOICE', pageWidth / 2, 48, { align: 'center' });
+    doc.text('TAX INVOICE', pageWidth / 2, 52, { align: 'center' });
 
     // Invoice details
     doc.setFontSize(9);
