@@ -4,6 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { logError } from '@/lib/logger';
 
+const normalizeCompanyName = (name: string) =>
+  (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
 export interface BankDetails {
   bankName: string;
   accountTitle: string;
@@ -153,14 +156,27 @@ export function useCompanies() {
       const { data: allCompanies, error: allError } = await supabase
         .from('companies')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
 
       if (allError) throw allError;
       
       setCompanies(allCompanies || []);
 
+      const pickBest = (list: DbCompany[]) => {
+        const defaultOne = list.find((c) => c.is_default);
+        return defaultOne || list[0];
+      };
+
+      const targetCandidates = (allCompanies || []).filter((c) =>
+        normalizeCompanyName(c.name).includes('target')
+      );
+      const alhadafCandidates = (allCompanies || []).filter((c) =>
+        normalizeCompanyName(c.name).includes('alhadaf')
+      );
+
       // Find Target Specialties company
-      const target = allCompanies?.find(c => c.name.toLowerCase().includes('target'));
+      const target = targetCandidates.length ? pickBest(targetCandidates) : undefined;
       if (target) {
         setTargetDbId(target.id);
         setTargetDetails({
@@ -172,7 +188,7 @@ export function useCompanies() {
       }
 
       // Find Alhadaf company
-      const alhadaf = allCompanies?.find(c => c.name.toLowerCase().includes('alhadaf'));
+      const alhadaf = alhadafCandidates.length ? pickBest(alhadafCandidates) : undefined;
       
       if (alhadaf) {
         setAlhadafDbId(alhadaf.id);

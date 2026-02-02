@@ -41,6 +41,7 @@ export default function Settings() {
     updateAlhadafCompany,
     updateTargetCompany,
     setActiveCompany,
+    refetch: refetchCompanies,
   } = useCompanies();
 
   const { exporting, exportAsSQL, exportAsJSON } = useDatabaseExport();
@@ -191,6 +192,7 @@ export default function Settings() {
   const handleSaveAlhadaf = async () => {
     setSavingAlhadaf(true);
     await updateAlhadafCompany(alhadafForm);
+    await refetchCompanies();
     setSavingAlhadaf(false);
     setEditingAlhadaf(false);
   };
@@ -198,6 +200,7 @@ export default function Settings() {
   const handleSaveTarget = async () => {
     setSavingTarget(true);
     await updateTargetCompany(targetForm);
+    await refetchCompanies();
     setSavingTarget(false);
     setEditingTarget(false);
   };
