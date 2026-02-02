@@ -40,7 +40,7 @@ export function useProducts() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
-  const { getActiveCompanyDbId, activeCompanyId } = useCompanies();
+  const { getActiveCompanyDbId, activeCompanyId, alhadafDbId } = useCompanies();
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -102,8 +102,7 @@ export function useProducts() {
 
       // Also create same product for the other company
       // Target Specialties uses null company_id, Alhadaf uses UUID
-      const otherCompanyId = companyDbId ? null : 'other'; // Placeholder to determine which company
-      
+      let duplicated = false;
       try {
         if (companyDbId) {
           // Currently on Alhadaf, add to Target Specialties (null company_id)
@@ -114,24 +113,18 @@ export function useProducts() {
               user_id: user.id,
               company_id: null,
             });
+          duplicated = true;
         } else {
-          // Currently on Target Specialties, need alhadaf DB ID
-          // We'll try to find it from companies table
-          const { data: alhadafCompany } = await supabase
-            .from('companies')
-            .select('id')
-            .eq('user_id', user.id)
-            .ilike('name', '%alhadaf%')
-            .single();
-          
-          if (alhadafCompany) {
+          // Currently on Target Specialties, use Alhadaf DB ID (if available)
+          if (alhadafDbId) {
             await supabase
               .from('products')
               .insert({
                 ...input,
                 user_id: user.id,
-                company_id: alhadafCompany.id,
+                company_id: alhadafDbId,
               });
+            duplicated = true;
           }
         }
       } catch (dupError) {
@@ -142,7 +135,9 @@ export function useProducts() {
       setProducts((prev) => [data, ...prev]);
       toast({
         title: 'Product created',
-        description: 'Product has been added to both companies successfully',
+        description: duplicated
+          ? 'Product has been added to both companies successfully'
+          : 'Product has been added successfully',
       });
       return data;
     } catch (error: any) {

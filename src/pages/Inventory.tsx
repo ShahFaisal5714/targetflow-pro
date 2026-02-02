@@ -79,6 +79,47 @@ const initialFilters: FilterState = {
   maxStock: '',
 };
 
+const normalizeCsvHeader = (header: string) => {
+  const cleaned = (header || '')
+    .replace(/^\uFEFF/, '') // strip BOM
+    .trim()
+    .replace(/^"|"$/g, '')
+    .toLowerCase();
+  return cleaned.replace(/[\s\-]+/g, '_');
+};
+
+// Minimal CSV parser that supports quoted values and commas inside quotes.
+const parseCsvLine = (line: string): string[] => {
+  const out: string[] = [];
+  let cur = '';
+  let inQuotes = false;
+  const s = (line || '').replace(/\r$/, '');
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (ch === '"') {
+      // Escaped quote inside quoted field
+      if (inQuotes && s[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (ch === ',' && !inQuotes) {
+      out.push(cur);
+      cur = '';
+      continue;
+    }
+
+    cur += ch;
+  }
+  out.push(cur);
+  return out.map((v) => v.trim());
+};
+
 export default function Inventory() {
   const { products, loading, createProduct, updateProduct, deleteProduct } = useProducts();
   const [activeTab, setActiveTab] = useState<string>('all');
@@ -163,7 +204,8 @@ export default function Inventory() {
       try {
         const text = e.target?.result as string;
         const lines = text.split('\n').filter(line => line.trim());
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const rawHeaderCells = parseCsvLine(lines[0]);
+        const headers = rawHeaderCells.map(normalizeCsvHeader);
         
         const requiredHeaders = ['name', 'sku', 'category', 'price', 'cost', 'stock_quantity', 'unit'];
         const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
@@ -182,7 +224,7 @@ export default function Inventory() {
         let errorCount = 0;
 
         for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(',').map(v => v.trim());
+          const values = parseCsvLine(lines[i]);
           const rowData: Record<string, string> = {};
           headers.forEach((header, index) => {
             rowData[header] = values[index] || '';
