@@ -277,11 +277,39 @@ export default function QuotationDetail() {
     doc.setFont('helvetica', 'normal');
     doc.text('100% CDC Upon Material Delivery at Site', 45, finalY + 44);
 
-    // Terms & Conditions
-    if (finalY + 60 < 270) {
+    // Bank Details Section
+    let bankY = finalY + 55;
+    if (company.bankDetails && bankY < 250) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
-      doc.text('Terms & Conditions', 15, finalY + 55);
+      doc.text('Bank Details for Payment', 15, bankY);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      bankY += 7;
+      doc.text(`Bank Name: ${company.bankDetails.bankName}`, 15, bankY);
+      bankY += 5;
+      doc.text(`Account Title: ${company.bankDetails.accountTitle}`, 15, bankY);
+      bankY += 5;
+      doc.text(`Account Number: ${company.bankDetails.accountNumber}`, 15, bankY);
+      bankY += 5;
+      doc.text(`IBAN: ${company.bankDetails.iban}`, 15, bankY);
+      bankY += 5;
+      doc.text(`Swift Code: ${company.bankDetails.swiftCode}`, 15, bankY);
+      if (company.bankDetails.branch) {
+        bankY += 5;
+        doc.text(`Branch: ${company.bankDetails.branch}`, 15, bankY);
+      }
+      bankY += 10;
+    } else {
+      bankY = finalY + 55;
+    }
+
+    // Terms & Conditions
+    if (bankY < 270) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('Terms & Conditions', 15, bankY);
       
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
@@ -292,7 +320,7 @@ export default function QuotationDetail() {
         '4. Our cost of finance is 3% of the invoice value per month. Any payments that are not paid on the due date & or late payment, charges of 3% per month will be charged.'
       ];
       
-      let yPos = finalY + 62;
+      let yPos = bankY + 7;
       terms.forEach(term => {
         const lines = doc.splitTextToSize(term, 180);
         doc.text(lines, 15, yPos);
@@ -502,6 +530,41 @@ export default function QuotationDetail() {
                 <p className="text-muted-foreground">100% CDC Upon Material Delivery at Site</p>
               </div>
             </div>
+
+            {/* Bank Details */}
+            {company.bankDetails && (
+              <div className="pt-6 border-t">
+                <h3 className="font-bold text-foreground mb-3">Bank Details for Payment</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm bg-muted/50 p-4 rounded-lg">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Bank Name</p>
+                    <p className="font-medium">{company.bankDetails.bankName}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Account Title</p>
+                    <p className="font-medium">{company.bankDetails.accountTitle}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Account Number</p>
+                    <p className="font-medium font-mono">{company.bankDetails.accountNumber}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">IBAN</p>
+                    <p className="font-medium font-mono">{company.bankDetails.iban}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Swift Code</p>
+                    <p className="font-medium font-mono">{company.bankDetails.swiftCode}</p>
+                  </div>
+                  {company.bankDetails.branch && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Branch</p>
+                      <p className="font-medium">{company.bankDetails.branch}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="pt-6 border-t">
               <h3 className="font-bold text-foreground mb-3">Terms & Conditions</h3>

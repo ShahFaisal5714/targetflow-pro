@@ -4,6 +4,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { logError } from '@/lib/logger';
 
+export interface BankDetails {
+  bankName: string;
+  accountTitle: string;
+  accountNumber: string;
+  iban: string;
+  swiftCode: string;
+  currency?: string;
+  branch?: string;
+}
+
 export interface Company {
   id: string;
   name: string;
@@ -15,6 +25,7 @@ export interface Company {
   is_default: boolean;
   created_at: string;
   updated_at: string;
+  bankDetails?: BankDetails;
 }
 
 // Fixed company data for Target Specialties (hardcoded for display)
@@ -29,6 +40,15 @@ export const TARGET_SPECIALTIES_DISPLAY: Company = {
   is_default: true,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
+  bankDetails: {
+    bankName: 'Abu Dhabi Commercial Bank PJSC',
+    accountTitle: 'TARGET SPECIALTIES BUILDING MATERIAL TRADING SPS LLC',
+    accountNumber: '14405625820001',
+    iban: 'AE270030014405625820001',
+    swiftCode: 'ADCBAEAA',
+    currency: 'AED',
+    branch: 'IBD-AJMAN BRANCH',
+  },
 };
 
 // Fixed company data for Alhadaf Projects (hardcoded for display)
@@ -43,6 +63,14 @@ export const ALHADAF_PROJECTS_DISPLAY: Company = {
   is_default: false,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
+  bankDetails: {
+    bankName: 'ADCB Bank',
+    accountTitle: 'Al Hadaf Al Kabeer Metal Contracting',
+    accountNumber: '11913588820001',
+    iban: 'AE42 0030 0119 1358 8820 001',
+    swiftCode: 'ADCBAEAA060',
+    currency: 'AED',
+  },
 };
 
 // For backwards compatibility
