@@ -130,12 +130,16 @@ export default function InvoiceDetail() {
     doc.text(company.address || '', pageWidth / 2, 21, { align: 'center' });
     doc.text(`Email: ${company.email || 'N/A'} | Web: ${company.website || 'N/A'}`, pageWidth / 2, 26, { align: 'center' });
     doc.text(`Contact No: ${company.phone || 'N/A'}`, pageWidth / 2, 31, { align: 'center' });
+    if (company.taxInfo?.trn) {
+      doc.setFont('helvetica', 'bold');
+      doc.text(`TRN: ${company.taxInfo.trn}`, pageWidth / 2, 36, { align: 'center' });
+    }
 
     // Title
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
-    doc.text('TAX INVOICE', pageWidth / 2, 45, { align: 'center' });
+    doc.text('TAX INVOICE', pageWidth / 2, 48, { align: 'center' });
 
     // Invoice details
     doc.setFontSize(9);
@@ -145,37 +149,49 @@ export default function InvoiceDetail() {
     const rightColLabel = pageWidth / 2 + 5;
     const rightColValue = pageWidth / 2 + 35;
     
+    let detailsY = 60;
+    
     doc.setFont('helvetica', 'bold');
-    doc.text('Invoice No:', leftColLabel, 58);
+    doc.text('Invoice No:', leftColLabel, detailsY);
     doc.setFont('helvetica', 'normal');
-    doc.text(invoice.invoice_number, leftColValue, 58);
+    doc.text(invoice.invoice_number, leftColValue, detailsY);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Client:', leftColLabel, 65);
+    doc.text('Client:', leftColLabel, detailsY + 7);
     doc.setFont('helvetica', 'normal');
-    doc.text(invoice.client_name, leftColValue, 65);
+    doc.text(invoice.client_name, leftColValue, detailsY + 7);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Project:', leftColLabel, 72);
+    doc.text('Project:', leftColLabel, detailsY + 14);
     doc.setFont('helvetica', 'normal');
-    doc.text(project?.name || 'N/A', leftColValue, 72);
+    doc.text(project?.name || 'N/A', leftColValue, detailsY + 14);
+
+    // Buyer TRN
+    const buyerTrn = (project as any)?.buyerTrn;
+    if (buyerTrn) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Buyer TRN:', leftColLabel, detailsY + 21);
+      doc.setFont('helvetica', 'normal');
+      doc.text(buyerTrn, leftColValue, detailsY + 21);
+    }
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Issue Date:', rightColLabel, 58);
+    doc.text('Issue Date:', rightColLabel, detailsY);
     doc.setFont('helvetica', 'normal');
-    doc.text(new Date(invoice.created_at).toLocaleDateString('en-GB'), rightColValue, 58);
+    doc.text(new Date(invoice.created_at).toLocaleDateString('en-GB'), rightColValue, detailsY);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Due Date:', rightColLabel, 65);
+    doc.text('Due Date:', rightColLabel, detailsY + 7);
     doc.setFont('helvetica', 'normal');
-    doc.text(invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('en-GB') : 'N/A', rightColValue, 65);
+    doc.text(invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('en-GB') : 'N/A', rightColValue, detailsY + 7);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Status:', rightColLabel, 72);
+    doc.text('Status:', rightColLabel, detailsY + 14);
     doc.setFont('helvetica', 'normal');
-    doc.text(invoice.status.toUpperCase(), rightColValue, 72);
+    doc.text(invoice.status.toUpperCase(), rightColValue, detailsY + 14);
 
     // Items table
+    const tableStartY = buyerTrn ? 90 : 85;
     const tableData = invoice.items.map((item, index) => [
       index + 1,
       item.description.toUpperCase(),
@@ -185,7 +201,7 @@ export default function InvoiceDetail() {
     ]);
 
     autoTable(doc, {
-      startY: 85,
+      startY: tableStartY,
       head: [['S No', 'Description', 'Quantity', 'Unit Price', 'Amount']],
       body: tableData,
       theme: 'grid',
@@ -337,6 +353,9 @@ export default function InvoiceDetail() {
                 {company.email && <p className="mt-2">Email: {company.email}</p>}
                 {company.website && <p>Web: {company.website}</p>}
                 {company.phone && <p className="mt-2">Contact: {company.phone}</p>}
+                {company.taxInfo?.trn && (
+                  <p className="mt-2 font-semibold text-foreground">TRN: {company.taxInfo.trn}</p>
+                )}
               </div>
             </div>
             
@@ -363,6 +382,12 @@ export default function InvoiceDetail() {
                 <p className="text-xs font-semibold text-muted-foreground">Project:</p>
                 <p className="text-sm text-foreground font-semibold">{project?.name || 'N/A'}</p>
               </div>
+              {(project as any)?.buyerTrn && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Buyer TRN:</p>
+                  <p className="text-sm text-foreground font-semibold">{(project as any).buyerTrn}</p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-3">
