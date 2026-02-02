@@ -162,30 +162,31 @@ export default function QuotationDetail() {
     const margin = 14;
     const contentWidth = pageWidth - (margin * 2);
     
-    // Add logo - larger and more visible
+    // Add logo - on the left side
     const img = new Image();
     img.src = logo;
-    doc.addImage(img, 'PNG', margin, 8, 50, 30);
+    doc.addImage(img, 'PNG', margin, 10, 55, 35);
 
-    // Company Header - positioned to the right of logo
+    // Company Header - on the right side
+    const rightAlignX = pageWidth - margin;
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
-    doc.text(company.name, pageWidth / 2, 15, { align: 'center' });
+    doc.text(company.name, rightAlignX, 15, { align: 'right' });
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 60, 60);
-    doc.text(company.address || '', pageWidth / 2, 21, { align: 'center' });
-    doc.text(`Email: ${company.email || 'N/A'} | Web: ${company.website || 'N/A'}`, pageWidth / 2, 26, { align: 'center' });
-    doc.text(`Contact No: ${company.phone || 'N/A'}`, pageWidth / 2, 31, { align: 'center' });
+    doc.text(company.address || '', rightAlignX, 21, { align: 'right' });
+    doc.text(`Email: ${company.email || 'N/A'} | Web: ${company.website || 'N/A'}`, rightAlignX, 27, { align: 'right' });
+    doc.text(`Contact No: ${company.phone || 'N/A'}`, rightAlignX, 33, { align: 'right' });
 
-    // Title
+    // Title - centered below header
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
-    doc.text('QUOTATION', pageWidth / 2, 45, { align: 'center' });
+    doc.text('QUOTATION', pageWidth / 2, 52, { align: 'center' });
 
-    // Two column info section
+    // Two column info section - adjusted Y positions
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     const leftColLabel = margin;
@@ -195,58 +196,58 @@ export default function QuotationDetail() {
     
     // Left column
     doc.setFont('helvetica', 'bold');
-    doc.text('Attention:', leftColLabel, 58);
+    doc.text('Attention:', leftColLabel, 65);
     doc.setFont('helvetica', 'normal');
-    doc.text(project?.contractor?.contact || 'N/A', leftColValue, 58);
+    doc.text(project?.contractor?.contact || 'N/A', leftColValue, 65);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Contractor:', leftColLabel, 65);
+    doc.text('Contractor:', leftColLabel, 72);
     doc.setFont('helvetica', 'normal');
-    doc.text(project?.contractor?.name || 'N/A', leftColValue, 65);
+    doc.text(project?.contractor?.name || 'N/A', leftColValue, 72);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Project:', leftColLabel, 72);
+    doc.text('Project:', leftColLabel, 79);
     doc.setFont('helvetica', 'normal');
-    doc.text(quotation.project_name, leftColValue, 72);
+    doc.text(quotation.project_name, leftColValue, 79);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Location:', leftColLabel, 79);
+    doc.text('Location:', leftColLabel, 86);
     doc.setFont('helvetica', 'normal');
-    doc.text(project?.contractor?.address || 'Dubai, UAE', leftColValue, 79);
+    doc.text(project?.contractor?.address || 'Dubai, UAE', leftColValue, 86);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Scope of Work:', leftColLabel, 86);
+    doc.text('Scope of Work:', leftColLabel, 93);
     doc.setFont('helvetica', 'normal');
-    doc.text('Supply of Building Materials', leftColValue + 5, 86);
+    doc.text('Supply of Building Materials', leftColValue + 5, 93);
 
     // Right column
     doc.setFont('helvetica', 'bold');
-    doc.text('Issue Date:', rightColLabel, 58);
+    doc.text('Issue Date:', rightColLabel, 65);
     doc.setFont('helvetica', 'normal');
-    doc.text(new Date(quotation.created_at).toLocaleDateString('en-GB'), rightColValue, 58);
+    doc.text(new Date(quotation.created_at).toLocaleDateString('en-GB'), rightColValue, 65);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Prepared by:', rightColLabel, 65);
+    doc.text('Prepared by:', rightColLabel, 72);
     doc.setFont('helvetica', 'normal');
-    doc.text(project?.salesManager || 'N/A', rightColValue, 65);
+    doc.text(project?.salesManager || 'N/A', rightColValue, 72);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Quotation No:', rightColLabel, 72);
+    doc.text('Quotation No:', rightColLabel, 79);
     doc.setFont('helvetica', 'normal');
     // Use company-prefixed quotation number
     const companyPrefix = quotation.company_id ? 'AH' : 'TS';
     const quotationNo = `${companyPrefix}-QT-${quotation.id.slice(0, 8).toUpperCase()}`;
-    doc.text(quotationNo, rightColValue, 72);
+    doc.text(quotationNo, rightColValue, 79);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Phone No:', rightColLabel, 79);
+    doc.text('Phone No:', rightColLabel, 86);
     doc.setFont('helvetica', 'normal');
-    doc.text(project?.contractor?.phone || 'N/A', rightColValue, 79);
+    doc.text(project?.contractor?.phone || 'N/A', rightColValue, 86);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Quotation validity:', rightColLabel, 86);
+    doc.text('Quotation validity:', rightColLabel, 93);
     doc.setFont('helvetica', 'normal');
-    doc.text('30 Days', rightColValue, 86);
+    doc.text('30 Days', rightColValue, 93);
 
     // Items table with proper column widths that fit the page
     const tableData = quotation.items.map((item, index) => [
@@ -259,7 +260,7 @@ export default function QuotationDetail() {
     ]);
 
     autoTable(doc, {
-      startY: 95,
+      startY: 102,
       head: [['S No', 'Description', 'Unit', 'Quantity', 'Unit Price', 'Amount']],
       body: tableData,
       theme: 'grid',
