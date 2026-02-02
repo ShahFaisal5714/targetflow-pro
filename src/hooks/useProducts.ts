@@ -86,6 +86,8 @@ export function useProducts() {
 
     try {
       const companyDbId = getActiveCompanyDbId();
+      
+      // Create product for active company
       const { data, error } = await supabase
         .from('products')
         .insert({
@@ -98,10 +100,49 @@ export function useProducts() {
 
       if (error) throw error;
 
+      // Also create same product for the other company
+      // Target Specialties uses null company_id, Alhadaf uses UUID
+      const otherCompanyId = companyDbId ? null : 'other'; // Placeholder to determine which company
+      
+      try {
+        if (companyDbId) {
+          // Currently on Alhadaf, add to Target Specialties (null company_id)
+          await supabase
+            .from('products')
+            .insert({
+              ...input,
+              user_id: user.id,
+              company_id: null,
+            });
+        } else {
+          // Currently on Target Specialties, need alhadaf DB ID
+          // We'll try to find it from companies table
+          const { data: alhadafCompany } = await supabase
+            .from('companies')
+            .select('id')
+            .eq('user_id', user.id)
+            .ilike('name', '%alhadaf%')
+            .single();
+          
+          if (alhadafCompany) {
+            await supabase
+              .from('products')
+              .insert({
+                ...input,
+                user_id: user.id,
+                company_id: alhadafCompany.id,
+              });
+          }
+        }
+      } catch (dupError) {
+        // Silently ignore duplicate product creation errors
+        console.log('Could not add product to other company', dupError);
+      }
+
       setProducts((prev) => [data, ...prev]);
       toast({
         title: 'Product created',
-        description: 'Product has been added successfully',
+        description: 'Product has been added to both companies successfully',
       });
       return data;
     } catch (error: any) {

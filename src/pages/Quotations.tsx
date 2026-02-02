@@ -67,6 +67,7 @@ export default function Quotations() {
   const { toast, dismiss } = useToast();
   const { role } = useAuth();
   const canEdit = role !== 'viewer';
+  const isAdmin = role === 'admin';
   const { quotations, loading, createQuotation, updateQuotation, deleteQuotation, refetch } = useQuotations();
   const [activeTab, setActiveTab] = useState<QuotationStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -234,21 +235,25 @@ export default function Quotations() {
   const columns = [
     {
       key: 'id',
-      header: 'Quotation ID',
-      render: (quotation: Quotation) => (
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <FileText className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <p className="font-mono text-sm font-medium text-foreground">{quotation.id}</p>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <GitBranch className="h-3 w-3" />
-              Version {quotation.version}
+      header: 'Quotation No',
+      render: (quotation: Quotation) => {
+        const companyPrefix = quotation.company_id ? 'AH' : 'TS';
+        const quotationNo = `${companyPrefix}-QT-${quotation.id.slice(0, 8).toUpperCase()}`;
+        return (
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="font-mono text-sm font-medium text-foreground">{quotationNo}</p>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <GitBranch className="h-3 w-3" />
+                Version {quotation.version}
+              </div>
             </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       key: 'projectName',
@@ -313,7 +318,7 @@ export default function Quotations() {
           <Button size="sm" variant="outline" onClick={() => navigate(`/quotations/${quotation.id}`)}>
             View
           </Button>
-          {canEdit && (
+          {(canEdit || isAdmin) && (
             <>
               <Button size="sm" variant="outline" onClick={(e) => handleEditQuotation(quotation, e)}>
                 <Edit className="h-4 w-4" />
