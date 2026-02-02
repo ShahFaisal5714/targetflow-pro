@@ -154,7 +154,8 @@ export default function Settings() {
   }, [notificationSettings]);
 
   useEffect(() => {
-    if (alhadafCompany) {
+    // Avoid infinite re-render loops and avoid overwriting user input while editing
+    if (!editingAlhadaf && alhadafCompany) {
       setAlhadafForm({
         email: alhadafCompany.email || '',
         phone: alhadafCompany.phone || '',
@@ -162,10 +163,17 @@ export default function Settings() {
         website: alhadafCompany.website || '',
       });
     }
-  }, [alhadafCompany]);
+  }, [
+    editingAlhadaf,
+    alhadafCompany?.email,
+    alhadafCompany?.phone,
+    alhadafCompany?.address,
+    alhadafCompany?.website,
+  ]);
 
   useEffect(() => {
-    if (targetSpecialties) {
+    // Avoid infinite re-render loops and avoid overwriting user input while editing
+    if (!editingTarget && targetSpecialties) {
       setTargetForm({
         email: targetSpecialties.email || '',
         phone: targetSpecialties.phone || '',
@@ -173,7 +181,13 @@ export default function Settings() {
         website: targetSpecialties.website || '',
       });
     }
-  }, [targetSpecialties]);
+  }, [
+    editingTarget,
+    targetSpecialties?.email,
+    targetSpecialties?.phone,
+    targetSpecialties?.address,
+    targetSpecialties?.website,
+  ]);
 
   const handleSaveCompany = () => {
     saveCompanySettings(company);
