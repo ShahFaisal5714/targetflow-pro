@@ -114,10 +114,10 @@ export default function InvoiceDetail() {
     const margin = 14;
     const contentWidth = pageWidth - (margin * 2);
     
-    // Add logo
+    // Add logo - larger size for better visibility
     const img = new Image();
     img.src = logo;
-    doc.addImage(img, 'PNG', margin, 8, 50, 30);
+    doc.addImage(img, 'PNG', margin, 6, 70, 42);
 
     // Company Header
     doc.setFontSize(12);
@@ -346,11 +346,11 @@ export default function InvoiceDetail() {
           {/* Company Header */}
           <div className="p-8 border-b bg-gradient-to-br from-primary/5 to-accent/5">
             <div className="flex items-start justify-between mb-6">
-              <div className="bg-white rounded-lg p-4 shadow-sm border border-border/30 flex items-center justify-center" style={{ minWidth: '120px', minHeight: '60px' }}>
+              <div className="bg-white rounded-lg p-4 shadow-sm border border-border/30 flex items-center justify-center" style={{ minWidth: '180px', minHeight: '100px' }}>
                 <img 
                   src={logo} 
                   alt={company.name} 
-                  className="max-h-16 max-w-[160px] object-contain"
+                  className="max-h-24 max-w-[220px] object-contain"
                 />
               </div>
               <div className="text-right text-sm text-muted-foreground">
