@@ -3,16 +3,28 @@ import { useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Download, FileText, Printer, Loader2, Truck } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Printer, Loader2, Truck, Pencil, Trash2 } from 'lucide-react';
 import { useQuotations } from '@/hooks/useQuotations';
 import { useProjects } from '@/hooks/useProjects';
 import { useDeliveryOrders } from '@/hooks/useDeliveryOrders';
 import { useCompanies, TARGET_SPECIALTIES, ALHADAF_PROJECTS, Company } from '@/hooks/useCompanies';
+import { useAuth } from '@/contexts/AuthContext';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
+import QuotationFormDialog from '@/components/quotations/QuotationFormDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import targetLogo from '@/assets/target-logo.jpg';
@@ -21,13 +33,19 @@ import alhadafLogo from '@/assets/alhadaf-logo.png';
 export default function QuotationDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { quotations, loading: quotationsLoading } = useQuotations();
+  const { quotations, loading: quotationsLoading, updateQuotation, deleteQuotation } = useQuotations();
   const { projects, loading: projectsLoading } = useProjects();
   const { createDeliveryOrder } = useDeliveryOrders();
   const { activeCompanyId, alhadafCompany, loading: companiesLoading } = useCompanies();
+  const { role } = useAuth();
   
   const [deliveryDialogOpen, setDeliveryDialogOpen] = useState(false);
   const [deliveryItems, setDeliveryItems] = useState<{ productId: string; productName: string; unit: string; orderedQuantity: number; deliveryQuantity: number }[]>([]);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const canEdit = role === 'admin' || role === 'sales_manager';
   
   const quotation = quotations.find(q => q.id === id);
   const project = quotation ? projects.find(p => p.id === quotation.project_id) : null;
@@ -118,6 +136,24 @@ export default function QuotationDetail() {
       });
       navigate('/delivery-orders');
     }
+  };
+
+  const handleDeleteQuotation = async () => {
+    setIsDeleting(true);
+    const success = await deleteQuotation(quotation!.id);
+    setIsDeleting(false);
+    if (success) {
+      toast({
+        title: 'Quotation Deleted',
+        description: `Quotation ${getQuotationNumber()} has been deleted`,
+      });
+      navigate('/quotations');
+    }
+  };
+
+  const handleUpdateQuotation = async (data: any) => {
+    await updateQuotation(quotation!.id, data);
+    setEditDialogOpen(false);
   };
 
   const generatePDF = () => {
@@ -384,6 +420,22 @@ export default function QuotationDetail() {
               <p className="text-muted-foreground mt-1">{quotation.project_name}</p>
             </div>
             <div className="flex gap-2">
+              {canEdit && (
+                <>
+                  <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </>
+              )}
               {(quotation.status === 'approved' || quotation.status === 'submitted') && (
                 <Button variant="outline" onClick={handleOpenDeliveryDialog}>
                   <Truck className="h-4 w-4 mr-2" />
@@ -660,6 +712,61 @@ export default function QuotationDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Dialog - pass converted quotation type */}
+      <QuotationFormDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        quotation={quotation ? {
+          id: quotation.id,
+          projectId: quotation.project_id || '',
+          projectName: quotation.project_name,
+          companyId: quotation.company_id || '',
+          items: quotation.items.map((item, idx) => ({
+            id: item.productId || String(idx),
+            productId: item.productId,
+            productName: item.productName,
+            category: item.category as any,
+            unit: item.unit as any,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            margin: item.margin,
+            total: item.total,
+          })),
+          subtotal: quotation.subtotal,
+          discount: quotation.discount,
+          tax: quotation.tax,
+          total: quotation.total,
+          status: quotation.status as 'draft' | 'submitted' | 'approved' | 'rejected',
+          validUntil: quotation.valid_until || '',
+          version: quotation.version,
+          createdAt: quotation.created_at,
+          updatedAt: quotation.updated_at,
+        } : undefined}
+        onSubmit={handleUpdateQuotation}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Quotation</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete quotation {quotationNumber}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteQuotation}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
