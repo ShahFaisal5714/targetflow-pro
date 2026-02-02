@@ -126,6 +126,16 @@ export default function Settings() {
     website: '',
   });
   const [savingAlhadaf, setSavingAlhadaf] = useState(false);
+  
+  // Target Specialties editing state
+  const [editingTarget, setEditingTarget] = useState(false);
+  const [targetForm, setTargetForm] = useState({
+    email: targetSpecialties.email || '',
+    phone: targetSpecialties.phone || '',
+    address: targetSpecialties.address || '',
+    website: targetSpecialties.website || '',
+  });
+  const [savingTarget, setSavingTarget] = useState(false);
   const [bulkTransferOpen, setBulkTransferOpen] = useState(false);
 
   // Update local state when settings are loaded
@@ -231,21 +241,21 @@ export default function Settings() {
                 </Button>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Target Specialties - Always present, hardcoded */}
+                {/* Target Specialties - Editable */}
                 <div 
-                  className={`flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-colors ${
+                  className={`flex items-start gap-4 p-4 rounded-lg border transition-colors ${
                     activeCompanyId === 'target-specialties' || !activeCompanyId
                       ? 'border-primary bg-primary/5' 
                       : 'bg-card hover:bg-secondary/20'
-                  }`}
-                  onClick={() => handleSelectCompany('target-specialties')}
+                  } ${!editingTarget ? 'cursor-pointer' : ''}`}
+                  onClick={() => !editingTarget && handleSelectCompany('target-specialties')}
                 >
                   <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-white flex items-center justify-center overflow-hidden">
                     <img src={targetLogo} alt="Target Specialties" className="w-full h-full object-contain" />
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mb-2">
                       <h3 className="font-semibold truncate">{targetSpecialties.name}</h3>
                       {(activeCompanyId === 'target-specialties' || !activeCompanyId) && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">
@@ -254,23 +264,84 @@ export default function Settings() {
                         </span>
                       )}
                     </div>
-                    <div className="text-sm text-muted-foreground space-y-0.5">
-                      <p>{targetSpecialties.email}</p>
-                      <p>{targetSpecialties.phone}</p>
-                      <p className="truncate">{targetSpecialties.address}</p>
-                    </div>
+
+                    {editingTarget ? (
+                      <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Email</Label>
+                            <Input 
+                              value={targetForm.email}
+                              onChange={(e) => setTargetForm(prev => ({ ...prev, email: e.target.value }))}
+                              placeholder="email@example.com"
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Phone</Label>
+                            <Input 
+                              value={targetForm.phone}
+                              onChange={(e) => setTargetForm(prev => ({ ...prev, phone: e.target.value }))}
+                              placeholder="+971 XX XXX XXXX"
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Address</Label>
+                          <Input 
+                            value={targetForm.address}
+                            onChange={(e) => setTargetForm(prev => ({ ...prev, address: e.target.value }))}
+                            placeholder="Company address"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Website</Label>
+                          <Input 
+                            value={targetForm.website}
+                            onChange={(e) => setTargetForm(prev => ({ ...prev, website: e.target.value }))}
+                            placeholder="https://example.com"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                          <Button size="sm" onClick={() => { setSavingTarget(true); setTimeout(() => { setSavingTarget(false); setEditingTarget(false); }, 500); }} disabled={savingTarget}>
+                            {savingTarget && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+                            Save
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setEditingTarget(false)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground space-y-0.5">
+                        <p>{targetSpecialties.email}</p>
+                        <p>{targetSpecialties.phone}</p>
+                        <p className="truncate">{targetSpecialties.address}</p>
+                        {targetSpecialties.taxInfo?.trn && (
+                          <p className="text-xs font-medium mt-1">TRN: {targetSpecialties.taxInfo.trn}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    {!editingTarget && (
+                      <Button variant="ghost" size="icon" onClick={() => setEditingTarget(true)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
                     {(activeCompanyId === 'target-specialties' || !activeCompanyId) ? (
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                         <Check className="h-4 w-4 text-primary" />
                       </div>
-                    ) : (
-                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleSelectCompany('target-specialties'); }}>
+                    ) : !editingTarget ? (
+                      <Button variant="outline" size="sm" onClick={() => handleSelectCompany('target-specialties')}>
                         Select
                       </Button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
@@ -353,6 +424,9 @@ export default function Settings() {
                         {alhadafCompany.email && <p>{alhadafCompany.email}</p>}
                         {alhadafCompany.phone && <p>{alhadafCompany.phone}</p>}
                         {alhadafCompany.address && <p className="truncate">{alhadafCompany.address}</p>}
+                        {alhadafCompany.taxInfo?.trn && (
+                          <p className="text-xs font-medium mt-1">TRN: {alhadafCompany.taxInfo.trn}</p>
+                        )}
                         {!alhadafCompany.email && !alhadafCompany.phone && !alhadafCompany.address && (
                           <p className="text-muted-foreground/60">Click Edit to add contact details</p>
                         )}

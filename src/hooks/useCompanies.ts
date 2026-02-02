@@ -14,6 +14,10 @@ export interface BankDetails {
   branch?: string;
 }
 
+export interface CompanyTax {
+  trn: string;
+}
+
 export interface Company {
   id: string;
   name: string;
@@ -26,6 +30,7 @@ export interface Company {
   created_at: string;
   updated_at: string;
   bankDetails?: BankDetails;
+  taxInfo?: CompanyTax;
 }
 
 // Fixed company data for Target Specialties (hardcoded for display)
@@ -49,6 +54,9 @@ export const TARGET_SPECIALTIES_DISPLAY: Company = {
     currency: 'AED',
     branch: 'IBD-AJMAN BRANCH',
   },
+  taxInfo: {
+    trn: '104732260500003',
+  },
 };
 
 // Fixed company data for Alhadaf Projects (hardcoded for display)
@@ -57,8 +65,8 @@ export const ALHADAF_PROJECTS_DISPLAY: Company = {
   name: 'AL HADAF AL KABEER METAL CONTRACTING',
   logo_url: null,
   email: null,
-  phone: null,
-  address: null,
+  phone: '+971 50 230 7822',
+  address: '07, Saih Shuaib 2, Dubai Industrial City, Dubai, United Arab Emirates',
   website: null,
   is_default: false,
   created_at: new Date().toISOString(),
@@ -70,6 +78,9 @@ export const ALHADAF_PROJECTS_DISPLAY: Company = {
     iban: 'AE42 0030 0119 1358 8820 001',
     swiftCode: 'ADCBAEAA060',
     currency: 'AED',
+  },
+  taxInfo: {
+    trn: '100529145300003',
   },
 };
 
