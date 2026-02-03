@@ -3,10 +3,11 @@ import { useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Download, FileText, Printer, Loader2, Truck, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Printer, Loader2, Truck, Pencil, Trash2, Receipt } from 'lucide-react';
 import { useQuotations } from '@/hooks/useQuotations';
 import { useProjects } from '@/hooks/useProjects';
 import { useDeliveryOrders } from '@/hooks/useDeliveryOrders';
+import { useProformaInvoices } from '@/hooks/useProformaInvoices';
 import { useCompanies, TARGET_SPECIALTIES, ALHADAF_PROJECTS, Company } from '@/hooks/useCompanies';
 import { useAuth } from '@/contexts/AuthContext';
 import StatusBadge from '@/components/shared/StatusBadge';
@@ -36,10 +37,13 @@ export default function QuotationDetail() {
   const { quotations, loading: quotationsLoading, updateQuotation, deleteQuotation } = useQuotations();
   const { projects, loading: projectsLoading } = useProjects();
   const { createDeliveryOrder } = useDeliveryOrders();
+  const { createProformaInvoice } = useProformaInvoices();
   const { activeCompanyId, alhadafCompany, loading: companiesLoading } = useCompanies();
   const { role } = useAuth();
   
   const [deliveryDialogOpen, setDeliveryDialogOpen] = useState(false);
+  const [proformaDialogOpen, setProformaDialogOpen] = useState(false);
+  const [isCreatingProforma, setIsCreatingProforma] = useState(false);
   const [deliveryItems, setDeliveryItems] = useState<{ productId: string; productName: string; unit: string; orderedQuantity: number; deliveryQuantity: number }[]>([]);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -154,6 +158,53 @@ export default function QuotationDetail() {
   const handleUpdateQuotation = async (data: any) => {
     await updateQuotation(quotation!.id, data);
     setEditDialogOpen(false);
+  };
+
+  const handleCreateProformaInvoice = async () => {
+    if (!quotation) return;
+    
+    setIsCreatingProforma(true);
+    
+    // Convert quotation items to proforma invoice items
+    const proformaItems = quotation.items.map(item => ({
+      productId: item.productId,
+      description: item.productName,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      total: item.total,
+    }));
+    
+    // Calculate tax amount
+    const discountAmount = quotation.discount.type === 'percentage'
+      ? (quotation.subtotal * quotation.discount.value) / 100
+      : quotation.discount.value;
+    const afterDiscount = quotation.subtotal - discountAmount;
+    const taxAmount = (afterDiscount * quotation.tax.rate) / 100;
+    
+    const result = await createProformaInvoice({
+      quotation_id: quotation.id,
+      project_id: quotation.project_id || null,
+      client_name: project?.contractor?.name || quotation.project_name,
+      items: proformaItems,
+      subtotal: quotation.subtotal,
+      tax_rate: quotation.tax.rate,
+      tax_amount: taxAmount,
+      total: quotation.total,
+      valid_until: quotation.valid_until || null,
+      status: 'draft',
+      notes: `Generated from quotation ${getQuotationNumber()}`,
+    });
+    
+    setIsCreatingProforma(false);
+    setProformaDialogOpen(false);
+    
+    if (result) {
+      toast({
+        title: 'Proforma Invoice Created',
+        description: `Proforma invoice ${result.proforma_number} has been created`,
+      });
+      navigate(`/proforma-invoices/${result.id}`);
+    }
   };
 
   const generatePDF = () => {
@@ -469,10 +520,16 @@ export default function QuotationDetail() {
                 </>
               )}
               {(quotation.status === 'approved' || quotation.status === 'submitted') && (
-                <Button variant="outline" onClick={handleOpenDeliveryDialog}>
-                  <Truck className="h-4 w-4 mr-2" />
-                  Generate Delivery Order
-                </Button>
+                <>
+                  <Button variant="outline" onClick={handleOpenDeliveryDialog}>
+                    <Truck className="h-4 w-4 mr-2" />
+                    Generate Delivery Order
+                  </Button>
+                  <Button variant="outline" onClick={() => setProformaDialogOpen(true)}>
+                    <Receipt className="h-4 w-4 mr-2" />
+                    Create Proforma Invoice
+                  </Button>
+                </>
               )}
               <Button variant="outline" onClick={handleExportPDF}>
                 <Download className="h-4 w-4 mr-2" />
@@ -795,6 +852,58 @@ export default function QuotationDetail() {
               disabled={isDeleting}
             >
               {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Proforma Invoice Confirmation Dialog */}
+      <AlertDialog open={proformaDialogOpen} onOpenChange={setProformaDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Create Proforma Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will create a proforma invoice from quotation {quotationNumber} with all items and pricing. 
+              The proforma invoice can be shared with the customer before the final tax invoice is issued.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Client</p>
+                <p className="font-medium">{project?.contractor?.name || quotation?.project_name}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Total Amount</p>
+                <p className="font-medium">AED {quotation?.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Items</p>
+                <p className="font-medium">{quotation?.items.length} item(s)</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Tax Rate</p>
+                <p className="font-medium">{quotation?.tax.rate}% VAT</p>
+              </div>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCreatingProforma}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCreateProformaInvoice}
+              disabled={isCreatingProforma}
+            >
+              {isCreatingProforma ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Receipt className="h-4 w-4 mr-2" />
+                  Create Proforma Invoice
+                </>
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
