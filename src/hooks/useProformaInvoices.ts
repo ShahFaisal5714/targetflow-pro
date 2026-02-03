@@ -90,8 +90,9 @@ export function useProformaInvoices() {
       setLoading(true);
       const companyDbId = getActiveCompanyDbId();
       
+      // Use raw query since types might not be regenerated yet
       let query = supabase
-        .from('proforma_invoices')
+        .from('proforma_invoices' as any)
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -105,7 +106,7 @@ export function useProformaInvoices() {
 
       if (error) throw error;
 
-      setProformaInvoices((data || []).map((d) => mapDbToProformaInvoice(d as DbProformaInvoice)));
+      setProformaInvoices((data || []).map((d: any) => mapDbToProformaInvoice(d as DbProformaInvoice)));
     } catch (error) {
       logError('useProformaInvoices.fetchProformaInvoices', error);
       toast({
@@ -125,7 +126,7 @@ export function useProformaInvoices() {
     const companyPrefix = companyDbId ? 'AH' : 'TS';
     
     let countQuery = supabase
-      .from('proforma_invoices')
+      .from('proforma_invoices' as any)
       .select('*', { count: 'exact', head: true });
     
     if (companyDbId) {
@@ -163,14 +164,14 @@ export function useProformaInvoices() {
       };
 
       const { data, error } = await supabase
-        .from('proforma_invoices')
+        .from('proforma_invoices' as any)
         .insert(insertData)
         .select()
         .single();
 
       if (error) throw error;
 
-      const newProformaInvoice = mapDbToProformaInvoice(data as DbProformaInvoice);
+      const newProformaInvoice = mapDbToProformaInvoice(data as unknown as DbProformaInvoice);
       setProformaInvoices((prev) => [newProformaInvoice, ...prev]);
 
       toast({
@@ -207,7 +208,7 @@ export function useProformaInvoices() {
       };
 
       const { data, error } = await supabase
-        .from('proforma_invoices')
+        .from('proforma_invoices' as any)
         .update(updateData)
         .eq('id', id)
         .select()
@@ -215,7 +216,7 @@ export function useProformaInvoices() {
 
       if (error) throw error;
 
-      const updatedProformaInvoice = mapDbToProformaInvoice(data as DbProformaInvoice);
+      const updatedProformaInvoice = mapDbToProformaInvoice(data as unknown as DbProformaInvoice);
       setProformaInvoices((prev) =>
         prev.map((pi) => (pi.id === id ? updatedProformaInvoice : pi))
       );
@@ -240,7 +241,7 @@ export function useProformaInvoices() {
   const deleteProformaInvoice = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('proforma_invoices')
+        .from('proforma_invoices' as any)
         .delete()
         .eq('id', id);
 

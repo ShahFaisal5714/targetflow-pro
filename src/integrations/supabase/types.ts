@@ -336,6 +336,88 @@ export type Database = {
         }
         Relationships: []
       }
+      proforma_invoices: {
+        Row: {
+          client_name: string
+          company_id: string | null
+          created_at: string
+          id: string
+          items: Json | null
+          notes: string | null
+          proforma_number: string
+          project_id: string | null
+          quotation_id: string | null
+          status: string | null
+          subtotal: number | null
+          tax_amount: number | null
+          tax_rate: number | null
+          total: number | null
+          updated_at: string
+          user_id: string
+          valid_until: string | null
+        }
+        Insert: {
+          client_name: string
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          items?: Json | null
+          notes?: string | null
+          proforma_number: string
+          project_id?: string | null
+          quotation_id?: string | null
+          status?: string | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          tax_rate?: number | null
+          total?: number | null
+          updated_at?: string
+          user_id: string
+          valid_until?: string | null
+        }
+        Update: {
+          client_name?: string
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          items?: Json | null
+          notes?: string | null
+          proforma_number?: string
+          project_id?: string | null
+          quotation_id?: string | null
+          status?: string | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          tax_rate?: number | null
+          total?: number | null
+          updated_at?: string
+          user_id?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proforma_invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proforma_invoices_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proforma_invoices_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           attn_to: string | null
