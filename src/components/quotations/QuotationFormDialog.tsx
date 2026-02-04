@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { Plus, X } from 'lucide-react';
-import { Quotation, QuotationItem } from '@/types/crm';
+import { Quotation, QuotationItem, QuotationStatus } from '@/types/crm';
 import { useProjects } from '@/hooks/useProjects';
 import { useProducts } from '@/hooks/useProducts';
 import { useCompanies } from '@/hooks/useCompanies';
@@ -25,6 +25,7 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
   const { targetSpecialties, alhadafCompany, activeCompanyId } = useCompanies();
   const [projectId, setProjectId] = useState(quotation?.projectId || initialProjectId || '');
   const [companyId, setCompanyId] = useState(quotation?.companyId || '');
+  const [status, setStatus] = useState<string>(quotation?.status || 'draft');
   const [items, setItems] = useState<Partial<QuotationItem>[]>(
     quotation?.items || [{ productId: '', quantity: 0, unitPrice: 0 }]
   );
@@ -32,6 +33,12 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
   const [discountValue, setDiscountValue] = useState(quotation?.discount?.value || 0);
   const [validDays, setValidDays] = useState(30);
 
+  const statusOptions = [
+    { value: 'draft', label: 'Draft' },
+    { value: 'submitted', label: 'Submitted' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'rejected', label: 'Rejected' },
+  ];
   // Build company options
   const companyOptions = [
     { id: targetSpecialties.id, name: targetSpecialties.name },
@@ -44,12 +51,14 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
     if (quotation) {
       setProjectId(quotation.projectId || '');
       setCompanyId(quotation.companyId || '');
+      setStatus(quotation.status || 'draft');
       setItems(quotation.items || [{ productId: '', quantity: 0, unitPrice: 0 }]);
       setDiscountType(quotation.discount?.type || 'percentage');
       setDiscountValue(quotation.discount?.value || 0);
     } else if (open) {
       setProjectId(initialProjectId || '');
       setCompanyId(activeCompanyId);
+      setStatus('draft');
       setItems([{ productId: '', quantity: 0, unitPrice: 0 }]);
       setDiscountType('percentage');
       setDiscountValue(0);
@@ -125,7 +134,7 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
       total,
       validUntil: new Date(Date.now() + validDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       companyId: companyId || undefined,
-      status: quotation?.status || 'draft'
+      status: status as QuotationStatus
     };
 
     if (onSubmit) {
@@ -150,8 +159,8 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Company & Project Selection */}
-          <div className="grid grid-cols-3 gap-4">
+          {/* Company, Project & Status Selection */}
+          <div className="grid grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label>Company *</Label>
               <Select value={companyId} onValueChange={setCompanyId} required>
@@ -178,6 +187,22 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
                   {projects.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={status} onValueChange={(value) => setStatus(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
