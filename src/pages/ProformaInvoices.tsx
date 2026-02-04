@@ -161,7 +161,7 @@ export default function ProformaInvoices() {
         subtitle={`${filteredProformas.length} proforma invoices`}
       />
 
-      <div className="p-6 space-y-6">
+      <div className="px-6 py-6 space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-xl p-4">
