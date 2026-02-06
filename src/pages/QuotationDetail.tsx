@@ -3,7 +3,7 @@ import { useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Download, FileText, Printer, Loader2, Truck, Pencil, Trash2, Receipt } from 'lucide-react';
+import { Download, FileText, Printer, Loader2, Truck, Pencil, Trash2, Receipt, Mail, MessageCircle } from 'lucide-react';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import { useQuotations } from '@/hooks/useQuotations';
 import { useProjects } from '@/hooks/useProjects';
@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import QuotationFormDialog from '@/components/quotations/QuotationFormDialog';
 import {
   AlertDialog,
@@ -49,6 +50,9 @@ export default function QuotationDetail() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [clientEmail, setClientEmail] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
   
   const canEdit = role === 'admin' || role === 'sales_manager';
   
@@ -487,6 +491,80 @@ export default function QuotationDetail() {
     }
   };
 
+  const handleSendEmail = async () => {
+    if (!clientEmail || !quotation) return;
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(clientEmail)) {
+      toast({
+        title: 'Invalid Email',
+        description: 'Please enter a valid email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      const doc = generatePDF();
+      const pdfBase64 = doc.output('datauristring').split(',')[1];
+
+      const { data, error } = await supabase.functions.invoke('send-invoice-email', {
+        body: {
+          recipientEmail: clientEmail,
+          recipientName: project?.contractor?.name || quotation.project_name,
+          invoiceNumber: quotationNumber,
+          invoiceTotal: quotation.total.toLocaleString('en-US', { minimumFractionDigits: 2 }),
+          companyName: company.name,
+          companyEmail: company.email,
+          dueDate: quotation.valid_until,
+          documentType: 'Quotation',
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Email Sent',
+        description: `Quotation sent successfully to ${clientEmail}`,
+      });
+      setEmailDialogOpen(false);
+      setClientEmail('');
+    } catch (error: any) {
+      console.error('Error sending email:', error);
+      toast({
+        title: 'Failed to Send Email',
+        description: error.message || 'Please try again later',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const handleWhatsAppShare = () => {
+    if (!quotation) return;
+    
+    const message = encodeURIComponent(
+      `Dear ${project?.contractor?.name || quotation.project_name},\n\n` +
+      `Please find your Quotation details:\n\n` +
+      `📄 Quotation No: ${quotationNumber}\n` +
+      `💰 Total Amount: AED ${quotation.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}\n` +
+      `📅 Valid Until: ${quotation.valid_until ? new Date(quotation.valid_until).toLocaleDateString('en-GB') : '30 Days'}\n` +
+      `\nPlease contact us if you have any questions.\n\n` +
+      `Best regards,\n${company.name}`
+    );
+    
+    const clientPhone = project?.contractor?.phone || '';
+    const phoneNumber = clientPhone.replace(/\D/g, '');
+    
+    const whatsappUrl = phoneNumber 
+      ? `https://wa.me/${phoneNumber}?text=${message}`
+      : `https://wa.me/?text=${message}`;
+    
+    window.open(whatsappUrl, '_blank');
+  };
+
   return (
     <MainLayout>
       {/* Header */}
@@ -537,6 +615,24 @@ export default function QuotationDetail() {
                   </Button>
                 </>
               )}
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setClientEmail((project as any)?.client_email || '');
+                  setEmailDialogOpen(true);
+                }}
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Email
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleWhatsAppShare}
+                className="text-success hover:text-success"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                WhatsApp
+              </Button>
               <Button variant="outline" onClick={handleExportPDF}>
                 <Download className="h-4 w-4 mr-2" />
                 Export PDF
@@ -914,6 +1010,48 @@ export default function QuotationDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Email Dialog */}
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Quotation via Email</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Recipient Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="client@example.com"
+                value={clientEmail}
+                onChange={(e) => setClientEmail(e.target.value)}
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              The quotation PDF will be attached to the email.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEmailDialogOpen(false)} disabled={sendingEmail}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendEmail} disabled={sendingEmail || !clientEmail}>
+              {sendingEmail ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Email
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
