@@ -181,6 +181,45 @@ export type Database = {
           },
         ]
       }
+      document_email_history: {
+        Row: {
+          created_at: string
+          document_id: string
+          document_number: string
+          document_type: string
+          error_message: string | null
+          id: string
+          recipient_email: string
+          sent_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          document_number: string
+          document_type: string
+          error_message?: string | null
+          id?: string
+          recipient_email: string
+          sent_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          document_number?: string
+          document_type?: string
+          error_message?: string | null
+          id?: string
+          recipient_email?: string
+          sent_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           client_name: string

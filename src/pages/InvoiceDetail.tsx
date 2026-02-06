@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, FileText, Printer, Loader2, CreditCard, Mail, MessageCircle } from 'lucide-react';
+import { Download, FileText, Printer, Loader2, CreditCard, Mail, MessageCircle, Clock, History } from 'lucide-react';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useProjects } from '@/hooks/useProjects';
@@ -20,6 +20,8 @@ import targetLogo from '@/assets/target-logo.jpg';
 import alhadafLogo from '@/assets/alhadaf-logo.png';
 import { INVOICE_TERMS } from '@/data/invoiceTerms';
 import { useCustomInvoiceTerms } from '@/hooks/useCustomInvoiceTerms';
+import { useDocumentEmailHistory } from '@/hooks/useDocumentEmailHistory';
+import { useDocumentPdfUpload } from '@/hooks/useDocumentPdfUpload';
 
 export default function InvoiceDetail() {
   const { id } = useParams();
@@ -28,6 +30,8 @@ export default function InvoiceDetail() {
   const { projects, loading: projectsLoading } = useProjects();
   const { activeCompanyId, alhadafCompany, loading: companiesLoading } = useCompanies();
   const { customTerms } = useCustomInvoiceTerms();
+  const { emailHistory, fetchEmailHistory, recordEmailSent } = useDocumentEmailHistory();
+  const { uploadPdfForSharing } = useDocumentPdfUpload();
   
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -35,9 +39,17 @@ export default function InvoiceDetail() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [clientEmail, setClientEmail] = useState('');
+  const [sharingWhatsApp, setSharingWhatsApp] = useState(false);
 
   const invoice = invoices.find(inv => inv.id === id);
   const project = invoice ? projects.find(p => p.id === invoice.project_id) : null;
+
+  // Fetch email history when invoice is loaded - must be before early returns
+  useEffect(() => {
+    if (id) {
+      fetchEmailHistory('invoice', id);
+    }
+  }, [id, fetchEmailHistory]);
 
   // Get selected terms text for display/PDF
   const selectedTermsText = useMemo(() => {
@@ -341,6 +353,7 @@ export default function InvoiceDetail() {
     }
   };
 
+
   const handleSendEmail = async () => {
     if (!clientEmail || !invoice) return;
     
@@ -376,6 +389,15 @@ export default function InvoiceDetail() {
 
       if (error) throw error;
 
+      // Record the email in history
+      await recordEmailSent(
+        'invoice',
+        invoice.id,
+        invoice.invoice_number,
+        clientEmail,
+        'sent'
+      );
+
       toast({
         title: 'Email Sent',
         description: `Invoice sent successfully to ${clientEmail}`,
@@ -384,6 +406,17 @@ export default function InvoiceDetail() {
       setClientEmail('');
     } catch (error: any) {
       console.error('Error sending email:', error);
+      
+      // Record failed attempt
+      await recordEmailSent(
+        'invoice',
+        invoice.id,
+        invoice.invoice_number,
+        clientEmail,
+        'failed',
+        error.message
+      );
+      
       toast({
         title: 'Failed to Send Email',
         description: error.message || 'Please try again later',
@@ -394,29 +427,48 @@ export default function InvoiceDetail() {
     }
   };
 
-  const handleWhatsAppShare = () => {
+  const handleWhatsAppShare = async () => {
     if (!invoice) return;
     
-    const { company } = getInvoiceCompany();
-    const message = encodeURIComponent(
-      `Dear ${invoice.client_name},\n\n` +
-      `Please find your Tax Invoice details:\n\n` +
-      `📄 Invoice No: ${invoice.invoice_number}\n` +
-      `💰 Total Amount: AED ${invoice.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}\n` +
-      `${invoice.due_date ? `📅 Due Date: ${new Date(invoice.due_date).toLocaleDateString('en-GB')}\n` : ''}` +
-      `\nPlease contact us if you have any questions.\n\n` +
-      `Best regards,\n${company.name}`
-    );
-    
-    // Get client contact from project if available
-    const clientPhone = (project as any)?.client_contact || '';
-    const phoneNumber = clientPhone.replace(/\D/g, ''); // Remove non-digits
-    
-    const whatsappUrl = phoneNumber 
-      ? `https://wa.me/${phoneNumber}?text=${message}`
-      : `https://wa.me/?text=${message}`;
-    
-    window.open(whatsappUrl, '_blank');
+    setSharingWhatsApp(true);
+    try {
+      const { company } = getInvoiceCompany();
+      
+      // Generate and upload PDF
+      const doc = generatePDF();
+      const pdfBlob = doc.output('blob');
+      const pdfUrl = await uploadPdfForSharing(pdfBlob, invoice.invoice_number);
+      
+      const message = encodeURIComponent(
+        `Dear ${invoice.client_name},\n\n` +
+        `Please find your Tax Invoice details:\n\n` +
+        `📄 Invoice No: ${invoice.invoice_number}\n` +
+        `💰 Total Amount: AED ${invoice.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}\n` +
+        `${invoice.due_date ? `📅 Due Date: ${new Date(invoice.due_date).toLocaleDateString('en-GB')}\n` : ''}` +
+        `${pdfUrl ? `\n📎 Download PDF: ${pdfUrl}\n` : ''}` +
+        `\nPlease contact us if you have any questions.\n\n` +
+        `Best regards,\n${company.name}`
+      );
+      
+      // Get client contact from project if available
+      const clientPhone = (project as any)?.client_contact || '';
+      const phoneNumber = clientPhone.replace(/\D/g, ''); // Remove non-digits
+      
+      const whatsappUrl = phoneNumber 
+        ? `https://wa.me/${phoneNumber}?text=${message}`
+        : `https://wa.me/?text=${message}`;
+      
+      window.open(whatsappUrl, '_blank');
+    } catch (error) {
+      console.error('Error sharing via WhatsApp:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to prepare document for sharing',
+        variant: 'destructive',
+      });
+    } finally {
+      setSharingWhatsApp(false);
+    }
   };
 
   return (
@@ -459,9 +511,10 @@ export default function InvoiceDetail() {
               <Button 
                 variant="outline" 
                 onClick={handleWhatsAppShare}
+                disabled={sharingWhatsApp}
                 className="text-success hover:text-success"
               >
-                <MessageCircle className="h-4 w-4 mr-2" />
+                {sharingWhatsApp ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <MessageCircle className="h-4 w-4 mr-2" />}
                 WhatsApp
               </Button>
               <Button variant="outline" onClick={handleExportPDF}>

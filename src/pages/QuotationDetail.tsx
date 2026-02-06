@@ -1,9 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Download, FileText, Printer, Loader2, Truck, Pencil, Trash2, Receipt, Mail, MessageCircle } from 'lucide-react';
+import { Download, FileText, Printer, Loader2, Truck, Pencil, Trash2, Receipt, Mail, MessageCircle, History } from 'lucide-react';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import { useQuotations } from '@/hooks/useQuotations';
 import { useProjects } from '@/hooks/useProjects';
@@ -18,6 +18,8 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import QuotationFormDialog from '@/components/quotations/QuotationFormDialog';
+import { useDocumentEmailHistory } from '@/hooks/useDocumentEmailHistory';
+import { useDocumentPdfUpload } from '@/hooks/useDocumentPdfUpload';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,6 +44,8 @@ export default function QuotationDetail() {
   const { createProformaInvoice } = useProformaInvoices();
   const { activeCompanyId, alhadafCompany, loading: companiesLoading } = useCompanies();
   const { role } = useAuth();
+  const { emailHistory, fetchEmailHistory, recordEmailSent } = useDocumentEmailHistory();
+  const { uploadPdfForSharing } = useDocumentPdfUpload();
   
   const [deliveryDialogOpen, setDeliveryDialogOpen] = useState(false);
   const [proformaDialogOpen, setProformaDialogOpen] = useState(false);
@@ -53,11 +57,19 @@ export default function QuotationDetail() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [clientEmail, setClientEmail] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [sharingWhatsApp, setSharingWhatsApp] = useState(false);
   
   const canEdit = role === 'admin' || role === 'sales_manager';
   
   const quotation = quotations.find(q => q.id === id);
   const project = quotation ? projects.find(p => p.id === quotation.project_id) : null;
+
+  // Fetch email history - must be before early returns
+  useEffect(() => {
+    if (id) {
+      fetchEmailHistory('quotation', id);
+    }
+  }, [id, fetchEmailHistory]);
 
   // Determine which company to use for this quotation
   // Priority: quotation's company_id > active company
@@ -519,10 +531,20 @@ export default function QuotationDetail() {
           companyEmail: company.email,
           dueDate: quotation.valid_until,
           documentType: 'Quotation',
+          pdfBase64,
         },
       });
 
       if (error) throw error;
+
+      // Record email in history
+      await recordEmailSent(
+        'quotation',
+        quotation.id,
+        quotationNumber,
+        clientEmail,
+        'sent'
+      );
 
       toast({
         title: 'Email Sent',
@@ -532,6 +554,17 @@ export default function QuotationDetail() {
       setClientEmail('');
     } catch (error: any) {
       console.error('Error sending email:', error);
+      
+      // Record failed attempt
+      await recordEmailSent(
+        'quotation',
+        quotation.id,
+        quotationNumber,
+        clientEmail,
+        'failed',
+        error.message
+      );
+      
       toast({
         title: 'Failed to Send Email',
         description: error.message || 'Please try again later',
@@ -542,27 +575,45 @@ export default function QuotationDetail() {
     }
   };
 
-  const handleWhatsAppShare = () => {
+  const handleWhatsAppShare = async () => {
     if (!quotation) return;
     
-    const message = encodeURIComponent(
-      `Dear ${project?.contractor?.name || quotation.project_name},\n\n` +
-      `Please find your Quotation details:\n\n` +
-      `📄 Quotation No: ${quotationNumber}\n` +
-      `💰 Total Amount: AED ${quotation.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}\n` +
-      `📅 Valid Until: ${quotation.valid_until ? new Date(quotation.valid_until).toLocaleDateString('en-GB') : '30 Days'}\n` +
-      `\nPlease contact us if you have any questions.\n\n` +
-      `Best regards,\n${company.name}`
-    );
-    
-    const clientPhone = project?.contractor?.phone || '';
-    const phoneNumber = clientPhone.replace(/\D/g, '');
-    
-    const whatsappUrl = phoneNumber 
-      ? `https://wa.me/${phoneNumber}?text=${message}`
-      : `https://wa.me/?text=${message}`;
-    
-    window.open(whatsappUrl, '_blank');
+    setSharingWhatsApp(true);
+    try {
+      // Generate and upload PDF
+      const doc = generatePDF();
+      const pdfBlob = doc.output('blob');
+      const pdfUrl = await uploadPdfForSharing(pdfBlob, quotationNumber);
+      
+      const message = encodeURIComponent(
+        `Dear ${project?.contractor?.name || quotation.project_name},\n\n` +
+        `Please find your Quotation details:\n\n` +
+        `📄 Quotation No: ${quotationNumber}\n` +
+        `💰 Total Amount: AED ${quotation.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}\n` +
+        `📅 Valid Until: ${quotation.valid_until ? new Date(quotation.valid_until).toLocaleDateString('en-GB') : '30 Days'}\n` +
+        `${pdfUrl ? `\n📎 Download PDF: ${pdfUrl}\n` : ''}` +
+        `\nPlease contact us if you have any questions.\n\n` +
+        `Best regards,\n${company.name}`
+      );
+      
+      const clientPhone = project?.contractor?.phone || '';
+      const phoneNumber = clientPhone.replace(/\D/g, '');
+      
+      const whatsappUrl = phoneNumber 
+        ? `https://wa.me/${phoneNumber}?text=${message}`
+        : `https://wa.me/?text=${message}`;
+      
+      window.open(whatsappUrl, '_blank');
+    } catch (error) {
+      console.error('Error sharing via WhatsApp:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to prepare document for sharing',
+        variant: 'destructive',
+      });
+    } finally {
+      setSharingWhatsApp(false);
+    }
   };
 
   return (
@@ -628,9 +679,10 @@ export default function QuotationDetail() {
               <Button 
                 variant="outline" 
                 onClick={handleWhatsAppShare}
+                disabled={sharingWhatsApp}
                 className="text-success hover:text-success"
               >
-                <MessageCircle className="h-4 w-4 mr-2" />
+                {sharingWhatsApp ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <MessageCircle className="h-4 w-4 mr-2" />}
                 WhatsApp
               </Button>
               <Button variant="outline" onClick={handleExportPDF}>
