@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Download, FileText, Printer, Loader2, CreditCard } from 'lucide-react';
+import { Download, FileText, Printer, Loader2, CreditCard, Mail, MessageCircle } from 'lucide-react';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useProjects } from '@/hooks/useProjects';
@@ -12,12 +12,15 @@ import { useCompanies, TARGET_SPECIALTIES, ALHADAF_PROJECTS, Company } from '@/h
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useState, useEffect, useMemo } from 'react';
+import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import targetLogo from '@/assets/target-logo.jpg';
 import alhadafLogo from '@/assets/alhadaf-logo.png';
 import { INVOICE_TERMS } from '@/data/invoiceTerms';
 import { useCustomInvoiceTerms } from '@/hooks/useCustomInvoiceTerms';
+
 export default function InvoiceDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -29,6 +32,9 @@ export default function InvoiceDetail() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [recordingPayment, setRecordingPayment] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [clientEmail, setClientEmail] = useState('');
 
   const invoice = invoices.find(inv => inv.id === id);
   const project = invoice ? projects.find(p => p.id === invoice.project_id) : null;
@@ -335,6 +341,84 @@ export default function InvoiceDetail() {
     }
   };
 
+  const handleSendEmail = async () => {
+    if (!clientEmail || !invoice) return;
+    
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(clientEmail)) {
+      toast({
+        title: 'Invalid Email',
+        description: 'Please enter a valid email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      const { company } = getInvoiceCompany();
+      const doc = generatePDF();
+      const pdfBase64 = doc.output('datauristring').split(',')[1];
+
+      const { data, error } = await supabase.functions.invoke('send-invoice-email', {
+        body: {
+          recipientEmail: clientEmail,
+          recipientName: invoice.client_name,
+          invoiceNumber: invoice.invoice_number,
+          invoiceTotal: invoice.total.toLocaleString('en-US', { minimumFractionDigits: 2 }),
+          companyName: company.name,
+          companyEmail: company.email,
+          dueDate: invoice.due_date,
+          pdfBase64,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Email Sent',
+        description: `Invoice sent successfully to ${clientEmail}`,
+      });
+      setEmailDialogOpen(false);
+      setClientEmail('');
+    } catch (error: any) {
+      console.error('Error sending email:', error);
+      toast({
+        title: 'Failed to Send Email',
+        description: error.message || 'Please try again later',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const handleWhatsAppShare = () => {
+    if (!invoice) return;
+    
+    const { company } = getInvoiceCompany();
+    const message = encodeURIComponent(
+      `Dear ${invoice.client_name},\n\n` +
+      `Please find your Tax Invoice details:\n\n` +
+      `📄 Invoice No: ${invoice.invoice_number}\n` +
+      `💰 Total Amount: AED ${invoice.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}\n` +
+      `${invoice.due_date ? `📅 Due Date: ${new Date(invoice.due_date).toLocaleDateString('en-GB')}\n` : ''}` +
+      `\nPlease contact us if you have any questions.\n\n` +
+      `Best regards,\n${company.name}`
+    );
+    
+    // Get client contact from project if available
+    const clientPhone = (project as any)?.client_contact || '';
+    const phoneNumber = clientPhone.replace(/\D/g, ''); // Remove non-digits
+    
+    const whatsappUrl = phoneNumber 
+      ? `https://wa.me/${phoneNumber}?text=${message}`
+      : `https://wa.me/?text=${message}`;
+    
+    window.open(whatsappUrl, '_blank');
+  };
+
   return (
     <MainLayout>
       {/* Header */}
@@ -355,13 +439,31 @@ export default function InvoiceDetail() {
               </div>
               <p className="text-muted-foreground mt-1">{invoice.client_name}</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {invoice.status !== 'paid' && (
                 <Button variant="outline" onClick={() => setPaymentDialogOpen(true)}>
                   <CreditCard className="h-4 w-4 mr-2" />
                   Record Payment
                 </Button>
               )}
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setClientEmail((project as any)?.client_email || '');
+                  setEmailDialogOpen(true);
+                }}
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Email
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleWhatsAppShare}
+                className="text-success hover:text-success"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                WhatsApp
+              </Button>
               <Button variant="outline" onClick={handleExportPDF}>
                 <Download className="h-4 w-4 mr-2" />
                 Export PDF
@@ -563,6 +665,54 @@ export default function InvoiceDetail() {
             <Button onClick={handleRecordPayment} disabled={recordingPayment}>
               {recordingPayment && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Record Payment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Dialog */}
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Send Invoice via Email
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="clientEmail">Client Email Address</Label>
+              <Input
+                id="clientEmail"
+                type="email"
+                placeholder="client@example.com"
+                value={clientEmail}
+                onChange={(e) => setClientEmail(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                The invoice PDF will be attached to the email automatically.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEmailDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSendEmail} 
+              disabled={sendingEmail || !clientEmail}
+            >
+              {sendingEmail ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Email
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
