@@ -1,23 +1,40 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Download, FileText, Printer, Loader2 } from 'lucide-react';
+import { Download, FileText, Printer, Loader2, Receipt } from 'lucide-react';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import { useProformaInvoices } from '@/hooks/useProformaInvoices';
 import { useProjects } from '@/hooks/useProjects';
+import { useInvoices } from '@/hooks/useInvoices';
 import { useCompanies, TARGET_SPECIALTIES, ALHADAF_PROJECTS, Company } from '@/hooks/useCompanies';
 import StatusBadge from '@/components/shared/StatusBadge';
+import { toast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import targetLogo from '@/assets/target-logo.jpg';
 import alhadafLogo from '@/assets/alhadaf-logo.png';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function ProformaInvoiceDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+  const [converting, setConverting] = useState(false);
+  
   const { proformaInvoices, loading: proformaLoading } = useProformaInvoices();
   const { projects, loading: projectsLoading } = useProjects();
+  const { createInvoice } = useInvoices();
   const { activeCompanyId, alhadafCompany, loading: companiesLoading } = useCompanies();
 
   const proforma = proformaInvoices.find(pi => pi.id === id);
@@ -246,6 +263,45 @@ export default function ProformaInvoiceDetail() {
     }
   };
 
+  const handleConvertToInvoice = async () => {
+    if (!proforma) return;
+    
+    setConverting(true);
+    try {
+      const invoiceData = {
+        project_id: proforma.project_id,
+        client_name: proforma.client_name,
+        items: proforma.items,
+        subtotal: proforma.subtotal,
+        tax_rate: proforma.tax_rate,
+        tax_amount: proforma.tax_amount,
+        total: proforma.total,
+        status: 'draft',
+        notes: `Converted from Proforma Invoice: ${proforma.proforma_number}`,
+        company_id: proforma.company_id,
+      };
+      
+      const newInvoice = await createInvoice(invoiceData);
+      
+      if (newInvoice) {
+        toast({
+          title: 'Success',
+          description: `Tax Invoice ${newInvoice.invoice_number} created successfully`,
+        });
+        navigate(`/invoices/${newInvoice.id}`);
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to convert to tax invoice',
+        variant: 'destructive',
+      });
+    } finally {
+      setConverting(false);
+      setConvertDialogOpen(false);
+    }
+  };
+
   return (
     <MainLayout>
       {/* Header */}
@@ -267,6 +323,14 @@ export default function ProformaInvoiceDetail() {
               <p className="text-muted-foreground mt-1">{proforma.client_name}</p>
             </div>
             <div className="flex gap-2">
+              <Button 
+                variant="default" 
+                onClick={() => setConvertDialogOpen(true)}
+                className="bg-success hover:bg-success/90"
+              >
+                <Receipt className="h-4 w-4 mr-2" />
+                Convert to Tax Invoice
+              </Button>
               <Button variant="outline" onClick={handleExportPDF}>
                 <Download className="h-4 w-4 mr-2" />
                 Export PDF
@@ -400,6 +464,38 @@ export default function ProformaInvoiceDetail() {
           </div>
         </Card>
       </div>
+
+      {/* Convert to Invoice Confirmation Dialog */}
+      <AlertDialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Convert to Tax Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will create a new Tax Invoice from proforma "{proforma.proforma_number}" with all the same items and amounts. The proforma invoice will remain unchanged.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={converting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConvertToInvoice} 
+              disabled={converting}
+              className="bg-success hover:bg-success/90"
+            >
+              {converting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Converting...
+                </>
+              ) : (
+                <>
+                  <Receipt className="h-4 w-4 mr-2" />
+                  Convert
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
