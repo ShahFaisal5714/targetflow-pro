@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Download, FileText, Printer, Loader2, CreditCard } from 'lucide-react';
+import Breadcrumb from '@/components/shared/Breadcrumb';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useProjects } from '@/hooks/useProjects';
 import { useCompanies, TARGET_SPECIALTIES, ALHADAF_PROJECTS, Company } from '@/hooks/useCompanies';
@@ -339,10 +340,14 @@ export default function InvoiceDetail() {
       {/* Header */}
       <div className="bg-card border-b border-border">
         <div className="p-6">
-          <div className="flex items-center gap-4 mb-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/invoices')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+          <Breadcrumb 
+            items={[
+              { label: 'Invoices', href: '/invoices' },
+              { label: invoice.invoice_number }
+            ]} 
+            className="mb-4"
+          />
+          <div className="flex items-center gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold text-foreground">{invoice.invoice_number}</h1>
