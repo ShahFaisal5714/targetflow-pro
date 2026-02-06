@@ -1,8 +1,8 @@
 import { ReactNode } from 'react';
-import { Bell, Search, Plus, Building2 } from 'lucide-react';
+import { Bell, Plus, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useCompanies } from '@/hooks/useCompanies';
+import GlobalSearch from './GlobalSearch';
 
 interface HeaderProps {
   title: string;
@@ -33,15 +33,8 @@ export default function Header({ title, subtitle, action }: HeaderProps) {
             <span className="max-w-[150px] truncate">{activeCompany.name}</span>
           </div>
 
-          {/* Search */}
-          <div className="relative hidden md:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search projects, quotations..."
-              className="w-72 pl-10 bg-secondary/50 border-0 focus-visible:ring-1"
-            />
-          </div>
+          {/* Global Search */}
+          <GlobalSearch />
 
           {/* Notifications */}
           <button className="relative flex h-10 w-10 items-center justify-center rounded-lg hover:bg-secondary transition-colors">
