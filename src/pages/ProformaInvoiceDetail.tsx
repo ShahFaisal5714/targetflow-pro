@@ -3,7 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Download, FileText, Printer, Loader2, Receipt } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Download, FileText, Printer, Loader2, Receipt, Mail, MessageCircle } from 'lucide-react';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import { useProformaInvoices } from '@/hooks/useProformaInvoices';
 import { useProjects } from '@/hooks/useProjects';
@@ -11,6 +13,8 @@ import { useInvoices } from '@/hooks/useInvoices';
 import { useCompanies, TARGET_SPECIALTIES, ALHADAF_PROJECTS, Company } from '@/hooks/useCompanies';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import targetLogo from '@/assets/target-logo.jpg';
@@ -31,6 +35,9 @@ export default function ProformaInvoiceDetail() {
   const navigate = useNavigate();
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [clientEmail, setClientEmail] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
   
   const { proformaInvoices, loading: proformaLoading } = useProformaInvoices();
   const { projects, loading: projectsLoading } = useProjects();
@@ -263,6 +270,80 @@ export default function ProformaInvoiceDetail() {
     }
   };
 
+  const handleSendEmail = async () => {
+    if (!clientEmail || !proforma) return;
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(clientEmail)) {
+      toast({
+        title: 'Invalid Email',
+        description: 'Please enter a valid email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      const doc = generatePDF();
+      const pdfBase64 = doc.output('datauristring').split(',')[1];
+
+      const { data, error } = await supabase.functions.invoke('send-invoice-email', {
+        body: {
+          recipientEmail: clientEmail,
+          recipientName: proforma.client_name,
+          invoiceNumber: proforma.proforma_number,
+          invoiceTotal: proforma.total.toLocaleString('en-US', { minimumFractionDigits: 2 }),
+          companyName: company.name,
+          companyEmail: company.email,
+          dueDate: proforma.valid_until,
+          documentType: 'Proforma Invoice',
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Email Sent',
+        description: `Proforma invoice sent successfully to ${clientEmail}`,
+      });
+      setEmailDialogOpen(false);
+      setClientEmail('');
+    } catch (error: any) {
+      console.error('Error sending email:', error);
+      toast({
+        title: 'Failed to Send Email',
+        description: error.message || 'Please try again later',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const handleWhatsAppShare = () => {
+    if (!proforma) return;
+    
+    const message = encodeURIComponent(
+      `Dear ${proforma.client_name},\n\n` +
+      `Please find your Proforma Invoice details:\n\n` +
+      `📄 PI No: ${proforma.proforma_number}\n` +
+      `💰 Total Amount: AED ${proforma.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}\n` +
+      `${proforma.valid_until ? `📅 Valid Until: ${new Date(proforma.valid_until).toLocaleDateString('en-GB')}\n` : ''}` +
+      `\nPlease contact us if you have any questions.\n\n` +
+      `Best regards,\n${company.name}`
+    );
+    
+    const clientPhone = (project as any)?.client_contact || '';
+    const phoneNumber = clientPhone.replace(/\D/g, '');
+    
+    const whatsappUrl = phoneNumber 
+      ? `https://wa.me/${phoneNumber}?text=${message}`
+      : `https://wa.me/?text=${message}`;
+    
+    window.open(whatsappUrl, '_blank');
+  };
+
   const handleConvertToInvoice = async () => {
     if (!proforma) return;
     
@@ -322,7 +403,7 @@ export default function ProformaInvoiceDetail() {
               </div>
               <p className="text-muted-foreground mt-1">{proforma.client_name}</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button 
                 variant="default" 
                 onClick={() => setConvertDialogOpen(true)}
@@ -330,6 +411,24 @@ export default function ProformaInvoiceDetail() {
               >
                 <Receipt className="h-4 w-4 mr-2" />
                 Convert to Tax Invoice
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setClientEmail((project as any)?.client_email || '');
+                  setEmailDialogOpen(true);
+                }}
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Email
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleWhatsAppShare}
+                className="text-success hover:text-success"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                WhatsApp
               </Button>
               <Button variant="outline" onClick={handleExportPDF}>
                 <Download className="h-4 w-4 mr-2" />
@@ -496,6 +595,48 @@ export default function ProformaInvoiceDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Email Dialog */}
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Proforma Invoice via Email</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Recipient Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="client@example.com"
+                value={clientEmail}
+                onChange={(e) => setClientEmail(e.target.value)}
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              The proforma invoice PDF will be attached to the email.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEmailDialogOpen(false)} disabled={sendingEmail}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendEmail} disabled={sendingEmail || !clientEmail}>
+              {sendingEmail ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Email
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

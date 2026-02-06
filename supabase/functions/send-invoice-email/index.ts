@@ -15,7 +15,8 @@ interface InvoiceEmailRequest {
   companyName: string;
   companyEmail: string;
   dueDate: string | null;
-  pdfBase64: string;
+  pdfBase64?: string;
+  documentType?: string; // 'Tax Invoice', 'Proforma Invoice', 'Quotation'
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -41,24 +42,38 @@ const handler = async (req: Request): Promise<Response> => {
       companyEmail,
       dueDate,
       pdfBase64,
+      documentType = 'Tax Invoice',
     }: InvoiceEmailRequest = await req.json();
 
     // Validate required fields
-    if (!recipientEmail || !invoiceNumber || !pdfBase64) {
-      throw new Error("Missing required fields: recipientEmail, invoiceNumber, or pdfBase64");
+    if (!recipientEmail || !invoiceNumber) {
+      throw new Error("Missing required fields: recipientEmail or invoiceNumber");
     }
 
-    // Convert base64 to buffer for attachment
-    const pdfBuffer = Uint8Array.from(atob(pdfBase64), c => c.charCodeAt(0));
+    // Prepare attachments if PDF is provided
+    const attachments = pdfBase64 ? [
+      {
+        filename: `${invoiceNumber}.pdf`,
+        content: Uint8Array.from(atob(pdfBase64), c => c.charCodeAt(0)),
+      },
+    ] : [];
 
+    const dueDateLabel = documentType === 'Quotation' ? 'Valid Until' : 'Due Date';
     const dueDateText = dueDate 
-      ? `Payment is due by ${new Date(dueDate).toLocaleDateString('en-GB')}.`
-      : 'Please process payment at your earliest convenience.';
+      ? documentType === 'Quotation'
+        ? `This quotation is valid until ${new Date(dueDate).toLocaleDateString('en-GB')}.`
+        : `Payment is due by ${new Date(dueDate).toLocaleDateString('en-GB')}.`
+      : documentType === 'Quotation'
+        ? 'This quotation is valid for 30 days.'
+        : 'Please process payment at your earliest convenience.';
+
+    const documentLabel = documentType === 'Quotation' ? 'Quotation No' : 
+                          documentType === 'Proforma Invoice' ? 'PI No' : 'Invoice Number';
 
     const emailResponse = await resend.emails.send({
       from: `${companyName} <invoices@${companyEmail?.split('@')[1] || 'mail.lovable.app'}>`,
       to: [recipientEmail],
-      subject: `Tax Invoice ${invoiceNumber} from ${companyName}`,
+      subject: `${documentType} ${invoiceNumber} from ${companyName}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -74,14 +89,14 @@ const handler = async (req: Request): Promise<Response> => {
           <div style="background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
             <p style="margin-bottom: 20px;">Dear ${recipientName || 'Valued Customer'},</p>
             
-            <p>Please find attached your Tax Invoice <strong>${invoiceNumber}</strong> for the amount of <strong>AED ${invoiceTotal}</strong>.</p>
+            <p>Please find attached your ${documentType} <strong>${invoiceNumber}</strong> for the amount of <strong>AED ${invoiceTotal}</strong>.</p>
             
             <p>${dueDateText}</p>
             
             <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e5e7eb;">
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                  <td style="padding: 8px 0; color: #6b7280;">Invoice Number:</td>
+                  <td style="padding: 8px 0; color: #6b7280;">${documentLabel}:</td>
                   <td style="padding: 8px 0; text-align: right; font-weight: bold;">${invoiceNumber}</td>
                 </tr>
                 <tr>
@@ -90,14 +105,14 @@ const handler = async (req: Request): Promise<Response> => {
                 </tr>
                 ${dueDate ? `
                 <tr>
-                  <td style="padding: 8px 0; color: #6b7280;">Due Date:</td>
+                  <td style="padding: 8px 0; color: #6b7280;">${dueDateLabel}:</td>
                   <td style="padding: 8px 0; text-align: right;">${new Date(dueDate).toLocaleDateString('en-GB')}</td>
                 </tr>
                 ` : ''}
               </table>
             </div>
             
-            <p>If you have any questions regarding this invoice, please don't hesitate to contact us.</p>
+            <p>If you have any questions regarding this ${documentType.toLowerCase()}, please don't hesitate to contact us.</p>
             
             <p style="margin-top: 30px;">
               Best regards,<br>
@@ -113,12 +128,7 @@ const handler = async (req: Request): Promise<Response> => {
         </body>
         </html>
       `,
-      attachments: [
-        {
-          filename: `${invoiceNumber}.pdf`,
-          content: pdfBuffer,
-        },
-      ],
+      attachments,
     });
 
     console.log("Invoice email sent successfully:", emailResponse);
