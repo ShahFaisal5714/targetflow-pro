@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, FileText, Printer, Loader2, Receipt, Mail, MessageCircle } from 'lucide-react';
+import { Download, FileText, Printer, Loader2, Receipt, Mail, MessageCircle, History } from 'lucide-react';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import { useProformaInvoices } from '@/hooks/useProformaInvoices';
 import { useProjects } from '@/hooks/useProjects';
@@ -19,6 +19,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import targetLogo from '@/assets/target-logo.jpg';
 import alhadafLogo from '@/assets/alhadaf-logo.png';
+import { useDocumentEmailHistory } from '@/hooks/useDocumentEmailHistory';
+import { useDocumentPdfUpload } from '@/hooks/useDocumentPdfUpload';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,14 +40,24 @@ export default function ProformaInvoiceDetail() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [clientEmail, setClientEmail] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [sharingWhatsApp, setSharingWhatsApp] = useState(false);
   
   const { proformaInvoices, loading: proformaLoading } = useProformaInvoices();
   const { projects, loading: projectsLoading } = useProjects();
   const { createInvoice } = useInvoices();
   const { activeCompanyId, alhadafCompany, loading: companiesLoading } = useCompanies();
+  const { emailHistory, fetchEmailHistory, recordEmailSent } = useDocumentEmailHistory();
+  const { uploadPdfForSharing } = useDocumentPdfUpload();
 
   const proforma = proformaInvoices.find(pi => pi.id === id);
   const project = proforma ? projects.find(p => p.id === proforma.project_id) : null;
+
+  // Fetch email history - must be before early returns
+  useEffect(() => {
+    if (id) {
+      fetchEmailHistory('proforma', id);
+    }
+  }, [id, fetchEmailHistory]);
 
   const getProformaCompany = (): { company: Company; logo: string } => {
     const proformaCompanyId = proforma?.company_id;
@@ -298,10 +310,20 @@ export default function ProformaInvoiceDetail() {
           companyEmail: company.email,
           dueDate: proforma.valid_until,
           documentType: 'Proforma Invoice',
+          pdfBase64,
         },
       });
 
       if (error) throw error;
+
+      // Record email in history
+      await recordEmailSent(
+        'proforma',
+        proforma.id,
+        proforma.proforma_number,
+        clientEmail,
+        'sent'
+      );
 
       toast({
         title: 'Email Sent',
@@ -311,6 +333,17 @@ export default function ProformaInvoiceDetail() {
       setClientEmail('');
     } catch (error: any) {
       console.error('Error sending email:', error);
+      
+      // Record failed attempt
+      await recordEmailSent(
+        'proforma',
+        proforma.id,
+        proforma.proforma_number,
+        clientEmail,
+        'failed',
+        error.message
+      );
+      
       toast({
         title: 'Failed to Send Email',
         description: error.message || 'Please try again later',
@@ -321,27 +354,45 @@ export default function ProformaInvoiceDetail() {
     }
   };
 
-  const handleWhatsAppShare = () => {
+  const handleWhatsAppShare = async () => {
     if (!proforma) return;
     
-    const message = encodeURIComponent(
-      `Dear ${proforma.client_name},\n\n` +
-      `Please find your Proforma Invoice details:\n\n` +
-      `📄 PI No: ${proforma.proforma_number}\n` +
-      `💰 Total Amount: AED ${proforma.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}\n` +
-      `${proforma.valid_until ? `📅 Valid Until: ${new Date(proforma.valid_until).toLocaleDateString('en-GB')}\n` : ''}` +
-      `\nPlease contact us if you have any questions.\n\n` +
-      `Best regards,\n${company.name}`
-    );
-    
-    const clientPhone = (project as any)?.client_contact || '';
-    const phoneNumber = clientPhone.replace(/\D/g, '');
-    
-    const whatsappUrl = phoneNumber 
-      ? `https://wa.me/${phoneNumber}?text=${message}`
-      : `https://wa.me/?text=${message}`;
-    
-    window.open(whatsappUrl, '_blank');
+    setSharingWhatsApp(true);
+    try {
+      // Generate and upload PDF
+      const doc = generatePDF();
+      const pdfBlob = doc.output('blob');
+      const pdfUrl = await uploadPdfForSharing(pdfBlob, proforma.proforma_number);
+      
+      const message = encodeURIComponent(
+        `Dear ${proforma.client_name},\n\n` +
+        `Please find your Proforma Invoice details:\n\n` +
+        `📄 PI No: ${proforma.proforma_number}\n` +
+        `💰 Total Amount: AED ${proforma.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}\n` +
+        `${proforma.valid_until ? `📅 Valid Until: ${new Date(proforma.valid_until).toLocaleDateString('en-GB')}\n` : ''}` +
+        `${pdfUrl ? `\n📎 Download PDF: ${pdfUrl}\n` : ''}` +
+        `\nPlease contact us if you have any questions.\n\n` +
+        `Best regards,\n${company.name}`
+      );
+      
+      const clientPhone = (project as any)?.client_contact || '';
+      const phoneNumber = clientPhone.replace(/\D/g, '');
+      
+      const whatsappUrl = phoneNumber 
+        ? `https://wa.me/${phoneNumber}?text=${message}`
+        : `https://wa.me/?text=${message}`;
+      
+      window.open(whatsappUrl, '_blank');
+    } catch (error) {
+      console.error('Error sharing via WhatsApp:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to prepare document for sharing',
+        variant: 'destructive',
+      });
+    } finally {
+      setSharingWhatsApp(false);
+    }
   };
 
   const handleConvertToInvoice = async () => {
@@ -425,9 +476,10 @@ export default function ProformaInvoiceDetail() {
               <Button 
                 variant="outline" 
                 onClick={handleWhatsAppShare}
+                disabled={sharingWhatsApp}
                 className="text-success hover:text-success"
               >
-                <MessageCircle className="h-4 w-4 mr-2" />
+                {sharingWhatsApp ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <MessageCircle className="h-4 w-4 mr-2" />}
                 WhatsApp
               </Button>
               <Button variant="outline" onClick={handleExportPDF}>
