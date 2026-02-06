@@ -3,6 +3,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Download, FileText, Printer, Loader2 } from 'lucide-react';
+import Breadcrumb from '@/components/shared/Breadcrumb';
 import { useProformaInvoices } from '@/hooks/useProformaInvoices';
 import { useProjects } from '@/hooks/useProjects';
 import { useCompanies, TARGET_SPECIALTIES, ALHADAF_PROJECTS, Company } from '@/hooks/useCompanies';
@@ -250,10 +251,14 @@ export default function ProformaInvoiceDetail() {
       {/* Header */}
       <div className="bg-card border-b border-border">
         <div className="p-6">
-          <div className="flex items-center gap-4 mb-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+          <Breadcrumb 
+            items={[
+              { label: 'Proforma Invoices', href: '/proforma-invoices' },
+              { label: proforma.proforma_number }
+            ]} 
+            className="mb-4"
+          />
+          <div className="flex items-center gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold text-foreground">{proforma.proforma_number}</h1>
