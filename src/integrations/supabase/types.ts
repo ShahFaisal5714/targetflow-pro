@@ -630,6 +630,36 @@ export type Database = {
         }
         Relationships: []
       }
+      short_urls: {
+        Row: {
+          created_at: string
+          document_number: string
+          document_type: string
+          id: string
+          original_url: string
+          short_code: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_number: string
+          document_type: string
+          id?: string
+          original_url: string
+          short_code: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_number?: string
+          document_type?: string
+          id?: string
+          original_url?: string
+          short_code?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

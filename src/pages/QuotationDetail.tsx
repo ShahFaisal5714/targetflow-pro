@@ -580,10 +580,10 @@ export default function QuotationDetail() {
     
     setSharingWhatsApp(true);
     try {
-      // Generate and upload PDF
+      // Generate and upload PDF with short URL
       const doc = generatePDF();
       const pdfBlob = doc.output('blob');
-      const pdfUrl = await uploadPdfForSharing(pdfBlob, quotationNumber);
+      const pdfUrl = await uploadPdfForSharing(pdfBlob, quotationNumber, 'Quotation');
       
       const message = encodeURIComponent(
         `Dear ${project?.contractor?.name || quotation.project_name},\n\n` +

@@ -434,10 +434,10 @@ export default function InvoiceDetail() {
     try {
       const { company } = getInvoiceCompany();
       
-      // Generate and upload PDF
+      // Generate and upload PDF with short URL
       const doc = generatePDF();
       const pdfBlob = doc.output('blob');
-      const pdfUrl = await uploadPdfForSharing(pdfBlob, invoice.invoice_number);
+      const pdfUrl = await uploadPdfForSharing(pdfBlob, invoice.invoice_number, 'Invoice');
       
       const message = encodeURIComponent(
         `Dear ${invoice.client_name},\n\n` +

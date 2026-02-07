@@ -359,10 +359,10 @@ export default function ProformaInvoiceDetail() {
     
     setSharingWhatsApp(true);
     try {
-      // Generate and upload PDF
+      // Generate and upload PDF with short URL
       const doc = generatePDF();
       const pdfBlob = doc.output('blob');
-      const pdfUrl = await uploadPdfForSharing(pdfBlob, proforma.proforma_number);
+      const pdfUrl = await uploadPdfForSharing(pdfBlob, proforma.proforma_number, 'Proforma Invoice');
       
       const message = encodeURIComponent(
         `Dear ${proforma.client_name},\n\n` +

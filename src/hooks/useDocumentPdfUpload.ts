@@ -7,7 +7,8 @@ export function useDocumentPdfUpload() {
 
   const uploadPdfForSharing = useCallback(async (
     pdfBlob: Blob,
-    documentNumber: string
+    documentNumber: string,
+    documentType: string = 'Invoice'
   ): Promise<string | null> => {
     if (!user) return null;
 
@@ -31,7 +32,26 @@ export function useDocumentPdfUpload() {
         .from('document-pdfs')
         .getPublicUrl(data.path);
 
-      return publicUrlData.publicUrl;
+      const originalUrl = publicUrlData.publicUrl;
+
+      // Create short URL
+      const { data: shortUrlData, error: shortUrlError } = await supabase.functions.invoke(
+        'shorten-url',
+        {
+          body: {
+            originalUrl,
+            documentNumber,
+            documentType,
+          },
+        }
+      );
+
+      if (shortUrlError || !shortUrlData?.success) {
+        console.warn('Could not create short URL, using original:', shortUrlError);
+        return originalUrl;
+      }
+
+      return shortUrlData.shortUrl;
     } catch (error) {
       console.error('Error uploading PDF:', error);
       return null;
