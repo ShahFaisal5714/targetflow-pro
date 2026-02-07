@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, FileText, Printer, Loader2, Receipt, Mail, MessageCircle, History } from 'lucide-react';
+import { Download, FileText, Printer, Loader2, Receipt, MessageCircle } from 'lucide-react';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import { useProformaInvoices } from '@/hooks/useProformaInvoices';
 import { useProjects } from '@/hooks/useProjects';
@@ -19,7 +19,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import targetLogo from '@/assets/target-logo.jpg';
 import alhadafLogo from '@/assets/alhadaf-logo.png';
-import { useDocumentEmailHistory } from '@/hooks/useDocumentEmailHistory';
+
 import { useDocumentPdfUpload } from '@/hooks/useDocumentPdfUpload';
 import {
   AlertDialog,
@@ -37,27 +37,18 @@ export default function ProformaInvoiceDetail() {
   const navigate = useNavigate();
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [converting, setConverting] = useState(false);
-  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
-  const [clientEmail, setClientEmail] = useState('');
-  const [sendingEmail, setSendingEmail] = useState(false);
   const [sharingWhatsApp, setSharingWhatsApp] = useState(false);
   
   const { proformaInvoices, loading: proformaLoading } = useProformaInvoices();
   const { projects, loading: projectsLoading } = useProjects();
   const { createInvoice } = useInvoices();
   const { activeCompanyId, alhadafCompany, loading: companiesLoading } = useCompanies();
-  const { emailHistory, fetchEmailHistory, recordEmailSent } = useDocumentEmailHistory();
+  
   const { uploadPdfForSharing } = useDocumentPdfUpload();
 
   const proforma = proformaInvoices.find(pi => pi.id === id);
   const project = proforma ? projects.find(p => p.id === proforma.project_id) : null;
 
-  // Fetch email history - must be before early returns
-  useEffect(() => {
-    if (id) {
-      fetchEmailHistory('proforma', id);
-    }
-  }, [id, fetchEmailHistory]);
 
   const getProformaCompany = (): { company: Company; logo: string } => {
     const proformaCompanyId = proforma?.company_id;
@@ -282,77 +273,6 @@ export default function ProformaInvoiceDetail() {
     }
   };
 
-  const handleSendEmail = async () => {
-    if (!clientEmail || !proforma) return;
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(clientEmail)) {
-      toast({
-        title: 'Invalid Email',
-        description: 'Please enter a valid email address',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setSendingEmail(true);
-    try {
-      const doc = generatePDF();
-      const pdfBase64 = doc.output('datauristring').split(',')[1];
-
-      const { data, error } = await supabase.functions.invoke('send-invoice-email', {
-        body: {
-          recipientEmail: clientEmail,
-          recipientName: proforma.client_name,
-          invoiceNumber: proforma.proforma_number,
-          invoiceTotal: proforma.total.toLocaleString('en-US', { minimumFractionDigits: 2 }),
-          companyName: company.name,
-          companyEmail: company.email,
-          dueDate: proforma.valid_until,
-          documentType: 'Proforma Invoice',
-          pdfBase64,
-        },
-      });
-
-      if (error) throw error;
-
-      // Record email in history
-      await recordEmailSent(
-        'proforma',
-        proforma.id,
-        proforma.proforma_number,
-        clientEmail,
-        'sent'
-      );
-
-      toast({
-        title: 'Email Sent',
-        description: `Proforma invoice sent successfully to ${clientEmail}`,
-      });
-      setEmailDialogOpen(false);
-      setClientEmail('');
-    } catch (error: any) {
-      console.error('Error sending email:', error);
-      
-      // Record failed attempt
-      await recordEmailSent(
-        'proforma',
-        proforma.id,
-        proforma.proforma_number,
-        clientEmail,
-        'failed',
-        error.message
-      );
-      
-      toast({
-        title: 'Failed to Send Email',
-        description: error.message || 'Please try again later',
-        variant: 'destructive',
-      });
-    } finally {
-      setSendingEmail(false);
-    }
-  };
 
   const handleWhatsAppShare = async () => {
     if (!proforma) return;
@@ -462,16 +382,6 @@ export default function ProformaInvoiceDetail() {
               >
                 <Receipt className="h-4 w-4 mr-2" />
                 Convert to Tax Invoice
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setClientEmail((project as any)?.client_email || '');
-                  setEmailDialogOpen(true);
-                }}
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                Email
               </Button>
               <Button 
                 variant="outline" 
@@ -648,47 +558,6 @@ export default function ProformaInvoiceDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Email Dialog */}
-      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Send Proforma Invoice via Email</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Recipient Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="client@example.com"
-                value={clientEmail}
-                onChange={(e) => setClientEmail(e.target.value)}
-              />
-            </div>
-            <p className="text-sm text-muted-foreground">
-              The proforma invoice PDF will be attached to the email.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEmailDialogOpen(false)} disabled={sendingEmail}>
-              Cancel
-            </Button>
-            <Button onClick={handleSendEmail} disabled={sendingEmail || !clientEmail}>
-              {sendingEmail ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send Email
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </MainLayout>
   );
 }
