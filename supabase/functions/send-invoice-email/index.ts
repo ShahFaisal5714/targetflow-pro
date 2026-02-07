@@ -70,8 +70,11 @@ const handler = async (req: Request): Promise<Response> => {
     const documentLabel = documentType === 'Quotation' ? 'Quotation No' : 
                           documentType === 'Proforma Invoice' ? 'PI No' : 'Invoice Number';
 
+    // Use Resend's onboarding email for unverified domains
+    // To use your own domain, verify it at https://resend.com/domains
     const emailResponse = await resend.emails.send({
-      from: `${companyName} <invoices@${companyEmail?.split('@')[1] || 'mail.lovable.app'}>`,
+      from: `${companyName} <onboarding@resend.dev>`,
+      replyTo: companyEmail || undefined,
       to: [recipientEmail],
       subject: `${documentType} ${invoiceNumber} from ${companyName}`,
       html: `
