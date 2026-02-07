@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, FileText, Printer, Loader2, CreditCard, Mail, MessageCircle, Clock, History } from 'lucide-react';
+import { Download, FileText, Printer, Loader2, CreditCard, MessageCircle, Clock } from 'lucide-react';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useProjects } from '@/hooks/useProjects';
@@ -20,7 +20,7 @@ import targetLogo from '@/assets/target-logo.jpg';
 import alhadafLogo from '@/assets/alhadaf-logo.png';
 import { INVOICE_TERMS } from '@/data/invoiceTerms';
 import { useCustomInvoiceTerms } from '@/hooks/useCustomInvoiceTerms';
-import { useDocumentEmailHistory } from '@/hooks/useDocumentEmailHistory';
+
 import { useDocumentPdfUpload } from '@/hooks/useDocumentPdfUpload';
 
 export default function InvoiceDetail() {
@@ -30,26 +30,17 @@ export default function InvoiceDetail() {
   const { projects, loading: projectsLoading } = useProjects();
   const { activeCompanyId, alhadafCompany, loading: companiesLoading } = useCompanies();
   const { customTerms } = useCustomInvoiceTerms();
-  const { emailHistory, fetchEmailHistory, recordEmailSent } = useDocumentEmailHistory();
+  
   const { uploadPdfForSharing } = useDocumentPdfUpload();
   
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [recordingPayment, setRecordingPayment] = useState(false);
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
-  const [clientEmail, setClientEmail] = useState('');
   const [sharingWhatsApp, setSharingWhatsApp] = useState(false);
 
   const invoice = invoices.find(inv => inv.id === id);
   const project = invoice ? projects.find(p => p.id === invoice.project_id) : null;
 
-  // Fetch email history when invoice is loaded - must be before early returns
-  useEffect(() => {
-    if (id) {
-      fetchEmailHistory('invoice', id);
-    }
-  }, [id, fetchEmailHistory]);
 
   // Get selected terms text for display/PDF
   const selectedTermsText = useMemo(() => {
@@ -354,79 +345,6 @@ export default function InvoiceDetail() {
   };
 
 
-  const handleSendEmail = async () => {
-    if (!clientEmail || !invoice) return;
-    
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(clientEmail)) {
-      toast({
-        title: 'Invalid Email',
-        description: 'Please enter a valid email address',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setSendingEmail(true);
-    try {
-      const { company } = getInvoiceCompany();
-      const doc = generatePDF();
-      const pdfBase64 = doc.output('datauristring').split(',')[1];
-
-      const { data, error } = await supabase.functions.invoke('send-invoice-email', {
-        body: {
-          recipientEmail: clientEmail,
-          recipientName: invoice.client_name,
-          invoiceNumber: invoice.invoice_number,
-          invoiceTotal: invoice.total.toLocaleString('en-US', { minimumFractionDigits: 2 }),
-          companyName: company.name,
-          companyEmail: company.email,
-          dueDate: invoice.due_date,
-          pdfBase64,
-        },
-      });
-
-      if (error) throw error;
-
-      // Record the email in history
-      await recordEmailSent(
-        'invoice',
-        invoice.id,
-        invoice.invoice_number,
-        clientEmail,
-        'sent'
-      );
-
-      toast({
-        title: 'Email Sent',
-        description: `Invoice sent successfully to ${clientEmail}`,
-      });
-      setEmailDialogOpen(false);
-      setClientEmail('');
-    } catch (error: any) {
-      console.error('Error sending email:', error);
-      
-      // Record failed attempt
-      await recordEmailSent(
-        'invoice',
-        invoice.id,
-        invoice.invoice_number,
-        clientEmail,
-        'failed',
-        error.message
-      );
-      
-      toast({
-        title: 'Failed to Send Email',
-        description: error.message || 'Please try again later',
-        variant: 'destructive',
-      });
-    } finally {
-      setSendingEmail(false);
-    }
-  };
-
   const handleWhatsAppShare = async () => {
     if (!invoice) return;
     
@@ -498,16 +416,6 @@ export default function InvoiceDetail() {
                   Record Payment
                 </Button>
               )}
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setClientEmail((project as any)?.client_email || '');
-                  setEmailDialogOpen(true);
-                }}
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                Email
-              </Button>
               <Button 
                 variant="outline" 
                 onClick={handleWhatsAppShare}
@@ -723,53 +631,6 @@ export default function InvoiceDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Email Dialog */}
-      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Send Invoice via Email
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="clientEmail">Client Email Address</Label>
-              <Input
-                id="clientEmail"
-                type="email"
-                placeholder="client@example.com"
-                value={clientEmail}
-                onChange={(e) => setClientEmail(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                The invoice PDF will be attached to the email automatically.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEmailDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSendEmail} 
-              disabled={sendingEmail || !clientEmail}
-            >
-              {sendingEmail ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send Email
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </MainLayout>
   );
 }

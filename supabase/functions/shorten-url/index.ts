@@ -29,11 +29,10 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Missing required fields: originalUrl or documentNumber");
     }
 
-    // Generate a short code based on document number
-    // Clean the document number to create a URL-friendly slug
-    const shortCode = documentNumber
-      .replace(/[^a-zA-Z0-9-]/g, '')
-      .toLowerCase();
+    // Generate a very short code (6 chars) based on document number and random suffix
+    const docPrefix = documentNumber.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toLowerCase();
+    const randomSuffix = Math.random().toString(36).substring(2, 6);
+    const shortCode = `${docPrefix}${randomSuffix}`;
 
     // Check if this document already has a short URL
     const { data: existing } = await supabase
