@@ -244,62 +244,89 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
             </div>
 
             <div className="space-y-3">
-              {items.map((item, index) => (
+              {items.map((item, index) => {
+                const isManual = !item.productId;
+                return (
                 <div key={index} className="flex gap-3 items-start p-4 bg-secondary/20 rounded-lg">
-                  <div className="flex-1 grid grid-cols-5 gap-3">
-                    <div className="col-span-2">
-                      <Label className="text-xs">Product *</Label>
-                      <Select
-                        value={item.productId}
-                        onValueChange={(value) => handleItemChange(index, 'productId', value)}
-                        required
-                      >
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Select product" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {products.map((product) => (
-                            <SelectItem key={product.id} value={product.id}>
-                              {product.name} {product.color ? `(${product.color})` : ''} - AED {product.price}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  <div className="flex-1 space-y-2">
+                    <div className="grid grid-cols-5 gap-3">
+                      <div className="col-span-2">
+                        <Label className="text-xs">Product *</Label>
+                        <Select
+                          value={item.productId || 'manual'}
+                          onValueChange={(value) => handleItemChange(index, 'productId', value)}
+                        >
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="Select product" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="manual">✏️ Enter manually</SelectItem>
+                            {products.map((product) => (
+                              <SelectItem key={product.id} value={product.id}>
+                                {product.name} {product.color ? `(${product.color})` : ''} - AED {product.price}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label className="text-xs">Quantity *</Label>
+                        <Input
+                          type="number"
+                          value={item.quantity || ''}
+                          onChange={(e) => handleItemChange(index, 'quantity', Number(e.target.value))}
+                          className="mt-1"
+                          min={0}
+                          step={0.01}
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <Label className="text-xs">Unit Price *</Label>
+                        <Input
+                          type="number"
+                          value={item.unitPrice || ''}
+                          onChange={(e) => handleItemChange(index, 'unitPrice', Number(e.target.value))}
+                          className="mt-1"
+                          min={0}
+                          step={0.01}
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <Label className="text-xs">Total</Label>
+                        <Input
+                          type="number"
+                          value={item.total?.toFixed(2) || '0.00'}
+                          className="mt-1 bg-muted"
+                          readOnly
+                        />
+                      </div>
                     </div>
 
+                    {isManual && (
+                      <div>
+                        <Label className="text-xs">Item Name *</Label>
+                        <Input
+                          value={item.productName || ''}
+                          onChange={(e) => handleItemChange(index, 'productName', e.target.value)}
+                          placeholder="Enter item name"
+                          className="mt-1"
+                          required
+                        />
+                      </div>
+                    )}
+
                     <div>
-                      <Label className="text-xs">Quantity *</Label>
+                      <Label className="text-xs">Description</Label>
                       <Input
-                        type="number"
-                        value={item.quantity || ''}
-                        onChange={(e) => handleItemChange(index, 'quantity', Number(e.target.value))}
+                        value={item.description || ''}
+                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                        placeholder="Optional description / notes"
                         className="mt-1"
-                        min={0}
-                        step={0.01}
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-xs">Unit Price *</Label>
-                      <Input
-                        type="number"
-                        value={item.unitPrice || ''}
-                        onChange={(e) => handleItemChange(index, 'unitPrice', Number(e.target.value))}
-                        className="mt-1"
-                        min={0}
-                        step={0.01}
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-xs">Total</Label>
-                      <Input
-                        type="number"
-                        value={item.total?.toFixed(2) || '0.00'}
-                        className="mt-1 bg-muted"
-                        readOnly
                       />
                     </div>
                   </div>
@@ -314,7 +341,8 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
