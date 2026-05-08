@@ -59,7 +59,7 @@ export default function Invoices() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
   const [pendingDeletes, setPendingDeletes] = useState<string[]>([]);
-  const undoTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const undoTimeoutRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   
   const [formData, setFormData] = useState({
     projectId: '',
