@@ -76,17 +76,30 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
   const handleItemChange = (index: number, field: string, value: any) => {
     const newItems = [...items];
     if (field === 'productId') {
-      const product = products.find(p => p.id === value);
-      if (product) {
+      if (value === 'manual') {
         newItems[index] = {
           ...newItems[index],
-          productId: value,
-          productName: product.name,
-          category: product.category as any,
-          unit: product.unit as any,
-          unitPrice: product.price,
-          margin: 25
+          productId: '',
+          productName: '',
+          description: '',
+          unitPrice: 0,
+          unit: 'pcs' as any,
+          margin: 25,
         };
+      } else {
+        const product = products.find(p => p.id === value);
+        if (product) {
+          newItems[index] = {
+            ...newItems[index],
+            productId: value,
+            productName: product.name,
+            description: product.name + (product.color ? ` - ${product.color}` : ''),
+            category: product.category as any,
+            unit: product.unit as any,
+            unitPrice: product.price,
+            margin: 25
+          };
+        }
       }
     } else {
       newItems[index] = { ...newItems[index], [field]: value };
