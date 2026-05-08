@@ -128,8 +128,8 @@ export function useDatabaseImport() {
               // Update instead of insert (but don't change user_id)
               const { id, user_id, ...updateData } = rowData;
               const { error } = await supabase
-                .from(tableName)
-                .update(updateData)
+                .from(tableName as 'profiles')
+                .update(updateData as never)
                 .eq('user_id', user.id);
               
               if (error) {

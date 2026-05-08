@@ -213,7 +213,7 @@ export function useProjects() {
 
       const { error } = await supabase
         .from('projects')
-        .update(updateData)
+        .update(updateData as never)
         .eq('id', id);
 
       if (error) throw error;

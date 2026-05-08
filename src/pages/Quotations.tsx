@@ -77,7 +77,7 @@ export default function Quotations() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [quotationToDelete, setQuotationToDelete] = useState<Quotation | null>(null);
   const [pendingDeletes, setPendingDeletes] = useState<string[]>([]);
-  const undoTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const undoTimeoutRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<FilterState>(initialFilters);
 
