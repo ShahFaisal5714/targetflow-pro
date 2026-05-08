@@ -68,6 +68,7 @@ export interface QuotationItem {
   id: string;
   productId: string;
   productName: string;
+  description?: string;
   category: ProductCategory;
   unit: ProductUnit;
   quantity: number;
