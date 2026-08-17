@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import targetLogo from '@/assets/target-logo.jpg';
 import alhadafLogo from '@/assets/alhadaf-logo.png';
+import tswpcLogo from '@/assets/tswpc-logo.png';
 import {
   DropdownMenu,
   DropdownMenuContent,
