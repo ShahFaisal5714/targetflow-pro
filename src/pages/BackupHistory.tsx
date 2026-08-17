@@ -71,6 +71,7 @@ export default function BackupHistory() {
       // Company filter
       if (companyFilter === 'target' && backup.company_name !== 'Target Specialties') return false;
       if (companyFilter === 'alhadaf' && backup.company_name !== 'Al Hadaf Al Kabeer') return false;
+      if (companyFilter === 'tswpc' && !(backup.company_name || '').toLowerCase().includes('wpc')) return false;
       
       // Search filter (filename or date)
       if (searchQuery.trim()) {
@@ -153,6 +154,7 @@ export default function BackupHistory() {
                   <SelectItem value="all">All Companies</SelectItem>
                   <SelectItem value="target">Target Specialties</SelectItem>
                   <SelectItem value="alhadaf">Al Hadaf Al Kabeer</SelectItem>
+                  <SelectItem value="tswpc">TS WPC Doors</SelectItem>
                 </SelectContent>
               </Select>
             </div>
