@@ -22,7 +22,7 @@ interface QuotationFormDialogProps {
 export default function QuotationFormDialog({ open, onOpenChange, quotation, onSubmit, initialProjectId }: QuotationFormDialogProps) {
   const { projects } = useProjects();
   const { products } = useProducts();
-  const { targetSpecialties, alhadafCompany, activeCompanyId } = useCompanies();
+  const { targetSpecialties, alhadafCompany, tswpcCompany, activeCompanyId } = useCompanies();
   const [projectId, setProjectId] = useState(quotation?.projectId || initialProjectId || '');
   const [companyId, setCompanyId] = useState(quotation?.companyId || '');
   const [status, setStatus] = useState<string>(quotation?.status || 'draft');
@@ -45,6 +45,9 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
   ];
   if (alhadafCompany) {
     companyOptions.push({ id: alhadafCompany.id, name: alhadafCompany.name });
+  }
+  if (tswpcCompany) {
+    companyOptions.push({ id: tswpcCompany.id, name: tswpcCompany.name });
   }
 
   useEffect(() => {

@@ -32,7 +32,7 @@ interface ExtendedFormData {
 
 export default function ProjectFormDialog({ open, onOpenChange, project, onSubmit }: ProjectFormDialogProps) {
   const { toast } = useToast();
-  const { targetSpecialties, alhadafCompany, activeCompanyId } = useCompanies();
+  const { targetSpecialties, alhadafCompany, tswpcCompany, activeCompanyId } = useCompanies();
   const isEdit = !!project;
 
   const [formData, setFormData] = useState<ExtendedFormData>({
@@ -142,6 +142,7 @@ export default function ProjectFormDialog({ open, onOpenChange, project, onSubmi
   const companyOptions = [
     { id: targetSpecialties.id, name: 'Target Specialties Building Material Trading LLC' },
     { id: alhadafCompany.id, name: 'Al Hadaf Al Kabeer Metal Contracting' },
+    { id: tswpcCompany.id, name: 'TS WPC DOORS' },
   ];
 
   return (
