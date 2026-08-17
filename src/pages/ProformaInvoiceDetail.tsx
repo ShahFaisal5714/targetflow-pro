@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import SecondaryOfficeBlock from '@/components/shared/SecondaryOfficeBlock';
 import { getLogoForCompanyName } from '@/lib/companyLogos';
 import { drawSecondaryOffice } from '@/lib/pdfOfficeBlock';
 
@@ -405,6 +406,7 @@ export default function ProformaInvoiceDetail() {
                 {company.email && <p className="mt-2">Email: {company.email}</p>}
                 {company.website && <p>Web: {company.website}</p>}
                 {company.phone && <p className="mt-2">Contact: {company.phone}</p>}
+                <SecondaryOfficeBlock company={company} />
                 {company.taxInfo?.trn && (
                   <p className="mt-2 font-semibold text-foreground">TRN: {company.taxInfo.trn}</p>
                 )}
