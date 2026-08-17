@@ -265,8 +265,9 @@ export default function DeliveryOrders() {
     const img = new Image();
     img.src = logo;
     const isAlhadaf = company.name.toLowerCase().includes('hadaf');
-    const logoWidth = isAlhadaf ? 65 : 55;
-    const logoHeight = isAlhadaf ? 42 : 35;
+    const isSquareLogo = company.name.toLowerCase().includes('wpc');
+    const logoWidth = isSquareLogo ? 34 : isAlhadaf ? 65 : 55;
+    const logoHeight = isSquareLogo ? 34 : isAlhadaf ? 42 : 35;
     doc.addImage(img, 'PNG', margin, 8, logoWidth, logoHeight);
 
     // Company Header - on the right side with BOLD text
