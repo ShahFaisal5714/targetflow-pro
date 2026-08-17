@@ -32,8 +32,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import targetLogo from '@/assets/target-logo.jpg';
-import alhadafLogo from '@/assets/alhadaf-logo.png';
+import { getLogoForCompanyName } from '@/lib/companyLogos';
 
 export default function QuotationDetail() {
   const { id } = useParams();
@@ -42,7 +41,7 @@ export default function QuotationDetail() {
   const { projects, loading: projectsLoading } = useProjects();
   const { createDeliveryOrder } = useDeliveryOrders();
   const { createProformaInvoice } = useProformaInvoices();
-  const { activeCompanyId, alhadafCompany, loading: companiesLoading } = useCompanies();
+  const { activeCompanyId, getCompanyById, loading: companiesLoading } = useCompanies();
   const { role } = useAuth();
   
   const { uploadPdfForSharing } = useDocumentPdfUpload();
@@ -65,30 +64,8 @@ export default function QuotationDetail() {
   // Determine which company to use for this quotation
   // Priority: quotation's company_id > active company
   const getQuotationCompany = (): { company: Company; logo: string } => {
-    const quotationCompanyId = quotation?.company_id;
-    
-    // Check if quotation has a specific company assigned
-    if (quotationCompanyId === 'alhadaf-projects' || 
-        (quotationCompanyId && quotationCompanyId !== 'target-specialties')) {
-      return { 
-        company: { ...ALHADAF_PROJECTS, ...alhadafCompany },
-        logo: alhadafLogo 
-      };
-    }
-    
-    if (quotationCompanyId === 'target-specialties') {
-      return { company: TARGET_SPECIALTIES, logo: targetLogo };
-    }
-    
-    // Fall back to active company
-    if (activeCompanyId === 'alhadaf-projects') {
-      return { 
-        company: { ...ALHADAF_PROJECTS, ...alhadafCompany },
-        logo: alhadafLogo 
-      };
-    }
-    
-    return { company: TARGET_SPECIALTIES, logo: targetLogo };
+    const company = getCompanyById(quotation?.company_id ?? activeCompanyId);
+    return { company, logo: getLogoForCompanyName(company.name) };
   };
 
   if (quotationsLoading || projectsLoading || companiesLoading) {

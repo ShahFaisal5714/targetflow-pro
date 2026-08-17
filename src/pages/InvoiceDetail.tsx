@@ -16,8 +16,7 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import targetLogo from '@/assets/target-logo.jpg';
-import alhadafLogo from '@/assets/alhadaf-logo.png';
+import { getLogoForCompanyName } from '@/lib/companyLogos';
 import { INVOICE_TERMS } from '@/data/invoiceTerms';
 import { useCustomInvoiceTerms } from '@/hooks/useCustomInvoiceTerms';
 
@@ -28,7 +27,7 @@ export default function InvoiceDetail() {
   const navigate = useNavigate();
   const { invoices, loading: invoicesLoading, recordPayment } = useInvoices();
   const { projects, loading: projectsLoading } = useProjects();
-  const { activeCompanyId, alhadafCompany, loading: companiesLoading } = useCompanies();
+  const { activeCompanyId, getCompanyById, loading: companiesLoading } = useCompanies();
   const { customTerms } = useCustomInvoiceTerms();
   
   const { uploadPdfForSharing } = useDocumentPdfUpload();
@@ -59,28 +58,8 @@ export default function InvoiceDetail() {
   }, [invoice?.terms_conditions, customTerms]);
 
   const getInvoiceCompany = (): { company: Company; logo: string } => {
-    const invoiceCompanyId = invoice?.company_id;
-    
-    if (invoiceCompanyId === 'alhadaf-projects' || 
-        (invoiceCompanyId && invoiceCompanyId !== 'target-specialties')) {
-      return { 
-        company: { ...ALHADAF_PROJECTS, ...alhadafCompany },
-        logo: alhadafLogo 
-      };
-    }
-    
-    if (invoiceCompanyId === 'target-specialties') {
-      return { company: TARGET_SPECIALTIES, logo: targetLogo };
-    }
-    
-    if (activeCompanyId === 'alhadaf-projects') {
-      return { 
-        company: { ...ALHADAF_PROJECTS, ...alhadafCompany },
-        logo: alhadafLogo 
-      };
-    }
-    
-    return { company: TARGET_SPECIALTIES, logo: targetLogo };
+    const company = getCompanyById(invoice?.company_id ?? activeCompanyId);
+    return { company, logo: getLogoForCompanyName(company.name) };
   };
 
   if (invoicesLoading || projectsLoading || companiesLoading) {

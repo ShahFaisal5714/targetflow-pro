@@ -17,8 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import targetLogo from '@/assets/target-logo.jpg';
-import alhadafLogo from '@/assets/alhadaf-logo.png';
+import { getLogoForCompanyName } from '@/lib/companyLogos';
 
 import { useDocumentPdfUpload } from '@/hooks/useDocumentPdfUpload';
 import {
@@ -42,7 +41,7 @@ export default function ProformaInvoiceDetail() {
   const { proformaInvoices, loading: proformaLoading } = useProformaInvoices();
   const { projects, loading: projectsLoading } = useProjects();
   const { createInvoice } = useInvoices();
-  const { activeCompanyId, alhadafCompany, loading: companiesLoading } = useCompanies();
+  const { activeCompanyId, getCompanyById, loading: companiesLoading } = useCompanies();
   
   const { uploadPdfForSharing } = useDocumentPdfUpload();
 
@@ -51,28 +50,8 @@ export default function ProformaInvoiceDetail() {
 
 
   const getProformaCompany = (): { company: Company; logo: string } => {
-    const proformaCompanyId = proforma?.company_id;
-    
-    if (proformaCompanyId === 'alhadaf-projects' || 
-        (proformaCompanyId && proformaCompanyId !== 'target-specialties')) {
-      return { 
-        company: { ...ALHADAF_PROJECTS, ...alhadafCompany },
-        logo: alhadafLogo 
-      };
-    }
-    
-    if (proformaCompanyId === 'target-specialties') {
-      return { company: TARGET_SPECIALTIES, logo: targetLogo };
-    }
-    
-    if (activeCompanyId === 'alhadaf-projects') {
-      return { 
-        company: { ...ALHADAF_PROJECTS, ...alhadafCompany },
-        logo: alhadafLogo 
-      };
-    }
-    
-    return { company: TARGET_SPECIALTIES, logo: targetLogo };
+    const company = getCompanyById(proforma?.company_id ?? activeCompanyId);
+    return { company, logo: getLogoForCompanyName(company.name) };
   };
 
   if (proformaLoading || projectsLoading || companiesLoading) {
