@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getLogoForCompanyName } from '@/lib/companyLogos';
+import { drawSecondaryOffice } from '@/lib/pdfOfficeBlock';
 
 import { useDocumentPdfUpload } from '@/hooks/useDocumentPdfUpload';
 import {
@@ -103,6 +104,7 @@ export default function ProformaInvoiceDetail() {
     doc.text(`Email: ${company.email || 'N/A'}`, rightAlignX, 29, { align: 'right' });
     doc.text(`Web: ${company.website || 'N/A'}`, rightAlignX, 36, { align: 'right' });
     doc.text(`Contact No: ${company.phone || 'N/A'}`, rightAlignX, 43, { align: 'right' });
+    drawSecondaryOffice(doc, company, margin);
     if (company.taxInfo?.trn) {
       doc.text(`TRN: ${company.taxInfo.trn}`, rightAlignX, 50, { align: 'right' });
     }

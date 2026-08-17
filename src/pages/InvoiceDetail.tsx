@@ -16,7 +16,9 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import SecondaryOfficeBlock from '@/components/shared/SecondaryOfficeBlock';
 import { getLogoForCompanyName } from '@/lib/companyLogos';
+import { drawSecondaryOffice } from '@/lib/pdfOfficeBlock';
 import { INVOICE_TERMS } from '@/data/invoiceTerms';
 import { useCustomInvoiceTerms } from '@/hooks/useCustomInvoiceTerms';
 
@@ -124,6 +126,7 @@ export default function InvoiceDetail() {
     doc.text(`Email: ${company.email || 'N/A'}`, rightAlignX, 29, { align: 'right' });
     doc.text(`Web: ${company.website || 'N/A'}`, rightAlignX, 36, { align: 'right' });
     doc.text(`Contact No: ${company.phone || 'N/A'}`, rightAlignX, 43, { align: 'right' });
+    drawSecondaryOffice(doc, company, margin);
     if (company.taxInfo?.trn) {
       doc.text(`TRN: ${company.taxInfo.trn}`, rightAlignX, 50, { align: 'right' });
     }
@@ -436,6 +439,7 @@ export default function InvoiceDetail() {
                 {company.email && <p className="mt-2">Email: {company.email}</p>}
                 {company.website && <p>Web: {company.website}</p>}
                 {company.phone && <p className="mt-2">Contact: {company.phone}</p>}
+                <SecondaryOfficeBlock company={company} />
                 {company.taxInfo?.trn && (
                   <p className="mt-2 font-semibold text-foreground">TRN: {company.taxInfo.trn}</p>
                 )}

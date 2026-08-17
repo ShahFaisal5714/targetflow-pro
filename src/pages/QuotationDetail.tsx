@@ -33,7 +33,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import SecondaryOfficeBlock from '@/components/shared/SecondaryOfficeBlock';
 import { getLogoForCompanyName } from '@/lib/companyLogos';
+import { drawSecondaryOffice } from '@/lib/pdfOfficeBlock';
 
 export default function QuotationDetail() {
   const { id } = useParams();
@@ -221,6 +223,7 @@ export default function QuotationDetail() {
     doc.text(`Email: ${company.email || 'N/A'}`, rightAlignX, 29, { align: 'right' });
     doc.text(`Web: ${company.website || 'N/A'}`, rightAlignX, 36, { align: 'right' });
     doc.text(`Contact No: ${company.phone || 'N/A'}`, rightAlignX, 43, { align: 'right' });
+    drawSecondaryOffice(doc, company, margin);
 
     // Title - centered below header
     doc.setFontSize(18);
@@ -606,6 +609,7 @@ export default function QuotationDetail() {
                 {company.email && <p className="mt-2">Email: {company.email}</p>}
                 {company.website && <p>Web: {company.website}</p>}
                 {company.phone && <p className="mt-2">Contact: {company.phone}</p>}
+                <SecondaryOfficeBlock company={company} />
               </div>
             </div>
             

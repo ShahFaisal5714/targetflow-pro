@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getLogoForCompanyName } from '@/lib/companyLogos';
+import { drawSecondaryOffice } from '@/lib/pdfOfficeBlock';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -281,6 +282,7 @@ export default function DeliveryOrders() {
     doc.text(`Email: ${company.email || 'N/A'}`, rightAlignX, 29, { align: 'right' });
     doc.text(`Web: ${company.website || 'N/A'}`, rightAlignX, 36, { align: 'right' });
     doc.text(`Contact No: ${company.phone || 'N/A'}`, rightAlignX, 43, { align: 'right' });
+    drawSecondaryOffice(doc, company, margin);
 
     // Title - centered below header
     doc.setFontSize(18);
