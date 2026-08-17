@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompanies } from '@/hooks/useCompanies';
+import { getCompanyPrefix } from '@/lib/companyPrefix';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,6 +65,7 @@ const initialFilters: FilterState = {
 };
 
 export default function Quotations() {
+  const { getSlugForId } = useCompanies();
   const navigate = useNavigate();
   const { toast, dismiss } = useToast();
   const { role } = useAuth();
