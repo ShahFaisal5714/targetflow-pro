@@ -100,43 +100,33 @@ export function useProducts() {
 
       if (error) throw error;
 
-      // Also create same product for the other company
-      // Target Specialties uses null company_id, Alhadaf uses UUID
+      // Also create the same product for every other company
+      // Target Specialties uses null company_id, the others use their UUID
       let duplicated = false;
       try {
-        if (companyDbId) {
-          // Currently on Alhadaf, add to Target Specialties (null company_id)
-          await supabase
-            .from('products')
-            .insert({
-              ...input,
-              user_id: user.id,
-              company_id: null,
-            });
+        const allCompanyIds: (string | null)[] = [null, alhadafDbId, tswpcDbId].filter(
+          (id, index) => index === 0 || Boolean(id)
+        );
+        const otherCompanyIds = allCompanyIds.filter((id) => id !== companyDbId);
+
+        for (const otherId of otherCompanyIds) {
+          await supabase.from('products').insert({
+            ...input,
+            user_id: user.id,
+            company_id: otherId,
+          });
           duplicated = true;
-        } else {
-          // Currently on Target Specialties, use Alhadaf DB ID (if available)
-          if (alhadafDbId) {
-            await supabase
-              .from('products')
-              .insert({
-                ...input,
-                user_id: user.id,
-                company_id: alhadafDbId,
-              });
-            duplicated = true;
-          }
         }
       } catch (dupError) {
         // Silently ignore duplicate product creation errors
-        console.log('Could not add product to other company', dupError);
+        console.log('Could not add product to other companies', dupError);
       }
 
       setProducts((prev) => [data, ...prev]);
       toast({
         title: 'Product created',
         description: duplicated
-          ? 'Product has been added to both companies successfully'
+          ? 'Product has been added to all companies successfully'
           : 'Product has been added successfully',
       });
       return data;
