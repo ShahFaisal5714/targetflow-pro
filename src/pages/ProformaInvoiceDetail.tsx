@@ -10,7 +10,7 @@ import Breadcrumb from '@/components/shared/Breadcrumb';
 import { useProformaInvoices } from '@/hooks/useProformaInvoices';
 import { useProjects } from '@/hooks/useProjects';
 import { useInvoices } from '@/hooks/useInvoices';
-import { useCompanies, TARGET_SPECIALTIES, ALHADAF_PROJECTS, Company } from '@/hooks/useCompanies';
+import { useCompanies, Company } from '@/hooks/useCompanies';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';

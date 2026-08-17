@@ -14,13 +14,12 @@ import { Search, Truck, Plus, Edit, Trash2, Package, Calendar, Loader2, Download
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProjects } from '@/hooks/useProjects';
-import { useCompanies, TARGET_SPECIALTIES, ALHADAF_PROJECTS, Company } from '@/hooks/useCompanies';
+import { useCompanies, Company } from '@/hooks/useCompanies';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import targetLogo from '@/assets/target-logo.jpg';
-import alhadafLogo from '@/assets/alhadaf-logo.png';
+import { getLogoForCompanyName } from '@/lib/companyLogos';
 import {
   AlertDialog,
   AlertDialogAction,

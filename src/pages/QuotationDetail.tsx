@@ -9,7 +9,7 @@ import { useQuotations } from '@/hooks/useQuotations';
 import { useProjects } from '@/hooks/useProjects';
 import { useDeliveryOrders } from '@/hooks/useDeliveryOrders';
 import { useProformaInvoices } from '@/hooks/useProformaInvoices';
-import { useCompanies, TARGET_SPECIALTIES, ALHADAF_PROJECTS, Company } from '@/hooks/useCompanies';
+import { useCompanies, Company } from '@/hooks/useCompanies';
 import { useAuth } from '@/contexts/AuthContext';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';

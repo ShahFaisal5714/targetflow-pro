@@ -8,7 +8,7 @@ import { Download, FileText, Printer, Loader2, CreditCard, MessageCircle, Clock 
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useProjects } from '@/hooks/useProjects';
-import { useCompanies, TARGET_SPECIALTIES, ALHADAF_PROJECTS, Company } from '@/hooks/useCompanies';
+import { useCompanies, Company } from '@/hooks/useCompanies';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useState, useEffect, useMemo } from 'react';
