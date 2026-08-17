@@ -9,6 +9,7 @@ import { useQuotations } from '@/hooks/useQuotations';
 import { useProjects } from '@/hooks/useProjects';
 import { useDeliveryOrders } from '@/hooks/useDeliveryOrders';
 import { useProformaInvoices } from '@/hooks/useProformaInvoices';
+import { getCompanyPrefix } from '@/lib/companyPrefix';
 import { useCompanies, Company } from '@/hooks/useCompanies';
 import { useAuth } from '@/contexts/AuthContext';
 import StatusBadge from '@/components/shared/StatusBadge';
@@ -276,7 +277,7 @@ export default function QuotationDetail() {
     doc.text('Quotation No:', rightColLabel, 84);
     doc.setFont('helvetica', 'normal');
     // Use company-prefixed quotation number
-    const companyPrefix = quotation.company_id ? 'AH' : 'TS';
+    const companyPrefix = getCompanyPrefix(getSlugForId(quotation.company_id));
     const quotationNo = `${companyPrefix}-QT-${quotation.id.slice(0, 8).toUpperCase()}`;
     doc.text(quotationNo, rightColValue, 84);
 
@@ -414,7 +415,7 @@ export default function QuotationDetail() {
 
   // Generate quotation number with company prefix
   const getQuotationNumber = () => {
-    const companyPrefix = quotation.company_id ? 'AH' : 'TS';
+    const companyPrefix = getCompanyPrefix(getSlugForId(quotation.company_id));
     return `${companyPrefix}-QT-${quotation.id.slice(0, 8).toUpperCase()}`;
   };
 

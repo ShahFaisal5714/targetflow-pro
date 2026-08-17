@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { logError } from '@/lib/logger';
+import { getCompanyPrefix } from '@/lib/companyPrefix';
 import { useCompanies } from '@/hooks/useCompanies';
 
 export interface InvoiceItem {
@@ -80,7 +81,7 @@ export function useInvoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-  const { getActiveCompanyDbId, activeCompanyId } = useCompanies();
+  const { getActiveCompanyDbId, activeCompanyId, getSlugForId } = useCompanies();
 
   const fetchInvoices = useCallback(async () => {
     if (!user) {
@@ -127,7 +128,7 @@ export function useInvoices() {
     const year = new Date().getFullYear();
     
     // Get company prefix - TS for Target Specialties, AH for Alhadaf
-    const companyPrefix = companyDbId ? 'AH' : 'TS';
+    const companyPrefix = getCompanyPrefix(getSlugForId(companyDbId));
     
     // Count only invoices for this company
     let countQuery = supabase

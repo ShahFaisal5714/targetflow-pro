@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { logError } from '@/lib/logger';
+import { getCompanyPrefix } from '@/lib/companyPrefix';
 import { useCompanies } from '@/hooks/useCompanies';
 
 export interface ProformaInvoiceItem {
@@ -77,7 +78,7 @@ export function useProformaInvoices() {
   const [proformaInvoices, setProformaInvoices] = useState<ProformaInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-  const { getActiveCompanyDbId, activeCompanyId } = useCompanies();
+  const { getActiveCompanyDbId, activeCompanyId, getSlugForId } = useCompanies();
 
   const fetchProformaInvoices = useCallback(async () => {
     if (!user) {
@@ -123,7 +124,7 @@ export function useProformaInvoices() {
     const companyDbId = getActiveCompanyDbId();
     const year = new Date().getFullYear();
     
-    const companyPrefix = companyDbId ? 'AH' : 'TS';
+    const companyPrefix = getCompanyPrefix(getSlugForId(companyDbId));
     
     let countQuery = supabase
       .from('proforma_invoices' as any)

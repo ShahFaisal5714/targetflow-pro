@@ -237,7 +237,7 @@ export default function Quotations() {
       key: 'id',
       header: 'Quotation No',
       render: (quotation: Quotation) => {
-        const companyPrefix = quotation.company_id ? 'AH' : 'TS';
+        const companyPrefix = getCompanyPrefix(getSlugForId(quotation.company_id));
         const quotationNo = `${companyPrefix}-QT-${quotation.id.slice(0, 8).toUpperCase()}`;
         return (
           <div className="flex items-center gap-3">
