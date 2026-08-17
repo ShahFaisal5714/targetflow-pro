@@ -42,7 +42,7 @@ export default function QuotationDetail() {
   const { projects, loading: projectsLoading } = useProjects();
   const { createDeliveryOrder } = useDeliveryOrders();
   const { createProformaInvoice } = useProformaInvoices();
-  const { activeCompanyId, getCompanyById, loading: companiesLoading } = useCompanies();
+  const { activeCompanyId, getCompanyById, getSlugForId, loading: companiesLoading } = useCompanies();
   const { role } = useAuth();
   
   const { uploadPdfForSharing } = useDocumentPdfUpload();
