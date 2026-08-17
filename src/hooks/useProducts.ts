@@ -40,7 +40,7 @@ export function useProducts() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
-  const { getActiveCompanyDbId, activeCompanyId, alhadafDbId } = useCompanies();
+  const { getActiveCompanyDbId, activeCompanyId, alhadafDbId, tswpcDbId } = useCompanies();
 
   const fetchProducts = useCallback(async () => {
     try {
