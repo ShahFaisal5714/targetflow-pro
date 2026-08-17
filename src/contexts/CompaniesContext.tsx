@@ -9,6 +9,7 @@ const normalizeCompanyName = (name: string) =>
 
 const isTargetSpecialtiesName = (name: string) => {
   const normalized = normalizeCompanyName(name);
+  if (isTswpcName(name)) return false;
   return normalized.includes('target') || normalized.includes('specialties');
 };
 
@@ -16,6 +17,11 @@ const isAlhadafName = (name: string) => {
   const normalized = normalizeCompanyName(name);
   return normalized.includes('alhadaf') || normalized.includes('hadaf') || normalized.includes('kabeer');
 };
+
+function isTswpcName(name: string) {
+  const normalized = normalizeCompanyName(name);
+  return normalized.includes('wpc');
+}
 
 export interface BankDetails {
   bankName: string;
@@ -31,6 +37,14 @@ export interface CompanyTax {
   trn: string;
 }
 
+export interface CompanyOffice {
+  label: string;
+  name: string;
+  address: string;
+  phone?: string;
+  email?: string;
+}
+
 export interface Company {
   id: string;
   name: string;
@@ -44,6 +58,7 @@ export interface Company {
   updated_at: string;
   bankDetails?: BankDetails;
   taxInfo?: CompanyTax;
+  offices?: CompanyOffice[];
 }
 
 // Fixed company data for Target Specialties
@@ -97,9 +112,46 @@ export const ALHADAF_PROJECTS_DISPLAY: Company = {
   },
 };
 
+// Fixed company data for TS WPC Doors
+export const TS_WPC_DOORS_DISPLAY: Company = {
+  id: 'ts-wpc-doors',
+  name: 'TS WPC DOORS',
+  logo_url: null,
+  email: 'info@tswpcdoors.com',
+  phone: '+971 56 603 1585',
+  address: 'Buliding Rema plaza | Office no. 1 Aljurf 3 Ajman UAE',
+  website: 'tswpcdoors.com',
+  is_default: false,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  bankDetails: TARGET_SPECIALTIES_DISPLAY.bankDetails,
+  taxInfo: {
+    trn: '104732260500003',
+  },
+  offices: [
+    {
+      label: 'UAE OFFICE',
+      name: 'Target Specialties Building Material LLC WPC Doors UAE',
+      address: 'Buliding Rema plaza | Office no. 1, Aljurf 3 Ajman UAE.',
+      phone: '+971 566031585',
+      email: 'info@tswpcdoors.com',
+    },
+    {
+      label: 'UK OFFICE',
+      name: 'Target Specialties WPC Doors PVT LTD UK',
+      address: '55 Portland Street, AB11 6LN, Aberdeen, Scotland Uk',
+      phone: '+44 7902 034289',
+      email: 'David.Gosling@targetspecialties.com',
+    },
+  ],
+};
+
 // For backwards compatibility
 export const TARGET_SPECIALTIES = TARGET_SPECIALTIES_DISPLAY;
 export const ALHADAF_PROJECTS = ALHADAF_PROJECTS_DISPLAY;
+export const TS_WPC_DOORS = TS_WPC_DOORS_DISPLAY;
+
+export type CompanySlug = 'target-specialties' | 'alhadaf-projects' | 'ts-wpc-doors';
 
 interface DbCompany {
   id: string;
@@ -132,7 +184,7 @@ export const getActiveDisplayId = (): string => {
   if (typeof window !== 'undefined') {
     const stored = localStorage.getItem('activeCompanyId');
     if (stored && stored !== 'target-specialties') {
-      return 'alhadaf-projects';
+      return localStorage.getItem('activeCompanySlug') || 'alhadaf-projects';
     }
   }
   return 'target-specialties';
@@ -141,15 +193,21 @@ export const getActiveDisplayId = (): string => {
 interface CompaniesContextType {
   companies: DbCompany[];
   activeCompanyId: string;
+  activeDisplayId: CompanySlug;
   activeCompany: Company;
   targetCompany: Company;
   alhadafCompany: Company;
+  tswpcCompany: Company;
   alhadafDbId: string | null;
   targetDbId: string | null;
+  tswpcDbId: string | null;
   loading: boolean;
   setActiveCompany: (displayId: string) => Promise<boolean>;
   updateTargetCompany: (updates: Partial<Company>) => Promise<Company | null>;
   updateAlhadafCompany: (updates: Partial<Company>) => Promise<Company | null>;
+  updateTswpcCompany: (updates: Partial<Company>) => Promise<Company | null>;
+  getCompanyById: (id?: string | null) => Company;
+  getSlugForId: (id?: string | null) => CompanySlug;
   refetchCompanies: () => Promise<void>;
 }
 
@@ -162,20 +220,37 @@ export function CompaniesProvider({ children }: { children: ReactNode }) {
   const [alhadafDbId, setAlhadafDbId] = useState<string | null>(null);
   const [targetDbId, setTargetDbId] = useState<string | null>(null);
   const [targetDetails, setTargetDetails] = useState<Partial<Company>>({});
+  const [tswpcDbId, setTswpcDbId] = useState<string | null>(null);
+  const [tswpcDetails, setTswpcDetails] = useState<Partial<Company>>({});
   const [activeCompanyId, setActiveCompanyIdState] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('activeCompanyId') || 'target-specialties';
     }
     return 'target-specialties';
   });
+  const [activeSlug, setActiveSlug] = useState<CompanySlug>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('activeCompanyId');
+      if (!stored || stored === 'target-specialties') return 'target-specialties';
+      return (localStorage.getItem('activeCompanySlug') as CompanySlug) || 'alhadaf-projects';
+    }
+    return 'target-specialties';
+  });
   const [loading, setLoading] = useState(true);
+
+  const persistActive = useCallback((id: string, slug: CompanySlug) => {
+    setActiveCompanyIdState(id);
+    setActiveSlug(slug);
+    localStorage.setItem('activeCompanyId', id);
+    localStorage.setItem('activeCompanySlug', slug);
+  }, []);
 
   const fetchCompanies = useCallback(async () => {
     if (!user) {
       setLoading(false);
       return;
     }
-    
+
     try {
       const { data: allCompanies, error: allError } = await supabase
         .from('companies')
@@ -184,7 +259,7 @@ export function CompaniesProvider({ children }: { children: ReactNode }) {
         .order('updated_at', { ascending: false });
 
       if (allError) throw allError;
-      
+
       setCompanies(allCompanies || []);
 
       const pickBest = (list: DbCompany[]) => {
@@ -195,280 +270,240 @@ export function CompaniesProvider({ children }: { children: ReactNode }) {
         return [...list].sort((a, b) => score(b) - score(a))[0];
       };
 
-      const targetCandidates = (allCompanies || []).filter((c) =>
-        isTargetSpecialtiesName(c.name)
-      );
-      const alhadafCandidates = (allCompanies || []).filter((c) =>
-        isAlhadafName(c.name)
-      );
+      const pickDetails = (c: DbCompany) => ({
+        email: c.email,
+        phone: c.phone,
+        address: c.address,
+        website: c.website,
+      });
+
+      const targetCandidates = (allCompanies || []).filter((c) => isTargetSpecialtiesName(c.name));
+      const alhadafCandidates = (allCompanies || []).filter((c) => isAlhadafName(c.name));
+      const tswpcCandidates = (allCompanies || []).filter((c) => isTswpcName(c.name));
 
       const target = targetCandidates.length ? pickBest(targetCandidates) : undefined;
       if (target) {
         setTargetDbId(target.id);
-        setTargetDetails({
-          email: target.email,
-          phone: target.phone,
-          address: target.address,
-          website: target.website,
-        });
+        setTargetDetails(pickDetails(target));
       }
 
       const alhadaf = alhadafCandidates.length ? pickBest(alhadafCandidates) : undefined;
-      
       if (alhadaf) {
         setAlhadafDbId(alhadaf.id);
-        setAlhadafDetails({
-          email: alhadaf.email,
-          phone: alhadaf.phone,
-          address: alhadaf.address,
-          website: alhadaf.website,
-        });
-        
-        if (alhadaf.is_default) {
-          setActiveCompanyIdState(alhadaf.id);
-          localStorage.setItem('activeCompanyId', alhadaf.id);
-        }
+        setAlhadafDetails(pickDetails(alhadaf));
       }
 
-      const defaultCompany = allCompanies?.find(c => c.is_default);
-      if (defaultCompany) {
-        setActiveCompanyIdState(defaultCompany.id);
-        localStorage.setItem('activeCompanyId', defaultCompany.id);
+      const tswpc = tswpcCandidates.length ? pickBest(tswpcCandidates) : undefined;
+      if (tswpc) {
+        setTswpcDbId(tswpc.id);
+        setTswpcDetails(pickDetails(tswpc));
+      }
+
+      const defaultCompany = allCompanies?.find((c) => c.is_default);
+      if (defaultCompany && defaultCompany.id !== target?.id) {
+        const slug: CompanySlug = isTswpcName(defaultCompany.name)
+          ? 'ts-wpc-doors'
+          : isAlhadafName(defaultCompany.name)
+            ? 'alhadaf-projects'
+            : 'target-specialties';
+        if (slug === 'target-specialties') {
+          persistActive('target-specialties', 'target-specialties');
+        } else {
+          persistActive(defaultCompany.id, slug);
+        }
       } else {
-        setActiveCompanyIdState('target-specialties');
-        localStorage.setItem('activeCompanyId', 'target-specialties');
+        persistActive('target-specialties', 'target-specialties');
       }
     } catch (error) {
       logError('CompaniesContext.fetchCompanies', error);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, persistActive]);
 
   useEffect(() => {
     fetchCompanies();
   }, [fetchCompanies]);
 
-  const updateTargetCompany = useCallback(async (updates: Partial<Company>): Promise<Company | null> => {
-    if (!user) return null;
+  const updateCompanyByName = useCallback(
+    async (
+      name: string,
+      updates: Partial<Company>,
+      applyResult: (row: DbCompany) => void,
+      successMessage: string,
+    ): Promise<Company | null> => {
+      if (!user) return null;
 
-    try {
-      const payload = {
-        email: updates.email ?? null,
-        phone: updates.phone ?? null,
-        address: updates.address ?? null,
-        website: updates.website ?? null,
-      };
+      try {
+        const payload = {
+          email: updates.email ?? null,
+          phone: updates.phone ?? null,
+          address: updates.address ?? null,
+          website: updates.website ?? null,
+        };
 
-      const { data: updatedRows, error: updateError } = await supabase
-        .from('companies')
-        .update(payload)
-        .eq('user_id', user.id)
-        .eq('name', TARGET_SPECIALTIES_DISPLAY.name)
-        .select();
+        const { data: updatedRows, error: updateError } = await supabase
+          .from('companies')
+          .update(payload)
+          .eq('user_id', user.id)
+          .eq('name', name)
+          .select();
 
-      if (updateError) throw updateError;
+        if (updateError) throw updateError;
 
-      if (updatedRows && updatedRows.length > 0) {
-        const data = updatedRows[0] as unknown as DbCompany;
-        setTargetDbId(data.id);
-        setTargetDetails({
-          email: data.email,
-          phone: data.phone,
-          address: data.address,
-          website: data.website,
-        });
+        let row = (updatedRows?.[0] as unknown as DbCompany) || null;
 
-        toast({
-          title: 'Success',
-          description: 'Target Specialties details updated',
-        });
-
-        return data as unknown as Company;
-      }
-
-      const { data: created, error: insertError } = await supabase
-        .from('companies')
-        .insert({
-          user_id: user.id,
-          name: TARGET_SPECIALTIES_DISPLAY.name,
-          ...payload,
-          is_default: false,
-        })
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
-
-      setTargetDbId(created.id);
-      setTargetDetails({
-        email: created.email,
-        phone: created.phone,
-        address: created.address,
-        website: created.website,
-      });
-
-      toast({
-        title: 'Success',
-        description: 'Target Specialties details updated',
-      });
-
-      return created as Company;
-    } catch (error) {
-      logError('CompaniesContext.updateTargetCompany', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update company',
-        variant: 'destructive',
-      });
-      return null;
-    }
-  }, [user]);
-
-  const updateAlhadafCompany = useCallback(async (updates: Partial<Company>): Promise<Company | null> => {
-    if (!user) return null;
-
-    try {
-      const payload = {
-        email: updates.email ?? null,
-        phone: updates.phone ?? null,
-        address: updates.address ?? null,
-        website: updates.website ?? null,
-      };
-
-      const { data: updatedRows, error: updateError } = await supabase
-        .from('companies')
-        .update(payload)
-        .eq('user_id', user.id)
-        .eq('name', ALHADAF_PROJECTS_DISPLAY.name)
-        .select();
-
-      if (updateError) throw updateError;
-
-      if (updatedRows && updatedRows.length > 0) {
-        const data = updatedRows[0] as unknown as DbCompany;
-        setAlhadafDbId(data.id);
-        setAlhadafDetails({
-          email: data.email,
-          phone: data.phone,
-          address: data.address,
-          website: data.website,
-        });
-
-        toast({
-          title: 'Success',
-          description: 'Alhadaf Projects details updated',
-        });
-
-        return data as unknown as Company;
-      }
-
-      const { data: created, error: insertError } = await supabase
-        .from('companies')
-        .insert({
-          user_id: user.id,
-          name: ALHADAF_PROJECTS_DISPLAY.name,
-          ...payload,
-          is_default: false,
-        })
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
-
-      setAlhadafDbId(created.id);
-      setAlhadafDetails({
-        email: created.email,
-        phone: created.phone,
-        address: created.address,
-        website: created.website,
-      });
-
-      toast({
-        title: 'Success',
-        description: 'Alhadaf Projects details updated',
-      });
-
-      return created as Company;
-    } catch (error) {
-      logError('CompaniesContext.updateAlhadafCompany', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update company',
-        variant: 'destructive',
-      });
-      return null;
-    }
-  }, [user]);
-
-  const setActiveCompanyHandler = useCallback(async (displayId: string): Promise<boolean> => {
-    if (!user) return false;
-
-    try {
-      await supabase
-        .from('companies')
-        .update({ is_default: false })
-        .eq('user_id', user.id);
-
-      if (displayId === 'alhadaf-projects') {
-        let companyIdToActivate = alhadafDbId;
-
-        if (!companyIdToActivate) {
-          const { data: existing, error: findError } = await supabase
-            .from('companies')
-            .select('id')
-            .eq('user_id', user.id)
-            .eq('name', ALHADAF_PROJECTS_DISPLAY.name)
-            .limit(1);
-
-          if (findError) throw findError;
-          companyIdToActivate = existing?.[0]?.id ?? null;
-        }
-
-        if (!companyIdToActivate) {
-          const { data: newCompany, error } = await supabase
+        if (!row) {
+          const { data: created, error: insertError } = await supabase
             .from('companies')
             .insert({
               user_id: user.id,
-              name: ALHADAF_PROJECTS_DISPLAY.name,
-              is_default: true,
+              name,
+              ...payload,
+              is_default: false,
             })
             .select()
             .single();
 
-          if (error) throw error;
-          companyIdToActivate = newCompany.id;
-        } else {
-          await supabase
-            .from('companies')
-            .update({ is_default: true })
-            .eq('id', companyIdToActivate);
+          if (insertError) throw insertError;
+          row = created as unknown as DbCompany;
         }
 
-        setAlhadafDbId(companyIdToActivate);
-        setActiveCompanyIdState(companyIdToActivate);
-        localStorage.setItem('activeCompanyId', companyIdToActivate);
-      } else {
-        setActiveCompanyIdState('target-specialties');
-        localStorage.setItem('activeCompanyId', 'target-specialties');
-      }
-      
-      toast({
-        title: 'Success',
-        description: `${displayId === 'target-specialties' ? 'Target Specialties' : 'Alhadaf Projects'} is now active`,
-      });
+        applyResult(row);
 
-      return true;
-    } catch (error) {
-      logError('CompaniesContext.setActiveCompany', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to set active company',
-        variant: 'destructive',
-      });
-      return false;
-    }
-  }, [user, alhadafDbId]);
+        toast({ title: 'Success', description: successMessage });
+
+        return row as unknown as Company;
+      } catch (error) {
+        logError('CompaniesContext.updateCompany', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to update company',
+          variant: 'destructive',
+        });
+        return null;
+      }
+    },
+    [user],
+  );
+
+  const updateTargetCompany = useCallback(
+    (updates: Partial<Company>) =>
+      updateCompanyByName(
+        TARGET_SPECIALTIES_DISPLAY.name,
+        updates,
+        (row) => {
+          setTargetDbId(row.id);
+          setTargetDetails({ email: row.email, phone: row.phone, address: row.address, website: row.website });
+        },
+        'Target Specialties details updated',
+      ),
+    [updateCompanyByName],
+  );
+
+  const updateAlhadafCompany = useCallback(
+    (updates: Partial<Company>) =>
+      updateCompanyByName(
+        ALHADAF_PROJECTS_DISPLAY.name,
+        updates,
+        (row) => {
+          setAlhadafDbId(row.id);
+          setAlhadafDetails({ email: row.email, phone: row.phone, address: row.address, website: row.website });
+        },
+        'Alhadaf Projects details updated',
+      ),
+    [updateCompanyByName],
+  );
+
+  const updateTswpcCompany = useCallback(
+    (updates: Partial<Company>) =>
+      updateCompanyByName(
+        TS_WPC_DOORS_DISPLAY.name,
+        updates,
+        (row) => {
+          setTswpcDbId(row.id);
+          setTswpcDetails({ email: row.email, phone: row.phone, address: row.address, website: row.website });
+        },
+        'TS WPC Doors details updated',
+      ),
+    [updateCompanyByName],
+  );
+
+  const setActiveCompanyHandler = useCallback(
+    async (displayId: string): Promise<boolean> => {
+      if (!user) return false;
+
+      const slug = (displayId as CompanySlug) || 'target-specialties';
+
+      try {
+        await supabase.from('companies').update({ is_default: false }).eq('user_id', user.id);
+
+        if (slug === 'alhadaf-projects' || slug === 'ts-wpc-doors') {
+          const isAlhadaf = slug === 'alhadaf-projects';
+          const fixedName = isAlhadaf ? ALHADAF_PROJECTS_DISPLAY.name : TS_WPC_DOORS_DISPLAY.name;
+          let companyIdToActivate = isAlhadaf ? alhadafDbId : tswpcDbId;
+
+          if (!companyIdToActivate) {
+            const { data: existing, error: findError } = await supabase
+              .from('companies')
+              .select('id')
+              .eq('user_id', user.id)
+              .eq('name', fixedName)
+              .limit(1);
+
+            if (findError) throw findError;
+            companyIdToActivate = existing?.[0]?.id ?? null;
+          }
+
+          if (!companyIdToActivate) {
+            const { data: newCompany, error } = await supabase
+              .from('companies')
+              .insert({
+                user_id: user.id,
+                name: fixedName,
+                is_default: true,
+              })
+              .select()
+              .single();
+
+            if (error) throw error;
+            companyIdToActivate = newCompany.id;
+          } else {
+            await supabase.from('companies').update({ is_default: true }).eq('id', companyIdToActivate);
+          }
+
+          if (isAlhadaf) {
+            setAlhadafDbId(companyIdToActivate);
+          } else {
+            setTswpcDbId(companyIdToActivate);
+          }
+          persistActive(companyIdToActivate, slug);
+        } else {
+          persistActive('target-specialties', 'target-specialties');
+        }
+
+        const label =
+          slug === 'target-specialties'
+            ? 'Target Specialties'
+            : slug === 'alhadaf-projects'
+              ? 'Alhadaf Projects'
+              : 'TS WPC Doors';
+
+        toast({ title: 'Success', description: `${label} is now active` });
+
+        return true;
+      } catch (error) {
+        logError('CompaniesContext.setActiveCompany', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to set active company',
+          variant: 'destructive',
+        });
+        return false;
+      }
+    },
+    [user, alhadafDbId, tswpcDbId, persistActive],
+  );
 
   const targetWithDetails = useMemo<Company>(() => {
     return {
@@ -486,34 +521,73 @@ export function CompaniesProvider({ children }: { children: ReactNode }) {
     };
   }, [alhadafDbId, alhadafDetails]);
 
-  const activeCompany = useMemo<Company>(() => {
-    if (activeCompanyId && activeCompanyId !== 'target-specialties') {
-      return {
-        ...ALHADAF_PROJECTS_DISPLAY,
-        id: activeCompanyId,
-        ...alhadafDetails,
-      };
-    }
+  const tswpcWithDetails = useMemo<Company>(() => {
     return {
-      ...TARGET_SPECIALTIES_DISPLAY,
-      ...targetDetails,
+      ...TS_WPC_DOORS_DISPLAY,
+      id: tswpcDbId || 'ts-wpc-doors',
+      ...tswpcDetails,
     };
-  }, [activeCompanyId, alhadafDetails, targetDetails]);
+  }, [tswpcDbId, tswpcDetails]);
+
+  const getSlugForId = useCallback(
+    (id?: string | null): CompanySlug => {
+      if (!id || id === 'target-specialties') return 'target-specialties';
+      if (id === 'alhadaf-projects' || id === 'ts-wpc-doors') return id;
+      if (tswpcDbId && id === tswpcDbId) return 'ts-wpc-doors';
+      if (alhadafDbId && id === alhadafDbId) return 'alhadaf-projects';
+      if (targetDbId && id === targetDbId) return 'target-specialties';
+      // Unknown UUID: fall back on the stored slug when it matches the active id
+      if (id === activeCompanyId) return activeSlug;
+      const match = companies.find((c) => c.id === id);
+      if (match) {
+        if (isTswpcName(match.name)) return 'ts-wpc-doors';
+        if (isAlhadafName(match.name)) return 'alhadaf-projects';
+        return 'target-specialties';
+      }
+      return 'alhadaf-projects';
+    },
+    [alhadafDbId, tswpcDbId, targetDbId, activeCompanyId, activeSlug, companies],
+  );
+
+  const getCompanyById = useCallback(
+    (id?: string | null): Company => {
+      const slug = getSlugForId(id);
+      if (slug === 'ts-wpc-doors') return tswpcWithDetails;
+      if (slug === 'alhadaf-projects') return alhadafWithDetails;
+      return targetWithDetails;
+    },
+    [getSlugForId, tswpcWithDetails, alhadafWithDetails, targetWithDetails],
+  );
+
+  const activeCompany = useMemo<Company>(() => {
+    const slug = getSlugForId(activeCompanyId);
+    if (slug === 'ts-wpc-doors') return { ...tswpcWithDetails, id: activeCompanyId };
+    if (slug === 'alhadaf-projects') return { ...alhadafWithDetails, id: activeCompanyId };
+    return targetWithDetails;
+  }, [activeCompanyId, getSlugForId, tswpcWithDetails, alhadafWithDetails, targetWithDetails]);
+
+  const activeDisplayId = useMemo(() => getSlugForId(activeCompanyId), [getSlugForId, activeCompanyId]);
 
   return (
     <CompaniesContext.Provider
       value={{
         companies,
         activeCompanyId,
+        activeDisplayId,
         activeCompany,
         targetCompany: targetWithDetails,
         alhadafCompany: alhadafWithDetails,
+        tswpcCompany: tswpcWithDetails,
         alhadafDbId,
         targetDbId,
+        tswpcDbId,
         loading,
         setActiveCompany: setActiveCompanyHandler,
         updateTargetCompany,
         updateAlhadafCompany,
+        updateTswpcCompany,
+        getCompanyById,
+        getSlugForId,
         refetchCompanies: fetchCompanies,
       }}
     >
