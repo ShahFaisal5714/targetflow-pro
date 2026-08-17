@@ -9,8 +9,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, ArrowRight, FolderKanban, FileText, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useCompanies, TARGET_SPECIALTIES_DISPLAY, ALHADAF_PROJECTS_DISPLAY } from '@/hooks/useCompanies';
+import { useCompanies, TARGET_SPECIALTIES_DISPLAY, ALHADAF_PROJECTS_DISPLAY, TS_WPC_DOORS_DISPLAY } from '@/hooks/useCompanies';
 import { useAuth } from '@/contexts/AuthContext';
+
+type CompanyKey = 'target' | 'alhadaf' | 'tswpc';
 
 interface BulkTransferDialogProps {
   open: boolean;
@@ -28,13 +30,13 @@ interface TransferableItem {
 export default function BulkTransferDialog({ open, onOpenChange, onTransferComplete }: BulkTransferDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { alhadafDbId } = useCompanies();
+  const { alhadafDbId, tswpcDbId } = useCompanies();
   
   const [loading, setLoading] = useState(false);
   const [transferring, setTransferring] = useState(false);
   const [items, setItems] = useState<TransferableItem[]>([]);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [targetCompany, setTargetCompany] = useState<'target' | 'alhadaf'>('alhadaf');
+  const [targetCompany, setTargetCompany] = useState<CompanyKey>('alhadaf');
   const [activeTab, setActiveTab] = useState<'projects' | 'quotations' | 'products'>('projects');
 
   const fetchItems = async (type: 'projects' | 'quotations' | 'products') => {
@@ -108,10 +110,20 @@ export default function BulkTransferDialog({ open, onOpenChange, onTransferCompl
     }
   };
 
+  const companyIdFor = (key: CompanyKey): string | null =>
+    key === 'alhadaf' ? alhadafDbId : key === 'tswpc' ? tswpcDbId : null;
+
+  const companyNameFor = (key: CompanyKey): string =>
+    key === 'alhadaf'
+      ? ALHADAF_PROJECTS_DISPLAY.name
+      : key === 'tswpc'
+        ? TS_WPC_DOORS_DISPLAY.name
+        : TARGET_SPECIALTIES_DISPLAY.name;
+
   const getFilteredItems = () => {
-    // Show items from the opposite company (source)
-    const sourceCompanyId = targetCompany === 'alhadaf' ? null : alhadafDbId;
-    return items.filter(item => item.company_id === sourceCompanyId);
+    // Show items that are not already owned by the destination company
+    const destCompanyId = companyIdFor(targetCompany);
+    return items.filter(item => (item.company_id || null) !== destCompanyId);
   };
 
   const handleTransfer = async () => {
@@ -120,7 +132,7 @@ export default function BulkTransferDialog({ open, onOpenChange, onTransferCompl
     setTransferring(true);
     
     try {
-      const newCompanyId = targetCompany === 'alhadaf' ? alhadafDbId : null;
+      const newCompanyId = companyIdFor(targetCompany);
       const tableName = activeTab;
 
       const { error } = await supabase
@@ -151,8 +163,8 @@ export default function BulkTransferDialog({ open, onOpenChange, onTransferCompl
   };
 
   const filteredItems = getFilteredItems();
-  const sourceCompany = targetCompany === 'alhadaf' ? TARGET_SPECIALTIES_DISPLAY.name : ALHADAF_PROJECTS_DISPLAY.name;
-  const destCompany = targetCompany === 'alhadaf' ? ALHADAF_PROJECTS_DISPLAY.name : TARGET_SPECIALTIES_DISPLAY.name;
+  const sourceCompany = 'Other companies';
+  const destCompany = companyNameFor(targetCompany);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -171,7 +183,7 @@ export default function BulkTransferDialog({ open, onOpenChange, onTransferCompl
             <RadioGroup 
               value={targetCompany} 
               onValueChange={(v) => {
-                setTargetCompany(v as 'target' | 'alhadaf');
+                setTargetCompany(v as CompanyKey);
                 setSelectedItems([]);
               }}
               className="flex gap-4"
@@ -183,6 +195,10 @@ export default function BulkTransferDialog({ open, onOpenChange, onTransferCompl
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="target" id="target" />
                 <Label htmlFor="target" className="cursor-pointer">Target Specialties</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="tswpc" id="tswpc" />
+                <Label htmlFor="tswpc" className="cursor-pointer">TS WPC Doors</Label>
               </div>
             </RadioGroup>
           </div>

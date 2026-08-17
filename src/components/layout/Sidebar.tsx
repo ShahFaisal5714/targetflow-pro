@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import targetLogo from '@/assets/target-logo.jpg';
 import alhadafLogo from '@/assets/alhadaf-logo.png';
+import tswpcLogo from '@/assets/tswpc-logo.png';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,10 +73,15 @@ export default function Sidebar() {
   });
 
   // Get the appropriate logo and company name based on active company display ID
-  const isAlhadaf = activeDisplayId === 'alhadaf-projects';
-  const currentLogo = isAlhadaf ? alhadafLogo : targetLogo;
-  const companyDisplayName = isAlhadaf ? 'Al Hadaf' : 'Target';
-  const companySubtitle = isAlhadaf ? 'Al Kabeer' : 'Specialties';
+  const brandBySlug = {
+    'target-specialties': { logo: targetLogo, name: 'Target', subtitle: 'Specialties', boxed: false },
+    'alhadaf-projects': { logo: alhadafLogo, name: 'Al Hadaf', subtitle: 'Al Kabeer', boxed: true },
+    'ts-wpc-doors': { logo: tswpcLogo, name: 'TS WPC', subtitle: 'Doors', boxed: true },
+  } as const;
+  const brand = brandBySlug[activeDisplayId] ?? brandBySlug['target-specialties'];
+  const currentLogo = brand.logo;
+  const companyDisplayName = brand.name;
+  const companySubtitle = brand.subtitle;
 
   return (
     <aside
@@ -87,11 +93,11 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className={`${isAlhadaf ? 'h-10 w-10 bg-white rounded-lg flex items-center justify-center' : ''}`}>
+          <div className={`${brand.boxed ? 'h-10 w-10 bg-white rounded-lg flex items-center justify-center' : ''}`}>
             <img 
               src={currentLogo} 
               alt={`${companyDisplayName} Logo`} 
-              className={isAlhadaf ? 'h-8 w-8 object-contain' : 'h-10 w-10 object-contain rounded-lg'}
+              className={brand.boxed ? 'h-8 w-8 object-contain' : 'h-10 w-10 object-contain rounded-lg'}
             />
           </div>
           {!collapsed && (

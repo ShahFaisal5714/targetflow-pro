@@ -14,13 +14,13 @@ import { Search, Truck, Plus, Edit, Trash2, Package, Calendar, Loader2, Download
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProjects } from '@/hooks/useProjects';
-import { useCompanies, TARGET_SPECIALTIES, ALHADAF_PROJECTS, Company } from '@/hooks/useCompanies';
+import { useCompanies, Company } from '@/hooks/useCompanies';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import targetLogo from '@/assets/target-logo.jpg';
-import alhadafLogo from '@/assets/alhadaf-logo.png';
+import { getLogoForCompanyName } from '@/lib/companyLogos';
+import { drawSecondaryOffice } from '@/lib/pdfOfficeBlock';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,24 +53,6 @@ interface DeliveryOrder {
   company_id: string | null;
 }
 
-// Helper to get company for a delivery order
-const getDeliveryCompany = (
-  order: DeliveryOrder,
-  activeCompanyId: string,
-  alhadafCompany: Partial<Company> | undefined
-): { company: Company; logo: string } => {
-  const isAlhadaf = order.company_id && order.company_id !== 'target-specialties';
-  
-  if (isAlhadaf) {
-    return { 
-      company: { ...ALHADAF_PROJECTS, ...alhadafCompany } as Company,
-      logo: alhadafLogo 
-    };
-  }
-  
-  return { company: TARGET_SPECIALTIES, logo: targetLogo };
-};
-
 const statusTabs: { key: string; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'pending', label: 'Pending' },
@@ -81,7 +63,7 @@ const statusTabs: { key: string; label: string }[] = [
 export default function DeliveryOrders() {
   const { user, role } = useAuth();
   const { projects } = useProjects();
-  const { activeCompanyId, alhadafCompany, getActiveCompanyDbId } = useCompanies();
+  const { activeCompanyId, getCompanyById, getActiveCompanyDbId } = useCompanies();
   const { toast } = useToast();
   const canEdit = role !== 'viewer';
 
@@ -270,7 +252,8 @@ export default function DeliveryOrders() {
 
   // PDF Generation for Delivery Order
   const generateDeliveryPDF = (order: DeliveryOrder) => {
-    const { company, logo } = getDeliveryCompany(order, activeCompanyId, alhadafCompany);
+    const company = getCompanyById(order.company_id ?? activeCompanyId);
+    const logo = getLogoForCompanyName(company.name);
     const project = projects.find(p => p.id === order.project_id);
     
     const doc = new jsPDF();
@@ -282,8 +265,9 @@ export default function DeliveryOrders() {
     const img = new Image();
     img.src = logo;
     const isAlhadaf = company.name.toLowerCase().includes('hadaf');
-    const logoWidth = isAlhadaf ? 65 : 55;
-    const logoHeight = isAlhadaf ? 42 : 35;
+    const isSquareLogo = company.name.toLowerCase().includes('wpc');
+    const logoWidth = isSquareLogo ? 34 : isAlhadaf ? 65 : 55;
+    const logoHeight = isSquareLogo ? 34 : isAlhadaf ? 42 : 35;
     doc.addImage(img, 'PNG', margin, 8, logoWidth, logoHeight);
 
     // Company Header - on the right side with BOLD text
@@ -299,6 +283,7 @@ export default function DeliveryOrders() {
     doc.text(`Email: ${company.email || 'N/A'}`, rightAlignX, 29, { align: 'right' });
     doc.text(`Web: ${company.website || 'N/A'}`, rightAlignX, 36, { align: 'right' });
     doc.text(`Contact No: ${company.phone || 'N/A'}`, rightAlignX, 43, { align: 'right' });
+    drawSecondaryOffice(doc, company, margin);
 
     // Title - centered below header
     doc.setFontSize(18);

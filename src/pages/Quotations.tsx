@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompanies } from '@/hooks/useCompanies';
+import { getCompanyPrefix } from '@/lib/companyPrefix';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,6 +65,7 @@ const initialFilters: FilterState = {
 };
 
 export default function Quotations() {
+  const { getSlugForId } = useCompanies();
   const navigate = useNavigate();
   const { toast, dismiss } = useToast();
   const { role } = useAuth();
@@ -237,7 +240,7 @@ export default function Quotations() {
       key: 'id',
       header: 'Quotation No',
       render: (quotation: Quotation) => {
-        const companyPrefix = quotation.company_id ? 'AH' : 'TS';
+        const companyPrefix = getCompanyPrefix(getSlugForId(quotation.company_id));
         const quotationNo = `${companyPrefix}-QT-${quotation.id.slice(0, 8).toUpperCase()}`;
         return (
           <div className="flex items-center gap-3">

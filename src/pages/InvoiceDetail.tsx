@@ -8,7 +8,7 @@ import { Download, FileText, Printer, Loader2, CreditCard, MessageCircle, Clock 
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useProjects } from '@/hooks/useProjects';
-import { useCompanies, TARGET_SPECIALTIES, ALHADAF_PROJECTS, Company } from '@/hooks/useCompanies';
+import { useCompanies, Company } from '@/hooks/useCompanies';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useState, useEffect, useMemo } from 'react';
@@ -16,8 +16,9 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import targetLogo from '@/assets/target-logo.jpg';
-import alhadafLogo from '@/assets/alhadaf-logo.png';
+import SecondaryOfficeBlock from '@/components/shared/SecondaryOfficeBlock';
+import { getLogoForCompanyName } from '@/lib/companyLogos';
+import { drawSecondaryOffice } from '@/lib/pdfOfficeBlock';
 import { INVOICE_TERMS } from '@/data/invoiceTerms';
 import { useCustomInvoiceTerms } from '@/hooks/useCustomInvoiceTerms';
 
@@ -28,7 +29,7 @@ export default function InvoiceDetail() {
   const navigate = useNavigate();
   const { invoices, loading: invoicesLoading, recordPayment } = useInvoices();
   const { projects, loading: projectsLoading } = useProjects();
-  const { activeCompanyId, alhadafCompany, loading: companiesLoading } = useCompanies();
+  const { activeCompanyId, getCompanyById, loading: companiesLoading } = useCompanies();
   const { customTerms } = useCustomInvoiceTerms();
   
   const { uploadPdfForSharing } = useDocumentPdfUpload();
@@ -59,28 +60,8 @@ export default function InvoiceDetail() {
   }, [invoice?.terms_conditions, customTerms]);
 
   const getInvoiceCompany = (): { company: Company; logo: string } => {
-    const invoiceCompanyId = invoice?.company_id;
-    
-    if (invoiceCompanyId === 'alhadaf-projects' || 
-        (invoiceCompanyId && invoiceCompanyId !== 'target-specialties')) {
-      return { 
-        company: { ...ALHADAF_PROJECTS, ...alhadafCompany },
-        logo: alhadafLogo 
-      };
-    }
-    
-    if (invoiceCompanyId === 'target-specialties') {
-      return { company: TARGET_SPECIALTIES, logo: targetLogo };
-    }
-    
-    if (activeCompanyId === 'alhadaf-projects') {
-      return { 
-        company: { ...ALHADAF_PROJECTS, ...alhadafCompany },
-        logo: alhadafLogo 
-      };
-    }
-    
-    return { company: TARGET_SPECIALTIES, logo: targetLogo };
+    const company = getCompanyById(invoice?.company_id ?? activeCompanyId);
+    return { company, logo: getLogoForCompanyName(company.name) };
   };
 
   if (invoicesLoading || projectsLoading || companiesLoading) {
@@ -128,8 +109,9 @@ export default function InvoiceDetail() {
     const img = new Image();
     img.src = logo;
     const isAlhadaf = company.name.toLowerCase().includes('hadaf');
-    const logoWidth = isAlhadaf ? 65 : 55;
-    const logoHeight = isAlhadaf ? 42 : 35;
+    const isSquareLogo = company.name.toLowerCase().includes('wpc');
+    const logoWidth = isSquareLogo ? 34 : isAlhadaf ? 65 : 55;
+    const logoHeight = isSquareLogo ? 34 : isAlhadaf ? 42 : 35;
     doc.addImage(img, 'PNG', margin, 8, logoWidth, logoHeight);
 
     // Company Header - on the right side with BOLD text
@@ -145,6 +127,7 @@ export default function InvoiceDetail() {
     doc.text(`Email: ${company.email || 'N/A'}`, rightAlignX, 29, { align: 'right' });
     doc.text(`Web: ${company.website || 'N/A'}`, rightAlignX, 36, { align: 'right' });
     doc.text(`Contact No: ${company.phone || 'N/A'}`, rightAlignX, 43, { align: 'right' });
+    drawSecondaryOffice(doc, company, margin);
     if (company.taxInfo?.trn) {
       doc.text(`TRN: ${company.taxInfo.trn}`, rightAlignX, 50, { align: 'right' });
     }
@@ -457,6 +440,7 @@ export default function InvoiceDetail() {
                 {company.email && <p className="mt-2">Email: {company.email}</p>}
                 {company.website && <p>Web: {company.website}</p>}
                 {company.phone && <p className="mt-2">Contact: {company.phone}</p>}
+                <SecondaryOfficeBlock company={company} />
                 {company.taxInfo?.trn && (
                   <p className="mt-2 font-semibold text-foreground">TRN: {company.taxInfo.trn}</p>
                 )}

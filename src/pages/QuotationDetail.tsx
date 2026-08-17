@@ -9,7 +9,8 @@ import { useQuotations } from '@/hooks/useQuotations';
 import { useProjects } from '@/hooks/useProjects';
 import { useDeliveryOrders } from '@/hooks/useDeliveryOrders';
 import { useProformaInvoices } from '@/hooks/useProformaInvoices';
-import { useCompanies, TARGET_SPECIALTIES, ALHADAF_PROJECTS, Company } from '@/hooks/useCompanies';
+import { getCompanyPrefix } from '@/lib/companyPrefix';
+import { useCompanies, Company } from '@/hooks/useCompanies';
 import { useAuth } from '@/contexts/AuthContext';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -32,8 +33,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import targetLogo from '@/assets/target-logo.jpg';
-import alhadafLogo from '@/assets/alhadaf-logo.png';
+import SecondaryOfficeBlock from '@/components/shared/SecondaryOfficeBlock';
+import { getLogoForCompanyName } from '@/lib/companyLogos';
+import { drawSecondaryOffice } from '@/lib/pdfOfficeBlock';
 
 export default function QuotationDetail() {
   const { id } = useParams();
@@ -42,7 +44,7 @@ export default function QuotationDetail() {
   const { projects, loading: projectsLoading } = useProjects();
   const { createDeliveryOrder } = useDeliveryOrders();
   const { createProformaInvoice } = useProformaInvoices();
-  const { activeCompanyId, alhadafCompany, loading: companiesLoading } = useCompanies();
+  const { activeCompanyId, getCompanyById, getSlugForId, loading: companiesLoading } = useCompanies();
   const { role } = useAuth();
   
   const { uploadPdfForSharing } = useDocumentPdfUpload();
@@ -65,30 +67,8 @@ export default function QuotationDetail() {
   // Determine which company to use for this quotation
   // Priority: quotation's company_id > active company
   const getQuotationCompany = (): { company: Company; logo: string } => {
-    const quotationCompanyId = quotation?.company_id;
-    
-    // Check if quotation has a specific company assigned
-    if (quotationCompanyId === 'alhadaf-projects' || 
-        (quotationCompanyId && quotationCompanyId !== 'target-specialties')) {
-      return { 
-        company: { ...ALHADAF_PROJECTS, ...alhadafCompany },
-        logo: alhadafLogo 
-      };
-    }
-    
-    if (quotationCompanyId === 'target-specialties') {
-      return { company: TARGET_SPECIALTIES, logo: targetLogo };
-    }
-    
-    // Fall back to active company
-    if (activeCompanyId === 'alhadaf-projects') {
-      return { 
-        company: { ...ALHADAF_PROJECTS, ...alhadafCompany },
-        logo: alhadafLogo 
-      };
-    }
-    
-    return { company: TARGET_SPECIALTIES, logo: targetLogo };
+    const company = getCompanyById(quotation?.company_id ?? activeCompanyId);
+    return { company, logo: getLogoForCompanyName(company.name) };
   };
 
   if (quotationsLoading || projectsLoading || companiesLoading) {
@@ -226,8 +206,9 @@ export default function QuotationDetail() {
     img.src = logo;
     // Use larger dimensions for Alhadaf logo to make it clearly visible
     const isAlhadaf = company.name.toLowerCase().includes('hadaf');
-    const logoWidth = isAlhadaf ? 65 : 55;
-    const logoHeight = isAlhadaf ? 42 : 35;
+    const isSquareLogo = company.name.toLowerCase().includes('wpc');
+    const logoWidth = isSquareLogo ? 34 : isAlhadaf ? 65 : 55;
+    const logoHeight = isSquareLogo ? 34 : isAlhadaf ? 42 : 35;
     doc.addImage(img, 'PNG', margin, 8, logoWidth, logoHeight);
 
     // Company Header - on the right side with BOLD text
@@ -243,6 +224,7 @@ export default function QuotationDetail() {
     doc.text(`Email: ${company.email || 'N/A'}`, rightAlignX, 29, { align: 'right' });
     doc.text(`Web: ${company.website || 'N/A'}`, rightAlignX, 36, { align: 'right' });
     doc.text(`Contact No: ${company.phone || 'N/A'}`, rightAlignX, 43, { align: 'right' });
+    drawSecondaryOffice(doc, company, margin);
 
     // Title - centered below header
     doc.setFontSize(18);
@@ -299,7 +281,7 @@ export default function QuotationDetail() {
     doc.text('Quotation No:', rightColLabel, 84);
     doc.setFont('helvetica', 'normal');
     // Use company-prefixed quotation number
-    const companyPrefix = quotation.company_id ? 'AH' : 'TS';
+    const companyPrefix = getCompanyPrefix(getSlugForId(quotation.company_id));
     const quotationNo = `${companyPrefix}-QT-${quotation.id.slice(0, 8).toUpperCase()}`;
     doc.text(quotationNo, rightColValue, 84);
 
@@ -437,7 +419,7 @@ export default function QuotationDetail() {
 
   // Generate quotation number with company prefix
   const getQuotationNumber = () => {
-    const companyPrefix = quotation.company_id ? 'AH' : 'TS';
+    const companyPrefix = getCompanyPrefix(getSlugForId(quotation.company_id));
     return `${companyPrefix}-QT-${quotation.id.slice(0, 8).toUpperCase()}`;
   };
 
@@ -628,6 +610,7 @@ export default function QuotationDetail() {
                 {company.email && <p className="mt-2">Email: {company.email}</p>}
                 {company.website && <p>Web: {company.website}</p>}
                 {company.phone && <p className="mt-2">Contact: {company.phone}</p>}
+                <SecondaryOfficeBlock company={company} />
               </div>
             </div>
             
