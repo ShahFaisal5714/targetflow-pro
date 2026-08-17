@@ -19,6 +19,7 @@ import { useDatabaseImport } from '@/hooks/useDatabaseImport';
 import { useBackupHistory } from '@/hooks/useBackupHistory';
 import targetLogo from '@/assets/target-logo.jpg';
 import alhadafLogo from '@/assets/alhadaf-logo.png';
+import tswpcLogo from '@/assets/tswpc-logo.png';
 
 export default function Settings() {
   const { 
@@ -35,10 +36,15 @@ export default function Settings() {
   const {
     targetSpecialties,
     alhadafCompany,
+    tswpcCompany,
     activeCompanyId,
+    activeDisplayId,
     alhadafDbId,
+    tswpcDbId,
+    activeCompany,
     loading: companiesLoading,
     updateAlhadafCompany,
+    updateTswpcCompany,
     updateTargetCompany,
     setActiveCompany,
     refetch: refetchCompanies,
@@ -51,9 +57,9 @@ export default function Settings() {
   // Wrapper to save backup to history with company info
   // IMPORTANT: Use actual DB UUID (alhadafDbId) not display ID for company_id
   const handleSaveToHistory = async (result: ExportResult) => {
-    const isTargetSpecialties = activeCompanyId === 'target-specialties' || !activeCompanyId;
-    const companyDbId = isTargetSpecialties ? null : alhadafDbId;
-    const companyName = isTargetSpecialties ? 'Target Specialties' : (alhadafCompany?.name || 'Al Hadaf Al Kabeer');
+    const isTargetSpecialties = activeDisplayId === 'target-specialties';
+    const companyDbId = isTargetSpecialties ? null : activeCompanyId;
+    const companyName = isTargetSpecialties ? 'Target Specialties' : (activeCompany?.name || 'Company');
     
     await saveBackup({
       filename: result.filename,
@@ -71,17 +77,15 @@ export default function Settings() {
 
   // Get active company name and ID for export
   const getActiveCompanyName = () => {
-    return activeCompanyId === 'target-specialties' 
-      ? 'Target Specialties' 
-      : alhadafCompany?.name || 'Al Hadaf Al Kabeer';
+    return activeDisplayId === 'target-specialties'
+      ? 'Target Specialties'
+      : activeCompany?.name || 'Company';
   };
 
   const getActiveCompanyIdForExport = (): string | null => {
     // Target Specialties uses null company_id in database
     // Use actual DB UUID (alhadafDbId) not display ID
-    return (activeCompanyId === 'target-specialties' || !activeCompanyId)
-      ? null 
-      : alhadafDbId || null;
+    return activeDisplayId === 'target-specialties' ? null : activeCompanyId || null;
   };
 
   const handleExportSQL = () => exportAsSQL(handleSaveToHistory, getActiveCompanyName(), getActiveCompanyIdForExport());
@@ -128,6 +132,16 @@ export default function Settings() {
     website: '',
   });
   const [savingAlhadaf, setSavingAlhadaf] = useState(false);
+
+  // TS WPC Doors editing state
+  const [editingTswpc, setEditingTswpc] = useState(false);
+  const [tswpcForm, setTswpcForm] = useState({
+    email: '',
+    phone: '',
+    address: '',
+    website: '',
+  });
+  const [savingTswpc, setSavingTswpc] = useState(false);
   
   // Target Specialties editing state
   const [editingTarget, setEditingTarget] = useState(false);
@@ -172,6 +186,23 @@ export default function Settings() {
   ]);
 
   useEffect(() => {
+    if (!editingTswpc && tswpcCompany) {
+      setTswpcForm({
+        email: tswpcCompany.email || '',
+        phone: tswpcCompany.phone || '',
+        address: tswpcCompany.address || '',
+        website: tswpcCompany.website || '',
+      });
+    }
+  }, [
+    editingTswpc,
+    tswpcCompany?.email,
+    tswpcCompany?.phone,
+    tswpcCompany?.address,
+    tswpcCompany?.website,
+  ]);
+
+  useEffect(() => {
     // Avoid infinite re-render loops and avoid overwriting user input while editing
     if (!editingTarget && targetSpecialties) {
       setTargetForm({
@@ -209,6 +240,14 @@ export default function Settings() {
     await refetchCompanies();
     setSavingAlhadaf(false);
     setEditingAlhadaf(false);
+  };
+
+  const handleSaveTswpc = async () => {
+    setSavingTswpc(true);
+    await updateTswpcCompany(tswpcForm);
+    await refetchCompanies();
+    setSavingTswpc(false);
+    setEditingTswpc(false);
   };
 
   const handleSaveTarget = async () => {
@@ -280,7 +319,7 @@ export default function Settings() {
                 {/* Target Specialties - Editable */}
                 <div 
                   className={`flex items-start gap-4 p-4 rounded-lg border transition-colors ${
-                    activeCompanyId === 'target-specialties' || !activeCompanyId
+                    activeDisplayId === 'target-specialties'
                       ? 'border-primary bg-primary/5' 
                       : 'bg-card hover:bg-secondary/20'
                   } ${!editingTarget ? 'cursor-pointer' : ''}`}
@@ -293,7 +332,7 @@ export default function Settings() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="font-semibold truncate">{targetSpecialties.name}</h3>
-                      {(activeCompanyId === 'target-specialties' || !activeCompanyId) && (
+                      {(activeDisplayId === 'target-specialties') && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">
                           <Star className="h-3 w-3" />
                           Active
@@ -369,7 +408,7 @@ export default function Settings() {
                         <Edit className="h-4 w-4" />
                       </Button>
                     )}
-                    {(activeCompanyId === 'target-specialties' || !activeCompanyId) ? (
+                    {(activeDisplayId === 'target-specialties') ? (
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                         <Check className="h-4 w-4 text-primary" />
                       </div>
@@ -384,7 +423,7 @@ export default function Settings() {
                 {/* Alhadaf Projects - Editable */}
                 <div 
                   className={`flex items-start gap-4 p-4 rounded-lg border transition-colors ${
-                    activeCompanyId && activeCompanyId !== 'target-specialties'
+                    activeDisplayId === 'alhadaf-projects'
                       ? 'border-primary bg-primary/5' 
                       : 'bg-card hover:bg-secondary/20'
                   } ${!editingAlhadaf ? 'cursor-pointer' : ''}`}
@@ -397,7 +436,7 @@ export default function Settings() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="font-semibold truncate">{alhadafCompany.name}</h3>
-                      {activeCompanyId && activeCompanyId !== 'target-specialties' && (
+                      {activeDisplayId === 'alhadaf-projects' && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">
                           <Star className="h-3 w-3" />
                           Active
@@ -476,7 +515,7 @@ export default function Settings() {
                         <Edit className="h-4 w-4" />
                       </Button>
                     )}
-                    {activeCompanyId && activeCompanyId !== 'target-specialties' ? (
+                    {activeDisplayId === 'alhadaf-projects' ? (
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                         <Check className="h-4 w-4 text-primary" />
                       </div>
