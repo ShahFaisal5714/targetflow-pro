@@ -104,9 +104,20 @@ export const drawPdfHeader = (doc: jsPDF, options: PdfHeaderOptions): PdfHeaderM
   const template = getCompanyPdfTemplate(company, showTrn);
 
   // Logo (left)
-  const img = new Image();
-  img.src = logo;
-  doc.addImage(img, 'PNG', template.logo.x ?? margin, template.logo.y, template.logo.width, template.logo.height);
+  let logoInput: unknown = logo;
+  if (typeof Image !== 'undefined') {
+    const img = new Image();
+    img.src = logo;
+    logoInput = img;
+  }
+  doc.addImage(
+    logoInput as HTMLImageElement,
+    'PNG',
+    template.logo.x ?? margin,
+    template.logo.y,
+    template.logo.width,
+    template.logo.height,
+  );
   const logoBottom = template.logo.y + template.logo.height;
 
   // Company details (right)
