@@ -233,7 +233,7 @@ export default function InvoiceDetail() {
       
       // Check if we need a new page
       const pageHeight = doc.internal.pageSize.getHeight();
-      if (termsY + (selectedTermsText.length * 5) + 20 > pageHeight - 20) {
+      if (termsY + (selectedTermsText.length * 5) + 20 > pageHeight - 30) {
         doc.addPage();
         termsY = 20;
       }

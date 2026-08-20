@@ -372,7 +372,7 @@ export default function QuotationDetail() {
     }
 
     // Terms & Conditions
-    if (bankY < 270) {
+    if (bankY < 262) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       doc.text('Terms & Conditions', 15, bankY);
