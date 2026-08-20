@@ -18,7 +18,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import SecondaryOfficeBlock from '@/components/shared/SecondaryOfficeBlock';
 import { getLogoForCompanyName } from '@/lib/companyLogos';
-import { drawSecondaryOffice } from '@/lib/pdfOfficeBlock';
+import { drawPdfHeader, drawDocumentFooter } from '@/lib/pdfTemplate';
 import { INVOICE_TERMS } from '@/data/invoiceTerms';
 import { useCustomInvoiceTerms } from '@/hooks/useCustomInvoiceTerms';
 
@@ -105,38 +105,16 @@ export default function InvoiceDetail() {
     const margin = 14;
     const contentWidth = pageWidth - (margin * 2);
     
-    // Add logo - on the left side (larger for Alhadaf)
-    const img = new Image();
-    img.src = logo;
-    const isAlhadaf = company.name.toLowerCase().includes('hadaf');
-    const isSquareLogo = company.name.toLowerCase().includes('wpc');
-    const logoWidth = isSquareLogo ? 34 : isAlhadaf ? 65 : 55;
-    const logoHeight = isSquareLogo ? 34 : isAlhadaf ? 42 : 35;
-    doc.addImage(img, 'PNG', margin, 8, logoWidth, logoHeight);
-
-    // Company Header - on the right side with BOLD text
-    const rightAlignX = pageWidth - margin;
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text(company.name, rightAlignX, 15, { align: 'right' });
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(40, 40, 40);
-    doc.text(company.address || '', rightAlignX, 22, { align: 'right' });
-    doc.text(`Email: ${company.email || 'N/A'}`, rightAlignX, 29, { align: 'right' });
-    doc.text(`Web: ${company.website || 'N/A'}`, rightAlignX, 36, { align: 'right' });
-    doc.text(`Contact No: ${company.phone || 'N/A'}`, rightAlignX, 43, { align: 'right' });
-    drawSecondaryOffice(doc, company, margin);
-    if (company.taxInfo?.trn) {
-      doc.text(`TRN: ${company.taxInfo.trn}`, rightAlignX, 50, { align: 'right' });
-    }
-
-    // Title - centered below header
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text('TAX INVOICE', pageWidth / 2, 58, { align: 'center' });
+    // Per-company header template (logo, contact block, offices, TRN, title)
+    const metrics = drawPdfHeader(doc, {
+      company,
+      logo,
+      title: 'TAX INVOICE',
+      margin,
+      showTrn: true,
+      detailsGap: 10,
+      tableGap: 37,
+    });
 
     // Invoice details - Centered layout
     doc.setFontSize(9);
@@ -150,7 +128,7 @@ export default function InvoiceDetail() {
     const rightColLabel = centerX + 10;
     const rightColValue = centerX + 10 + 25;
     
-    let detailsY = 68;
+    let detailsY = metrics.detailsY;
     
     doc.setFont('helvetica', 'bold');
     doc.text('Invoice No:', leftColLabel, detailsY);
@@ -192,7 +170,7 @@ export default function InvoiceDetail() {
     }
 
     // Items table - adjusted for larger header
-    const tableStartY = buyerTrn ? 100 : 95;
+    const tableStartY = metrics.tableStartY + (buyerTrn ? 5 : 0);
     const tableData = invoice.items.map((item, index) => [
       index + 1,
       item.description.toUpperCase(),
@@ -276,6 +254,8 @@ export default function InvoiceDetail() {
         doc.text(splitText, margin, termY);
       });
     }
+
+    drawDocumentFooter(doc, company, margin);
 
     return doc;
   };
