@@ -19,7 +19,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import SecondaryOfficeBlock from '@/components/shared/SecondaryOfficeBlock';
 import { getLogoForCompanyName } from '@/lib/companyLogos';
-import { drawSecondaryOffice } from '@/lib/pdfOfficeBlock';
+import { drawPdfHeader, drawDocumentFooter } from '@/lib/pdfTemplate';
 
 import { useDocumentPdfUpload } from '@/hooks/useDocumentPdfUpload';
 import {
@@ -84,38 +84,16 @@ export default function ProformaInvoiceDetail() {
     const margin = 14;
     const contentWidth = pageWidth - (margin * 2);
     
-    // Add logo
-    const img = new Image();
-    img.src = logo;
-    const isAlhadaf = company.name.toLowerCase().includes('hadaf');
-    const isSquareLogo = company.name.toLowerCase().includes('wpc');
-    const logoWidth = isSquareLogo ? 34 : isAlhadaf ? 65 : 55;
-    const logoHeight = isSquareLogo ? 34 : isAlhadaf ? 42 : 35;
-    doc.addImage(img, 'PNG', margin, 8, logoWidth, logoHeight);
-
-    // Company Header
-    const rightAlignX = pageWidth - margin;
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text(company.name, rightAlignX, 15, { align: 'right' });
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(40, 40, 40);
-    doc.text(company.address || '', rightAlignX, 22, { align: 'right' });
-    doc.text(`Email: ${company.email || 'N/A'}`, rightAlignX, 29, { align: 'right' });
-    doc.text(`Web: ${company.website || 'N/A'}`, rightAlignX, 36, { align: 'right' });
-    doc.text(`Contact No: ${company.phone || 'N/A'}`, rightAlignX, 43, { align: 'right' });
-    drawSecondaryOffice(doc, company, margin);
-    if (company.taxInfo?.trn) {
-      doc.text(`TRN: ${company.taxInfo.trn}`, rightAlignX, 50, { align: 'right' });
-    }
-
-    // Title
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text('PROFORMA INVOICE', pageWidth / 2, 58, { align: 'center' });
+    // Per-company header template (logo, contact block, offices, TRN, title)
+    const metrics = drawPdfHeader(doc, {
+      company,
+      logo,
+      title: 'PROFORMA INVOICE',
+      margin,
+      showTrn: true,
+      detailsGap: 10,
+      tableGap: 37,
+    });
 
     // Details - Centered layout
     doc.setFontSize(9);
@@ -128,7 +106,8 @@ export default function ProformaInvoiceDetail() {
     const rightColLabel = centerX + 10;
     const rightColValue = centerX + 10 + 25;
     
-    let detailsY = 68;
+    let detailsY = metrics.detailsY;
+
     
     doc.setFont('helvetica', 'bold');
     doc.text('PI No:', leftColLabel, detailsY);
@@ -161,7 +140,7 @@ export default function ProformaInvoiceDetail() {
     doc.text(proforma.status.toUpperCase(), rightColValue, detailsY + 14);
 
     // Items table
-    const tableStartY = 95;
+    const tableStartY = metrics.tableStartY;
     const tableData = proforma.items.map((item, index) => [
       index + 1,
       item.description.toUpperCase(),
@@ -215,6 +194,8 @@ export default function ProformaInvoiceDetail() {
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(100, 100, 100);
     doc.text('This is a proforma invoice for reference purposes only. A tax invoice will be issued upon order confirmation.', margin, finalY + 30);
+
+    drawDocumentFooter(doc, company, margin);
 
     return doc;
   };

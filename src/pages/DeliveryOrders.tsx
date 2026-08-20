@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getLogoForCompanyName } from '@/lib/companyLogos';
-import { drawSecondaryOffice } from '@/lib/pdfOfficeBlock';
+import { drawPdfHeader, drawDocumentFooter, drawSignatureBlock } from '@/lib/pdfTemplate';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -261,73 +261,54 @@ export default function DeliveryOrders() {
     const margin = 14;
     const contentWidth = pageWidth - (margin * 2);
     
-    // Add logo - on the left side (larger for Alhadaf)
-    const img = new Image();
-    img.src = logo;
-    const isAlhadaf = company.name.toLowerCase().includes('hadaf');
-    const isSquareLogo = company.name.toLowerCase().includes('wpc');
-    const logoWidth = isSquareLogo ? 34 : isAlhadaf ? 65 : 55;
-    const logoHeight = isSquareLogo ? 34 : isAlhadaf ? 42 : 35;
-    doc.addImage(img, 'PNG', margin, 8, logoWidth, logoHeight);
+    // Per-company header template (logo, contact block, offices, title)
+    const metrics = drawPdfHeader(doc, {
+      company,
+      logo,
+      title: 'DELIVERY ORDER',
+      margin,
+      detailsGap: 14,
+      tableGap: 39,
+    });
 
-    // Company Header - on the right side with BOLD text
-    const rightAlignX = pageWidth - margin;
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text(company.name, rightAlignX, 15, { align: 'right' });
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(40, 40, 40);
-    doc.text(company.address || '', rightAlignX, 22, { align: 'right' });
-    doc.text(`Email: ${company.email || 'N/A'}`, rightAlignX, 29, { align: 'right' });
-    doc.text(`Web: ${company.website || 'N/A'}`, rightAlignX, 36, { align: 'right' });
-    doc.text(`Contact No: ${company.phone || 'N/A'}`, rightAlignX, 43, { align: 'right' });
-    drawSecondaryOffice(doc, company, margin);
-
-    // Title - centered below header
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text('DELIVERY ORDER', pageWidth / 2, 56, { align: 'center' });
-
-    // Order details section
-    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
     const leftColLabel = margin;
-    const leftColValue = margin + 35;
+    const leftColValue = margin + 30;
     const rightColLabel = pageWidth / 2 + 5;
     const rightColValue = pageWidth / 2 + 35;
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Delivery No:', leftColLabel, 70);
-    doc.setFont('helvetica', 'normal');
-    doc.text(order.delivery_number, leftColValue, 70);
+    const detailsY = metrics.detailsY;
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Project:', leftColLabel, 77);
+    doc.text('Delivery No:', leftColLabel, detailsY);
     doc.setFont('helvetica', 'normal');
-    doc.text(order.project_name || 'N/A', leftColValue, 77);
+    doc.text(order.delivery_number, leftColValue, detailsY);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Status:', leftColLabel, 84);
+    doc.text('Project:', leftColLabel, detailsY + 7);
     doc.setFont('helvetica', 'normal');
-    doc.text(order.status.toUpperCase(), leftColValue, 84);
+    doc.text(order.project_name || 'N/A', leftColValue, detailsY + 7);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Date:', rightColLabel, 70);
+    doc.text('Status:', leftColLabel, detailsY + 14);
     doc.setFont('helvetica', 'normal');
-    doc.text(new Date(order.created_at).toLocaleDateString('en-GB'), rightColValue, 70);
+    doc.text(order.status.toUpperCase(), leftColValue, detailsY + 14);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Delivery Date:', rightColLabel, 77);
+    doc.text('Date:', rightColLabel, detailsY);
     doc.setFont('helvetica', 'normal');
-    doc.text(order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('en-GB') : 'Not set', rightColValue, 77);
+    doc.text(new Date(order.created_at).toLocaleDateString('en-GB'), rightColValue, detailsY);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Delivery Date:', rightColLabel, detailsY + 7);
+    doc.setFont('helvetica', 'normal');
+    doc.text(order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('en-GB') : 'Not set', rightColValue, detailsY + 7);
 
     if (project?.contractor?.name) {
       doc.setFont('helvetica', 'bold');
-      doc.text('Contractor:', rightColLabel, 84);
+      doc.text('Contractor:', rightColLabel, detailsY + 14);
       doc.setFont('helvetica', 'normal');
-      doc.text(project.contractor.name, rightColValue, 84);
+      doc.text(project.contractor.name, rightColValue, detailsY + 14);
     }
 
     // Items table
@@ -340,7 +321,7 @@ export default function DeliveryOrders() {
     ]);
 
     autoTable(doc, {
-      startY: 95,
+      startY: metrics.tableStartY,
       head: [['S No', 'Product Name', 'Unit', 'Ordered Qty', 'Delivering Qty']],
       body: tableData,
       theme: 'grid',
@@ -374,20 +355,13 @@ export default function DeliveryOrders() {
       doc.text(splitNotes, margin, finalY + 7);
     }
 
-    // Signature section
+    // Signature / acknowledgement area
     const signatureY = (doc as any).lastAutoTable.finalY + (order.notes ? 40 : 20);
-    if (signatureY < 260) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.text('Received By:', margin, signatureY);
-      doc.line(margin + 25, signatureY, margin + 80, signatureY);
-      
-      doc.text('Date:', pageWidth / 2, signatureY);
-      doc.line(pageWidth / 2 + 15, signatureY, pageWidth / 2 + 60, signatureY);
-      
-      doc.text('Signature:', margin, signatureY + 15);
-      doc.line(margin + 25, signatureY + 15, margin + 80, signatureY + 15);
+    if (signatureY < 250) {
+      drawSignatureBlock(doc, signatureY, { margin });
     }
+
+    drawDocumentFooter(doc, company, margin);
 
     return doc;
   };
