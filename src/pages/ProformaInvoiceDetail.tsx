@@ -19,7 +19,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import SecondaryOfficeBlock from '@/components/shared/SecondaryOfficeBlock';
 import { getLogoForCompanyName } from '@/lib/companyLogos';
-import { drawSecondaryOffice } from '@/lib/pdfOfficeBlock';
+import { drawPdfHeader, drawDocumentFooter } from '@/lib/pdfTemplate';
 
 import { useDocumentPdfUpload } from '@/hooks/useDocumentPdfUpload';
 import {
@@ -140,7 +140,7 @@ export default function ProformaInvoiceDetail() {
     doc.text(proforma.status.toUpperCase(), rightColValue, detailsY + 14);
 
     // Items table
-    const tableStartY = 95;
+    const tableStartY = metrics.tableStartY;
     const tableData = proforma.items.map((item, index) => [
       index + 1,
       item.description.toUpperCase(),
@@ -194,6 +194,8 @@ export default function ProformaInvoiceDetail() {
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(100, 100, 100);
     doc.text('This is a proforma invoice for reference purposes only. A tax invoice will be issued upon order confirmation.', margin, finalY + 30);
+
+    drawDocumentFooter(doc, company, margin);
 
     return doc;
   };
