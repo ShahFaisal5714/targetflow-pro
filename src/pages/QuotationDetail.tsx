@@ -576,7 +576,7 @@ export default function QuotationDetail() {
       <div className="p-6">
         <Card className="max-w-5xl mx-auto print-container">
           {/* Company Header */}
-          <div className="p-8 border-b bg-gradient-to-br from-primary/5 to-accent/5 print-header print-no-break">
+          <div className="p-4 sm:p-8 border-b bg-gradient-to-br from-primary/5 to-accent/5 print-header print-no-break">
             <div className="flex items-start justify-between mb-6">
               <div className="print-logo-container bg-white rounded-lg p-4 shadow-sm border border-border/30 flex items-center justify-center" style={{ minWidth: '120px', minHeight: '60px' }}>
                 <img 
@@ -605,7 +605,7 @@ export default function QuotationDetail() {
           </div>
 
           {/* Details Section */}
-          <div className="p-8 grid grid-cols-2 gap-8 border-b">
+          <div className="p-4 sm:p-8 grid grid-cols-1 sm:grid-cols-2 gap-8 border-b">
             <div className="space-y-3">
               <div>
                 <p className="text-xs font-semibold text-muted-foreground">Attention:</p>
@@ -654,7 +654,7 @@ export default function QuotationDetail() {
           </div>
 
           {/* Items Table */}
-          <div className="p-8 border-b">
+          <div className="p-4 sm:p-8 border-b">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -684,7 +684,7 @@ export default function QuotationDetail() {
           </div>
 
           {/* Totals */}
-          <div className="p-8 border-b bg-muted/30">
+          <div className="p-4 sm:p-8 border-b bg-muted/30">
             <div className="max-w-md ml-auto space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="font-semibold">Sub Total Amount (AED):</span>
@@ -702,8 +702,8 @@ export default function QuotationDetail() {
           </div>
 
           {/* Terms */}
-          <div className="p-8 space-y-4">
-            <div className="grid grid-cols-3 gap-4 text-sm">
+          <div className="p-4 sm:p-8 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="font-semibold text-foreground mb-1">Delivery Terms:</p>
                 <p className="text-muted-foreground">Delivery to site.</p>
@@ -786,7 +786,7 @@ export default function QuotationDetail() {
                       <span className="font-medium">{item.productName}</span>
                       <span className="text-sm text-muted-foreground">{item.unit}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <Label className="text-xs">Ordered Quantity</Label>
                         <Input value={item.orderedQuantity} readOnly className="bg-muted" />
@@ -897,7 +897,7 @@ export default function QuotationDetail() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Client</p>
                 <p className="font-medium">{project?.contractor?.name || quotation?.project_name}</p>

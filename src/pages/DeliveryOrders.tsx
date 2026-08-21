@@ -582,7 +582,7 @@ export default function DeliveryOrders() {
                   {formData.items.map((item, index) => (
                     <Card key={item.id}>
                       <CardContent className="p-3">
-                        <div className="grid grid-cols-12 gap-2 items-end">
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
                           <div className="col-span-4">
                             <Label className="text-xs">Product Name</Label>
                             <Input 

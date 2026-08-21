@@ -44,7 +44,13 @@ const navigation = [
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  variant?: 'desktop' | 'mobile';
+  onNavigate?: () => void;
+}
+
+export default function Sidebar({ variant = 'desktop', onNavigate }: SidebarProps) {
+  const isMobile = variant === 'mobile';
   const [collapsed, setCollapsed] = useState(false);
   const { profile, role, signOut, hasAccess } = useAuth();
   const { activeDisplayId } = useCompanies();
@@ -86,8 +92,9 @@ export default function Sidebar() {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 h-screen bg-sidebar transition-all duration-300 flex flex-col',
-        collapsed ? 'w-20' : 'w-64'
+        'bg-sidebar transition-all duration-300 flex flex-col',
+        isMobile ? 'h-full w-full' : 'fixed left-0 top-0 z-40 h-screen',
+        !isMobile && (collapsed ? 'w-20' : 'w-64')
       )}
     >
       {/* Logo */}
@@ -100,19 +107,21 @@ export default function Sidebar() {
               className={brand.boxed ? 'h-8 w-8 object-contain' : 'h-10 w-10 object-contain rounded-lg'}
             />
           </div>
-          {!collapsed && (
+          {(isMobile || !collapsed) && (
             <div className="animate-fade-in">
               <h1 className="text-lg font-bold text-sidebar-foreground">{companyDisplayName}</h1>
               <p className="text-xs text-sidebar-foreground/60">{companySubtitle}</p>
             </div>
           )}
         </div>
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-sidebar-accent text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors"
-        >
-          {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-        </button>
+        {!isMobile && (
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-sidebar-accent text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors"
+          >
+            {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -122,6 +131,7 @@ export default function Sidebar() {
             <li key={item.name}>
               <NavLink
                 to={item.href}
+                onClick={onNavigate}
                 className={({ isActive }) =>
                   cn(
                     'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group',
@@ -134,7 +144,7 @@ export default function Sidebar() {
                 {({ isActive }) => (
                   <>
                     <item.icon className={cn('h-5 w-5 shrink-0', isActive && 'text-sidebar-primary')} />
-                    {!collapsed && (
+                    {(isMobile || !collapsed) && (
                       <span className="text-sm font-medium animate-fade-in">{item.name}</span>
                     )}
                     {isActive && (
@@ -158,7 +168,7 @@ export default function Sidebar() {
                   {profile?.full_name ? getInitials(profile.full_name) : 'U'}
                 </span>
               </div>
-              {!collapsed && (
+              {(isMobile || !collapsed) && (
                 <div className="animate-fade-in text-left min-w-0">
                   <p className="text-sm font-medium text-sidebar-foreground truncate">
                     {profile?.full_name || 'User'}

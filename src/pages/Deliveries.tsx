@@ -114,7 +114,7 @@ export default function Deliveries() {
               ))}
               {pendingDeliveries.length === 0 && (
                 <Card>
-                  <CardContent className="p-8 text-center text-muted-foreground">
+                  <CardContent className="p-4 sm:p-8 text-center text-muted-foreground">
                     No pending deliveries
                   </CardContent>
                 </Card>
@@ -163,7 +163,7 @@ export default function Deliveries() {
               ))}
               {dispatchedDeliveries.length === 0 && (
                 <Card>
-                  <CardContent className="p-8 text-center text-muted-foreground">
+                  <CardContent className="p-4 sm:p-8 text-center text-muted-foreground">
                     No deliveries in transit
                   </CardContent>
                 </Card>
@@ -207,7 +207,7 @@ export default function Deliveries() {
               ))}
               {completedDeliveries.length === 0 && (
                 <Card>
-                  <CardContent className="p-8 text-center text-muted-foreground">
+                  <CardContent className="p-4 sm:p-8 text-center text-muted-foreground">
                     No completed deliveries
                   </CardContent>
                 </Card>

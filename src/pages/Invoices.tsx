@@ -359,7 +359,7 @@ export default function Invoices() {
         } : undefined}
       />
 
-      <div className="px-6 py-6 space-y-6">
+      <div className="px-4 py-4 sm:px-6 sm:py-6 min-w-0 space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-xl p-4">
@@ -459,7 +459,7 @@ export default function Invoices() {
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>Project</Label>
                 <Select 
@@ -559,7 +559,7 @@ export default function Invoices() {
                         </div>
                         
                         {/* Item Details Row */}
-                        <div className="grid grid-cols-12 gap-2 items-end">
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
                           <div className="col-span-5">
                             <Label className="text-xs">Description</Label>
                             <Input 
