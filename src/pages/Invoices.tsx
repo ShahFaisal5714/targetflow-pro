@@ -359,7 +359,7 @@ export default function Invoices() {
         } : undefined}
       />
 
-      <div className="px-4 py-4 sm:px-6 sm:py-6 space-y-6">
+      <div className="px-4 py-4 sm:px-6 sm:py-6 min-w-0 space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-xl p-4">

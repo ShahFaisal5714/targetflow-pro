@@ -26,7 +26,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           <Sidebar />
         </div>
         <MobileSidebar />
-        <main className="lg:pl-64 transition-all duration-300 min-w-0">
+        <main className="lg:pl-64 transition-all duration-300 min-w-0 overflow-x-clip">
           {children}
         </main>
       </div>
