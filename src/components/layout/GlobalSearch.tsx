@@ -102,6 +102,15 @@ export default function GlobalSearch() {
         </kbd>
       </button>
 
+      {/* Mobile search trigger */}
+      <button
+        onClick={() => setOpen(true)}
+        aria-label="Search"
+        className="md:hidden flex h-10 w-10 items-center justify-center rounded-lg hover:bg-secondary transition-colors"
+      >
+        <Search className="h-5 w-5 text-muted-foreground" />
+      </button>
+
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput 
           placeholder="Search projects, quotations, invoices..." 

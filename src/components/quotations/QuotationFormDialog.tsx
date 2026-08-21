@@ -350,10 +350,10 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
           </div>
 
           {/* Discount & Totals */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="space-y-4">
               <Label className="text-lg font-semibold">Discount</Label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>Type</Label>
                   <Select value={discountType} onValueChange={(value: 'percentage' | 'flat') => setDiscountType(value)}>

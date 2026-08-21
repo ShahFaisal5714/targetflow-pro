@@ -143,7 +143,7 @@ export default function ProjectDetail() {
               <StatusBadge status={project.status} />
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <p className="text-sm text-muted-foreground">Status</p>
                   <p className="font-medium text-foreground">
@@ -350,7 +350,7 @@ export default function ProjectDetail() {
               </div>
             ) : (
               <Card>
-                <CardContent className="p-8 text-center">
+                <CardContent className="p-4 sm:p-8 text-center">
                   <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground mb-4">No quotations yet</p>
                   <Button>
@@ -398,7 +398,7 @@ export default function ProjectDetail() {
               </div>
             ) : (
               <Card>
-                <CardContent className="p-8 text-center">
+                <CardContent className="p-4 sm:p-8 text-center">
                   <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">No sales orders yet</p>
                 </CardContent>

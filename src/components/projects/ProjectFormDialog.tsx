@@ -265,7 +265,7 @@ export default function ProjectFormDialog({ open, onOpenChange, project, onSubmi
           </div>
 
           {/* 10. Sales Manager */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="salesManager">10. Sales Manager Name:</Label>
               <Input 

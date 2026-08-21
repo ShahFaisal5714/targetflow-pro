@@ -378,7 +378,7 @@ export default function Quotations() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="px-6 py-6 space-y-6">
+      <div className="px-4 py-4 sm:px-6 sm:py-6 space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-card rounded-xl p-4 border border-border/50">

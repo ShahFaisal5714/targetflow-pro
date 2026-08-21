@@ -405,7 +405,7 @@ export default function InvoiceDetail() {
       <div className="p-6">
         <Card className="max-w-5xl mx-auto">
           {/* Company Header */}
-          <div className="p-8 border-b bg-gradient-to-br from-primary/5 to-accent/5">
+          <div className="p-4 sm:p-8 border-b bg-gradient-to-br from-primary/5 to-accent/5">
             <div className="flex items-start justify-between mb-6">
               <div className="bg-white rounded-lg p-4 shadow-sm border border-border/30 flex items-center justify-center" style={{ minWidth: '180px', minHeight: '100px' }}>
                 <img 
@@ -436,8 +436,8 @@ export default function InvoiceDetail() {
           </div>
 
           {/* Details Section - Centered */}
-          <div className="p-8 border-b flex justify-center">
-            <div className="grid grid-cols-2 gap-x-16 gap-y-3">
+          <div className="p-4 sm:p-8 border-b flex justify-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-16 gap-y-3">
               <div className="flex items-baseline gap-2">
                 <p className="text-xs font-semibold text-muted-foreground whitespace-nowrap">Invoice No:</p>
                 <p className="text-sm text-foreground font-mono font-semibold">{invoice.invoice_number}</p>
@@ -475,7 +475,7 @@ export default function InvoiceDetail() {
           </div>
 
           {/* Items Table */}
-          <div className="p-8 border-b">
+          <div className="p-4 sm:p-8 border-b">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -503,7 +503,7 @@ export default function InvoiceDetail() {
           </div>
 
           {/* Totals */}
-          <div className="p-8 border-b bg-muted/30">
+          <div className="p-4 sm:p-8 border-b bg-muted/30">
             <div className="max-w-md ml-auto space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
@@ -522,7 +522,7 @@ export default function InvoiceDetail() {
 
           {/* Terms & Conditions */}
           {invoice.terms_conditions && invoice.terms_conditions.length > 0 && (
-            <div className="p-8 border-b">
+            <div className="p-4 sm:p-8 border-b">
               <h3 className="font-bold text-foreground mb-3">Terms & Conditions</h3>
               <div className="space-y-2 text-xs text-muted-foreground">
                 {invoice.terms_conditions.map((termId, index) => {
@@ -537,7 +537,7 @@ export default function InvoiceDetail() {
           )}
 
           {/* Payment Status */}
-          <div className="p-8">
+          <div className="p-4 sm:p-8">
             <h3 className="font-semibold mb-4">Payment Status</h3>
             <div className="space-y-4">
               <div className="flex justify-between items-center">

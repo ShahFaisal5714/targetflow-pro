@@ -342,7 +342,7 @@ export default function Settings() {
 
                     {editingTarget ? (
                       <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <div className="space-y-1">
                             <Label className="text-xs">Email</Label>
                             <Input 
@@ -446,7 +446,7 @@ export default function Settings() {
 
                     {editingAlhadaf ? (
                       <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <div className="space-y-1">
                             <Label className="text-xs">Email</Label>
                             <Input 
@@ -553,7 +553,7 @@ export default function Settings() {
 
                     {editingTswpc ? (
                       <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <div className="space-y-1">
                             <Label className="text-xs">Email</Label>
                             <Input 
@@ -642,7 +642,7 @@ export default function Settings() {
                   <CardDescription>Update your default company details</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="companyName">Company Name</Label>
                       <Input 
@@ -662,7 +662,7 @@ export default function Settings() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
                       <Input 
@@ -705,7 +705,7 @@ export default function Settings() {
                   <CardDescription>Configure tax rates for quotations and invoices</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="vatRate">VAT Rate (%)</Label>
                       <Input 
