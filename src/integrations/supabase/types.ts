@@ -131,6 +131,57 @@ export type Database = {
         }
         Relationships: []
       }
+      customers: {
+        Row: {
+          address: string | null
+          company_id: string | null
+          contact_person: string | null
+          created_at: string
+          credit_limit: number
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          payment_terms: string | null
+          phone: string | null
+          trn: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          company_id?: string | null
+          contact_person?: string | null
+          created_at?: string
+          credit_limit?: number
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          payment_terms?: string | null
+          phone?: string | null
+          trn?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          company_id?: string | null
+          contact_person?: string | null
+          created_at?: string
+          credit_limit?: number
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          payment_terms?: string | null
+          phone?: string | null
+          trn?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       delivery_orders: {
         Row: {
           company_id: string | null
