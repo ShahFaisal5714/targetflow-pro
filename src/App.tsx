@@ -18,6 +18,7 @@ import ProformaInvoiceDetail from "./pages/ProformaInvoiceDetail";
 import ProformaInvoices from "./pages/ProformaInvoices";
 import DeliveryOrders from "./pages/DeliveryOrders";
 import Inventory from "./pages/Inventory";
+import Customers from "./pages/Customers";
 import Payments from "./pages/Payments";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/proforma-invoices" element={<ProtectedRoute><ProformaInvoices /></ProtectedRoute>} />
               <Route path="/proforma-invoices/:id" element={<ProtectedRoute><ProformaInvoiceDetail /></ProtectedRoute>} />
               <Route path="/delivery-orders" element={<ProtectedRoute><DeliveryOrders /></ProtectedRoute>} />
+              <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
               <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
               <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
               <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />

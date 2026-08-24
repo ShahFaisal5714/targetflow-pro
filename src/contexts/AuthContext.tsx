@@ -44,6 +44,7 @@ export const roleAccess: Record<string, AppRole[]> = {
   '/sales-orders': ['admin', 'sales_manager', 'viewer'],
   '/invoices': ['admin', 'sales_manager', 'viewer'],
   '/deliveries': ['admin', 'operations', 'viewer'],
+  '/customers': ['admin', 'sales_manager', 'operations', 'viewer'],
   '/inventory': ['admin', 'operations', 'viewer'],
   '/payments': ['admin', 'sales_manager', 'viewer'],
   '/users': ['admin'],
