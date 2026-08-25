@@ -42,6 +42,7 @@ export default function Projects() {
   const { role } = useAuth();
   const canEdit = role !== 'viewer';
   const { projects, loading, createProject, updateProject, deleteProject, refetch } = useProjects();
+  const { captureCustomer } = useCustomers();
   const [activeTab, setActiveTab] = useState<ProjectStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
