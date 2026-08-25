@@ -36,6 +36,8 @@ import autoTable from 'jspdf-autotable';
 import SecondaryOfficeBlock from '@/components/shared/SecondaryOfficeBlock';
 import { getLogoForCompanyName } from '@/lib/companyLogos';
 import { drawPdfHeader, drawDocumentFooter } from '@/lib/pdfTemplate';
+import { buildWpcQuotationPdf } from '@/lib/wpcQuotationPdf';
+
 
 export default function QuotationDetail() {
   const { id } = useParams();
