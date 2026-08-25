@@ -6,6 +6,7 @@ import DataTable from '@/components/shared/DataTable';
 import StatusBadge from '@/components/shared/StatusBadge';
 import ProjectFormDialog from '@/components/projects/ProjectFormDialog';
 import { useProjects } from '@/hooks/useProjects';
+import { useCustomers } from '@/hooks/useCustomers';
 import { Project, ProjectStatus } from '@/types/crm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,7 @@ export default function Projects() {
   const { role } = useAuth();
   const canEdit = role !== 'viewer';
   const { projects, loading, createProject, updateProject, deleteProject, refetch } = useProjects();
+  const { captureCustomer } = useCustomers();
   const [activeTab, setActiveTab] = useState<ProjectStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -63,6 +65,17 @@ export default function Projects() {
 
   const handleProjectCreate = async (newProject: Partial<Project>) => {
     await createProject(newProject);
+
+    const party = newProject.client?.name ? newProject.client : newProject.contractor;
+    if (party?.name) {
+      await captureCustomer({
+        name: party.name,
+        contact_person: party.contact || null,
+        email: party.email || null,
+        phone: party.phone || null,
+        address: party.address || null,
+      });
+    }
   };
 
   const handleDeleteProject = (project: Project, e: React.MouseEvent) => {

@@ -15,6 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompanies } from '@/hooks/useCompanies';
+import { useProjects } from '@/hooks/useProjects';
+import { useCustomers } from '@/hooks/useCustomers';
 import { getCompanyPrefix } from '@/lib/companyPrefix';
 import {
   AlertDialog,
@@ -72,6 +74,8 @@ export default function Quotations() {
   const canEdit = role !== 'viewer';
   const isAdmin = role === 'admin';
   const { quotations, loading, createQuotation, updateQuotation, deleteQuotation, refetch } = useQuotations();
+  const { projects } = useProjects();
+  const { captureCustomer } = useCustomers();
   const [activeTab, setActiveTab] = useState<QuotationStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -119,8 +123,23 @@ export default function Quotations() {
       valid_until: newQuotation.validUntil,
       status: newQuotation.status,
     });
+
+    const project = projects.find((p) => p.id === newQuotation.projectId);
+    const party = project?.client?.name ? project.client : project?.contractor;
+    const customerName = party?.name || newQuotation.projectName;
+    if (customerName) {
+      await captureCustomer({
+        name: customerName,
+        contact_person: party?.contact || null,
+        email: party?.email || null,
+        phone: party?.phone || null,
+        address: party?.address || null,
+      });
+    }
+
     refetch();
   };
+
 
   const handleEditQuotation = (quotation: Quotation, e: React.MouseEvent) => {
     e.stopPropagation();
