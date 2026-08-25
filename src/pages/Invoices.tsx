@@ -6,6 +6,7 @@ import DataTable from '@/components/shared/DataTable';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useInvoices, Invoice } from '@/hooks/useInvoices';
 import { useProjects } from '@/hooks/useProjects';
+import { useCustomers } from '@/hooks/useCustomers';
 import { useProducts } from '@/hooks/useProducts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
