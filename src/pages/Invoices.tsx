@@ -50,6 +50,7 @@ export default function Invoices() {
   const { toast, dismiss } = useToast();
   const { invoices, loading, createInvoice, deleteInvoice } = useInvoices();
   const { projects } = useProjects();
+  const { captureCustomer } = useCustomers();
   const { products } = useProducts();
   const canEdit = role !== 'viewer';
   const isAdmin = role === 'admin';
