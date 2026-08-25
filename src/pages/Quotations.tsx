@@ -74,6 +74,8 @@ export default function Quotations() {
   const canEdit = role !== 'viewer';
   const isAdmin = role === 'admin';
   const { quotations, loading, createQuotation, updateQuotation, deleteQuotation, refetch } = useQuotations();
+  const { projects } = useProjects();
+  const { captureCustomer } = useCustomers();
   const [activeTab, setActiveTab] = useState<QuotationStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
