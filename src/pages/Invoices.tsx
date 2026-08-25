@@ -164,10 +164,11 @@ export default function Invoices() {
     const total = subtotal + taxAmount;
 
     const project = projects.find(p => p.id === formData.projectId);
+    const clientName = formData.clientName || project?.contractor?.name || 'Unknown Client';
 
     await createInvoice({
       project_id: formData.projectId || null,
-      client_name: formData.clientName || project?.contractor?.name || 'Unknown Client',
+      client_name: clientName,
       items: formData.items,
       subtotal,
       tax_rate: taxRate,
@@ -178,6 +179,22 @@ export default function Invoices() {
       status: 'draft',
       terms_conditions: formData.termsConditions,
     });
+
+    const party =
+      project?.client?.name === clientName
+        ? project?.client
+        : project?.contractor?.name === clientName
+          ? project?.contractor
+          : undefined;
+
+    await captureCustomer({
+      name: clientName,
+      contact_person: party?.contact || null,
+      email: party?.email || null,
+      phone: party?.phone || null,
+      address: party?.address || null,
+    });
+
 
     setIsFormOpen(false);
     setFormData({ projectId: '', clientName: '', dueDate: '', items: [], termsConditions: getDefaultTerms() });
