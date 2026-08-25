@@ -36,6 +36,8 @@ import autoTable from 'jspdf-autotable';
 import SecondaryOfficeBlock from '@/components/shared/SecondaryOfficeBlock';
 import { getLogoForCompanyName } from '@/lib/companyLogos';
 import { drawPdfHeader, drawDocumentFooter } from '@/lib/pdfTemplate';
+import { buildWpcQuotationPdf } from '@/lib/wpcQuotationPdf';
+
 
 export default function QuotationDetail() {
   const { id } = useParams();
@@ -200,6 +202,53 @@ export default function QuotationDetail() {
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 14;
     const contentWidth = pageWidth - (margin * 2);
+
+    // TS WPC DOORS uses its own branded quotation layout
+    if (company.name.toLowerCase().includes('wpc')) {
+      const wpcPrefix = getCompanyPrefix(getSlugForId(quotation.company_id));
+      buildWpcQuotationPdf(doc, {
+        company,
+        logo,
+        attention: project?.contractor?.contact || 'N/A',
+        quotationNo: `${wpcPrefix}-QT-${quotation.id.slice(0, 8).toUpperCase()}`,
+        project: quotation.project_name,
+        scopeOfWork: 'Supply of WPC Doors',
+        location: project?.contractor?.address || 'Dubai, UAE',
+        issueDate: new Date(quotation.created_at).toLocaleDateString('en-GB'),
+        preparedBy: project?.salesManager || 'N/A',
+        phoneNo: project?.contractor?.phone || company.phone || 'N/A',
+        validity: quotation.valid_until
+          ? new Date(quotation.valid_until).toLocaleDateString('en-GB')
+          : '7 Days',
+        items: quotation.items.map((item: any) => ({
+          name: item.productName,
+          description: item.description,
+          unit: item.unit,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          total: item.total,
+        })),
+        subtotal: quotation.subtotal,
+        taxRate: quotation.tax.rate,
+        taxAmount,
+        total: quotation.total,
+        terms: [
+          'Delivery terms: Delivery to site',
+          'Delivery lag time from the date of LPO: 2-3 weeks from advance payment',
+          'Payment terms: 50% advance | 50% prior delivery of material at site / collection from our warehouse',
+          'Terms & Conditions:',
+          `1. All products remain property of ${company.name} until paid in full.`,
+          '2. Our offer excludes any civil work / electrical work / mechanical work / protection work, floor leveling & enablement works.',
+          '3. The prices are on the basis of above mentioned quantities, any variation shall be subject to revise the commercial offer.',
+          '4. Our cost of finance is 3% of the invoice value per month. Any payment not paid on the due date will be charged 3% per month.',
+          '5. Upon confirmation of the order with advance payment, the order shall be deemed firm and non-cancellable.',
+          '6. Our offer does not include the dismantling, removal, disposal or associated handling of any existing / previously installed doors at the site.',
+        ],
+      });
+      drawDocumentFooter(doc, company, margin);
+      return doc;
+    }
+
     
     // Per-company header template (logo, contact block, offices, title)
     const metrics = drawPdfHeader(doc, {
