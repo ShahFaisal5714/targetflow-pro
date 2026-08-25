@@ -15,6 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompanies } from '@/hooks/useCompanies';
+import { useProjects } from '@/hooks/useProjects';
+import { useCustomers } from '@/hooks/useCustomers';
 import { getCompanyPrefix } from '@/lib/companyPrefix';
 import {
   AlertDialog,
