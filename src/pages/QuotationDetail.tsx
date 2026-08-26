@@ -632,7 +632,12 @@ export default function QuotationDetail() {
                 {sharingWhatsApp ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <MessageCircle className="h-4 w-4 mr-2" />}
                 WhatsApp
               </Button>
+              <Button variant="outline" onClick={handleOpenPreview}>
+                <Eye className="h-4 w-4 mr-2" />
+                Preview PDF
+              </Button>
               <Button variant="outline" onClick={handleExportPDF}>
+
                 <Download className="h-4 w-4 mr-2" />
                 Export PDF
               </Button>
