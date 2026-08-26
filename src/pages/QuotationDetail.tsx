@@ -59,6 +59,9 @@ export default function QuotationDetail() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [sharingWhatsApp, setSharingWhatsApp] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
   
   const canEdit = role === 'admin' || role === 'sales_manager';
   
