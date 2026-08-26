@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Download, FileText, Printer, Loader2, Truck, Pencil, Trash2, Receipt, MessageCircle } from 'lucide-react';
+import { Download, FileText, Printer, Loader2, Truck, Pencil, Trash2, Receipt, MessageCircle, Eye } from 'lucide-react';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import { useQuotations } from '@/hooks/useQuotations';
 import { useProjects } from '@/hooks/useProjects';
