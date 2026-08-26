@@ -193,12 +193,16 @@ export const buildWpcQuotationPdf = (doc: jsPDF, data: WpcQuotationData): void =
   let y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
   const pageHeight = doc.internal.pageSize.getHeight();
 
+  // Footer rule sits at pageHeight - 15, so content must stay above that.
+  const contentBottom = pageHeight - 18;
+
   const ensureSpace = (needed: number) => {
-    if (y + needed > pageHeight - 20) {
+    if (y + needed > contentBottom) {
       doc.addPage();
       y = 20;
     }
   };
+
 
   ensureSpace(14);
   doc.setFillColor(...DARK);
