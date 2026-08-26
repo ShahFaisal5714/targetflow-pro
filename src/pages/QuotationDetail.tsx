@@ -987,6 +987,33 @@ export default function QuotationDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* PDF preview */}
+      <Dialog open={previewOpen} onOpenChange={(open) => { if (!open) closePreview(); }}>
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Preview — {quotationNumber}</DialogTitle>
+          </DialogHeader>
+          {previewUrl && (
+            <iframe
+              src={previewUrl}
+              title={`Quotation ${quotationNumber} preview`}
+              className="w-full h-[60vh] rounded-md border border-border bg-muted"
+            />
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" className="min-h-11" onClick={handleDownloadPreview}>
+              <Download className="h-4 w-4 mr-2" />
+              Download preview
+            </Button>
+            <Button className="min-h-11" onClick={handlePrint}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </MainLayout>
+
   );
 }
