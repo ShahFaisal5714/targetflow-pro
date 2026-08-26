@@ -1,5 +1,6 @@
 import type jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import qrcode from 'qrcode-generator';
 import type { Company } from '@/contexts/CompaniesContext';
 
 /**
@@ -7,7 +8,8 @@ import type { Company } from '@/contexts/CompaniesContext';
  *
  * Mirrors the printed WPC quotation format: branded header bar, boxed details
  * grid, dark items table with multi-line door descriptions, stacked
- * subtotal/VAT/total rows and a terms & conditions block.
+ * subtotal/VAT/total rows, terms & conditions block and a fixed
+ * QR-code + signature footer area.
  */
 
 export interface WpcQuotationItem {
@@ -37,6 +39,8 @@ export interface WpcQuotationData {
   taxAmount: number;
   total: number;
   terms?: string[];
+  /** Optional custom QR payload; defaults to a quotation summary line. */
+  qrData?: string;
 }
 
 const DARK: [number, number, number] = [46, 46, 46];
@@ -45,6 +49,26 @@ const TITLE: [number, number, number] = [214, 130, 34];
 
 const money = (n: number) =>
   n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** Draws a QR code as vector rectangles (no raster image needed). */
+const drawQrCode = (doc: jsPDF, text: string, x: number, y: number, size: number) => {
+  const qr = qrcode(0, 'M');
+  qr.addData(text);
+  qr.make();
+  const count = qr.getModuleCount();
+  const cell = size / count;
+  doc.setFillColor(255, 255, 255);
+  doc.rect(x, y, size, size, 'F');
+  doc.setFillColor(0, 0, 0);
+  for (let r = 0; r < count; r++) {
+    for (let c = 0; c < count; c++) {
+      if (qr.isDark(r, c)) {
+        doc.rect(x + c * cell, y + r * cell, cell, cell, 'F');
+      }
+    }
+  }
+};
+
 
 export const buildWpcQuotationPdf = (doc: jsPDF, data: WpcQuotationData): void => {
   const { company } = data;
