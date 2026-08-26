@@ -226,10 +226,11 @@ export const buildWpcQuotationPdf = (doc: jsPDF, data: WpcQuotationData): void =
 
   // ---- QR code + signature area ---------------------------------------
   // Fixed geometry: signature lines on the left, QR block on the right.
-  const qrSize = 26;
-  const blockHeight = qrSize + 12;
-  ensureSpace(blockHeight + 6);
+  const qrSize = 24;
+  const blockHeight = qrSize + 8;
   y += 4;
+  ensureSpace(blockHeight);
+
 
   const blockTop = y;
   const qrX = pageWidth - margin - qrSize;
