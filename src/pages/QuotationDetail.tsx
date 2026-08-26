@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Download, FileText, Printer, Loader2, Truck, Pencil, Trash2, Receipt, MessageCircle } from 'lucide-react';
+import { Download, FileText, Printer, Loader2, Truck, Pencil, Trash2, Receipt, MessageCircle, Eye } from 'lucide-react';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import { useQuotations } from '@/hooks/useQuotations';
 import { useProjects } from '@/hooks/useProjects';
@@ -59,6 +59,9 @@ export default function QuotationDetail() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [sharingWhatsApp, setSharingWhatsApp] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
   
   const canEdit = role === 'admin' || role === 'sales_manager';
   
@@ -495,6 +498,27 @@ export default function QuotationDetail() {
     window.open(pdfUrl, '_blank');
   };
 
+  const handleOpenPreview = () => {
+    const doc = generatePDF();
+    const url = URL.createObjectURL(doc.output('blob'));
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(url);
+    setPreviewOpen(true);
+  };
+
+  const closePreview = () => {
+    setPreviewOpen(false);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+  };
+
+  const handleDownloadPreview = () => {
+    generatePDF().save(`${quotationNumber}-preview.pdf`);
+  };
+
+
   const handlePrint = () => {
     const doc = generatePDF();
     const pdfBlob = doc.output('blob');
@@ -608,7 +632,12 @@ export default function QuotationDetail() {
                 {sharingWhatsApp ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <MessageCircle className="h-4 w-4 mr-2" />}
                 WhatsApp
               </Button>
+              <Button variant="outline" onClick={handleOpenPreview}>
+                <Eye className="h-4 w-4 mr-2" />
+                Preview PDF
+              </Button>
               <Button variant="outline" onClick={handleExportPDF}>
+
                 <Download className="h-4 w-4 mr-2" />
                 Export PDF
               </Button>
@@ -987,6 +1016,33 @@ export default function QuotationDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* PDF preview */}
+      <Dialog open={previewOpen} onOpenChange={(open) => { if (!open) closePreview(); }}>
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Preview — {quotationNumber}</DialogTitle>
+          </DialogHeader>
+          {previewUrl && (
+            <iframe
+              src={previewUrl}
+              title={`Quotation ${quotationNumber} preview`}
+              className="w-full h-[60vh] rounded-md border border-border bg-muted"
+            />
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" className="min-h-11" onClick={handleDownloadPreview}>
+              <Download className="h-4 w-4 mr-2" />
+              Download preview
+            </Button>
+            <Button className="min-h-11" onClick={handlePrint}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </MainLayout>
+
   );
 }

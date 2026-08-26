@@ -1,5 +1,6 @@
 import type jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import qrcode from 'qrcode-generator';
 import type { Company } from '@/contexts/CompaniesContext';
 
 /**
@@ -7,7 +8,8 @@ import type { Company } from '@/contexts/CompaniesContext';
  *
  * Mirrors the printed WPC quotation format: branded header bar, boxed details
  * grid, dark items table with multi-line door descriptions, stacked
- * subtotal/VAT/total rows and a terms & conditions block.
+ * subtotal/VAT/total rows, terms & conditions block and a fixed
+ * QR-code + signature footer area.
  */
 
 export interface WpcQuotationItem {
@@ -37,6 +39,8 @@ export interface WpcQuotationData {
   taxAmount: number;
   total: number;
   terms?: string[];
+  /** Optional custom QR payload; defaults to a quotation summary line. */
+  qrData?: string;
 }
 
 const DARK: [number, number, number] = [46, 46, 46];
@@ -45,6 +49,26 @@ const TITLE: [number, number, number] = [214, 130, 34];
 
 const money = (n: number) =>
   n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** Draws a QR code as vector rectangles (no raster image needed). */
+const drawQrCode = (doc: jsPDF, text: string, x: number, y: number, size: number) => {
+  const qr = qrcode(0, 'M');
+  qr.addData(text);
+  qr.make();
+  const count = qr.getModuleCount();
+  const cell = size / count;
+  doc.setFillColor(255, 255, 255);
+  doc.rect(x, y, size, size, 'F');
+  doc.setFillColor(0, 0, 0);
+  for (let r = 0; r < count; r++) {
+    for (let c = 0; c < count; c++) {
+      if (qr.isDark(r, c)) {
+        doc.rect(x + c * cell, y + r * cell, cell, cell, 'F');
+      }
+    }
+  }
+};
+
 
 export const buildWpcQuotationPdf = (doc: jsPDF, data: WpcQuotationData): void => {
   const { company } = data;
@@ -138,7 +162,7 @@ export const buildWpcQuotationPdf = (doc: jsPDF, data: WpcQuotationData): void =
   ]);
 
   const numericWidth = 26;
-  const descWidth = contentWidth - 10 - 16 - numericWidth * 3;
+  const descWidth = contentWidth - 13 - 16 - numericWidth * 3;
 
   autoTable(doc, {
     startY: itemsStartY,
@@ -156,7 +180,7 @@ export const buildWpcQuotationPdf = (doc: jsPDF, data: WpcQuotationData): void =
     margin: { left: margin, right: margin },
     tableWidth: contentWidth,
     columnStyles: {
-      0: { cellWidth: 10, halign: 'center' },
+      0: { cellWidth: 13, halign: 'center' },
       1: { cellWidth: descWidth },
       2: { cellWidth: 16, halign: 'center' },
       3: { cellWidth: numericWidth, halign: 'center' },
@@ -169,12 +193,16 @@ export const buildWpcQuotationPdf = (doc: jsPDF, data: WpcQuotationData): void =
   let y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
   const pageHeight = doc.internal.pageSize.getHeight();
 
+  // Footer rule sits at pageHeight - 15, so content must stay above that.
+  const contentBottom = pageHeight - 18;
+
   const ensureSpace = (needed: number) => {
-    if (y + needed > pageHeight - 20) {
+    if (y + needed > contentBottom) {
       doc.addPage();
       y = 20;
     }
   };
+
 
   ensureSpace(14);
   doc.setFillColor(...DARK);
@@ -196,5 +224,58 @@ export const buildWpcQuotationPdf = (doc: jsPDF, data: WpcQuotationData): void =
     y += lines.length * 4.2 + 1.5;
   });
 
+  // ---- QR code + signature area ---------------------------------------
+  // Fixed geometry: signature lines on the left, QR block on the right.
+  const qrSize = 24;
+  const blockHeight = qrSize + 8;
+  y += 4;
+  ensureSpace(blockHeight);
+
+
+  const blockTop = y;
+  const qrX = pageWidth - margin - qrSize;
+
+  // QR code (verification payload)
+  const qrPayload =
+    data.qrData ||
+    [
+      `Quotation: ${data.quotationNo}`,
+      `Project: ${data.project}`,
+      `Total: AED ${money(data.total)}`,
+      company.website || company.email || '',
+    ]
+      .filter(Boolean)
+      .join(' | ');
+  drawQrCode(doc, qrPayload, qrX, blockTop, qrSize);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(...DARK);
+  doc.text('Scan to verify quotation', qrX + qrSize / 2, blockTop + qrSize + 4, { align: 'center' });
+
+  // Signature area (left)
+  const sigWidth = 62;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.text('Prepared By', margin, blockTop + 4);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text(data.preparedBy || '', margin, blockTop + 9);
+  doc.setDrawColor(...DARK);
+  doc.setLineWidth(0.3);
+  doc.line(margin, blockTop + qrSize - 8, margin + sigWidth, blockTop + qrSize - 8);
+  doc.setFontSize(7);
+  doc.text('Authorised Signature', margin, blockTop + qrSize - 4);
+
+  const acceptX = margin + sigWidth + 14;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.text('Accepted By (Client)', acceptX, blockTop + 4);
+  doc.line(acceptX, blockTop + qrSize - 8, acceptX + sigWidth, blockTop + qrSize - 8);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.text('Name / Signature / Date', acceptX, blockTop + qrSize - 4);
+
   doc.setTextColor(0, 0, 0);
 };
+
