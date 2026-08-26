@@ -196,5 +196,57 @@ export const buildWpcQuotationPdf = (doc: jsPDF, data: WpcQuotationData): void =
     y += lines.length * 4.2 + 1.5;
   });
 
+  // ---- QR code + signature area ---------------------------------------
+  // Fixed geometry: signature lines on the left, QR block on the right.
+  const qrSize = 26;
+  const blockHeight = qrSize + 12;
+  ensureSpace(blockHeight + 6);
+  y += 4;
+
+  const blockTop = y;
+  const qrX = pageWidth - margin - qrSize;
+
+  // QR code (verification payload)
+  const qrPayload =
+    data.qrData ||
+    [
+      `Quotation: ${data.quotationNo}`,
+      `Project: ${data.project}`,
+      `Total: AED ${money(data.total)}`,
+      company.website || company.email || '',
+    ]
+      .filter(Boolean)
+      .join(' | ');
+  drawQrCode(doc, qrPayload, qrX, blockTop, qrSize);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(...DARK);
+  doc.text('Scan to verify quotation', qrX + qrSize / 2, blockTop + qrSize + 4, { align: 'center' });
+
+  // Signature area (left)
+  const sigWidth = 62;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.text('Prepared By', margin, blockTop + 4);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text(data.preparedBy || '', margin, blockTop + 9);
+  doc.setDrawColor(...DARK);
+  doc.setLineWidth(0.3);
+  doc.line(margin, blockTop + qrSize - 8, margin + sigWidth, blockTop + qrSize - 8);
+  doc.setFontSize(7);
+  doc.text('Authorised Signature', margin, blockTop + qrSize - 4);
+
+  const acceptX = margin + sigWidth + 14;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.text('Accepted By (Client)', acceptX, blockTop + 4);
+  doc.line(acceptX, blockTop + qrSize - 8, acceptX + sigWidth, blockTop + qrSize - 8);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.text('Name / Signature / Date', acceptX, blockTop + qrSize - 4);
+
   doc.setTextColor(0, 0, 0);
 };
+
