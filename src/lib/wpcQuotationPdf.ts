@@ -162,7 +162,7 @@ export const buildWpcQuotationPdf = (doc: jsPDF, data: WpcQuotationData): void =
   ]);
 
   const numericWidth = 26;
-  const descWidth = contentWidth - 10 - 16 - numericWidth * 3;
+  const descWidth = contentWidth - 13 - 16 - numericWidth * 3;
 
   autoTable(doc, {
     startY: itemsStartY,
@@ -180,7 +180,7 @@ export const buildWpcQuotationPdf = (doc: jsPDF, data: WpcQuotationData): void =
     margin: { left: margin, right: margin },
     tableWidth: contentWidth,
     columnStyles: {
-      0: { cellWidth: 10, halign: 'center' },
+      0: { cellWidth: 13, halign: 'center' },
       1: { cellWidth: descWidth },
       2: { cellWidth: 16, halign: 'center' },
       3: { cellWidth: numericWidth, halign: 'center' },
