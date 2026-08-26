@@ -495,6 +495,27 @@ export default function QuotationDetail() {
     window.open(pdfUrl, '_blank');
   };
 
+  const handleOpenPreview = () => {
+    const doc = generatePDF();
+    const url = URL.createObjectURL(doc.output('blob'));
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(url);
+    setPreviewOpen(true);
+  };
+
+  const closePreview = () => {
+    setPreviewOpen(false);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+  };
+
+  const handleDownloadPreview = () => {
+    generatePDF().save(`${quotationNumber}-preview.pdf`);
+  };
+
+
   const handlePrint = () => {
     const doc = generatePDF();
     const pdfBlob = doc.output('blob');
