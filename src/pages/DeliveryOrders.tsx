@@ -314,7 +314,7 @@ export default function DeliveryOrders() {
     // Items table
     const tableData = order.items.map((item, index) => [
       index + 1,
-      item.productName.toUpperCase(),
+      (item.productName ?? "").toUpperCase(),
       item.unit,
       item.quantity.toString(),
       item.deliveredQuantity.toString(),

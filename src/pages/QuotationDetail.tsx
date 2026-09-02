@@ -330,8 +330,8 @@ export default function QuotationDetail() {
     // Items table with proper column widths that fit the page
     const tableData = quotation.items.map((item, index) => [
       index + 1,
-      item.productName.toUpperCase(),
-      item.unit.toUpperCase(),
+      (item.productName ?? "").toUpperCase(),
+      (item.unit ?? "").toUpperCase(),
       item.quantity.toLocaleString('en-US', { minimumFractionDigits: 2 }),
       item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 }),
       item.total.toLocaleString('en-US', { minimumFractionDigits: 2 })
@@ -749,8 +749,8 @@ export default function QuotationDetail() {
                   {quotation.items.map((item, index) => (
                     <tr key={item.productId} className="border-b hover:bg-muted/50">
                       <td className="px-4 py-3 text-sm">{index + 1}</td>
-                      <td className="px-4 py-3 text-sm font-medium">{item.productName.toUpperCase()}</td>
-                      <td className="px-4 py-3 text-sm text-center">{item.unit.toUpperCase()}</td>
+                      <td className="px-4 py-3 text-sm font-medium">{(item.productName ?? "").toUpperCase()}</td>
+                      <td className="px-4 py-3 text-sm text-center">{(item.unit ?? "").toUpperCase()}</td>
                       <td className="px-4 py-3 text-sm text-right">{item.quantity.toFixed(2)}</td>
                       <td className="px-4 py-3 text-sm text-right">{item.unitPrice.toFixed(2)}</td>
                       <td className="px-4 py-3 text-sm text-right font-semibold">{item.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>

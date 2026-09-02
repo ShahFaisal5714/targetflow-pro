@@ -173,7 +173,7 @@ export default function InvoiceDetail() {
     const tableStartY = metrics.tableStartY + (buyerTrn ? 5 : 0);
     const tableData = invoice.items.map((item, index) => [
       index + 1,
-      item.description.toUpperCase(),
+      (item.description ?? "").toUpperCase(),
       item.quantity.toLocaleString('en-US', { minimumFractionDigits: 2 }),
       item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 }),
       item.total.toLocaleString('en-US', { minimumFractionDigits: 2 })
@@ -491,7 +491,7 @@ export default function InvoiceDetail() {
                   {invoice.items.map((item, index) => (
                     <tr key={item.productId} className="border-b hover:bg-muted/50">
                       <td className="px-4 py-3 text-sm">{index + 1}</td>
-                      <td className="px-4 py-3 text-sm font-medium">{item.description.toUpperCase()}</td>
+                      <td className="px-4 py-3 text-sm font-medium">{(item.description ?? "").toUpperCase()}</td>
                       <td className="px-4 py-3 text-sm text-right">{item.quantity.toFixed(2)}</td>
                       <td className="px-4 py-3 text-sm text-right">{item.unitPrice.toFixed(2)}</td>
                       <td className="px-4 py-3 text-sm text-right font-semibold">{item.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
