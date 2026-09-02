@@ -577,7 +577,8 @@ export default function QuotationDetail() {
     <MainLayout>
       {/* Header */}
       <div className="bg-card border-b border-border">
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
+
           <Breadcrumb 
             items={[
               { label: 'Projects', href: '/projects' },
@@ -586,15 +587,16 @@ export default function QuotationDetail() {
             ]} 
             className="mb-4"
           />
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-foreground">{quotationNumber}</h1>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground break-all">{quotationNumber}</h1>
                 <StatusBadge status={quotation.status as any} />
               </div>
-              <p className="text-muted-foreground mt-1">{quotation.project_name}</p>
+              <p className="text-muted-foreground mt-1 break-words">{quotation.project_name}</p>
             </div>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end [&_button]:min-h-11 [&_button]:w-full sm:[&_button]:w-auto">
+
               {canEdit && (
                 <>
                   <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
@@ -651,35 +653,37 @@ export default function QuotationDetail() {
       </div>
 
       {/* Quotation Preview */}
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <Card className="max-w-5xl mx-auto print-container">
           {/* Company Header */}
           <div className="p-4 sm:p-8 border-b bg-gradient-to-br from-primary/5 to-accent/5 print-header print-no-break">
-            <div className="flex items-start justify-between mb-6">
-              <div className="print-logo-container bg-white rounded-lg p-4 shadow-sm border border-border/30 flex items-center justify-center" style={{ minWidth: '120px', minHeight: '60px' }}>
+            <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 mb-6">
+              <div className="print-logo-container bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-border/30 flex items-center justify-center" style={{ minWidth: '120px', minHeight: '60px' }}>
                 <img 
                   src={logo} 
                   alt={company.name} 
-                  className="print-logo max-h-16 max-w-[160px] object-contain"
+                  className="print-logo max-h-14 sm:max-h-16 max-w-[140px] sm:max-w-[160px] object-contain"
                   style={{ width: 'auto', height: 'auto' }}
                 />
               </div>
-              <div className="text-right text-sm text-muted-foreground">
-                <p className="font-semibold text-foreground text-lg">{company.name}</p>
+              <div className="text-center sm:text-right text-xs sm:text-sm text-muted-foreground break-words">
+                <p className="font-semibold text-foreground text-base sm:text-lg">{company.name}</p>
                 {company.address && <p className="mt-1">{company.address}</p>}
-                {company.email && <p className="mt-2">Email: {company.email}</p>}
-                {company.website && <p>Web: {company.website}</p>}
+                {company.email && <p className="mt-2 break-all">Email: {company.email}</p>}
+                {company.website && <p className="break-all">Web: {company.website}</p>}
                 {company.phone && <p className="mt-2">Contact: {company.phone}</p>}
                 <SecondaryOfficeBlock company={company} />
               </div>
             </div>
+
             
             <div className="text-center">
-              <h2 className="text-3xl font-bold text-foreground flex items-center justify-center gap-2">
-                <FileText className="h-8 w-8 text-primary" />
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center justify-center gap-2">
+                <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
                 QUOTATION
               </h2>
             </div>
+
           </div>
 
           {/* Details Section */}
@@ -734,7 +738,7 @@ export default function QuotationDetail() {
           {/* Items Table */}
           <div className="p-4 sm:p-8 border-b">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[640px]">
                 <thead>
                   <tr className="bg-primary text-primary-foreground">
                     <th className="px-4 py-3 text-left text-xs font-semibold">S No</th>
