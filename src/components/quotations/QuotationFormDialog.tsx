@@ -10,6 +10,7 @@ import { Quotation, QuotationItem, QuotationStatus } from '@/types/crm';
 import { useProjects } from '@/hooks/useProjects';
 import { useProducts } from '@/hooks/useProducts';
 import { useCompanies } from '@/hooks/useCompanies';
+import { useCustomers } from '@/hooks/useCustomers';
 
 interface QuotationFormDialogProps {
   open: boolean;
@@ -22,10 +23,12 @@ interface QuotationFormDialogProps {
 export default function QuotationFormDialog({ open, onOpenChange, quotation, onSubmit, initialProjectId }: QuotationFormDialogProps) {
   const { projects } = useProjects();
   const { products } = useProducts();
+  const { customers } = useCustomers();
   const { targetSpecialties, alhadafCompany, tswpcCompany, activeCompanyId } = useCompanies();
   const [projectId, setProjectId] = useState(quotation?.projectId || initialProjectId || '');
   const [companyId, setCompanyId] = useState(quotation?.companyId || '');
   const [status, setStatus] = useState<string>(quotation?.status || 'draft');
+  const [customerId, setCustomerId] = useState<string>((quotation as any)?.customerId || '');
   const [items, setItems] = useState<Partial<QuotationItem>[]>(
     quotation?.items || [{ productId: '', quantity: 0, unitPrice: 0 }]
   );
@@ -55,6 +58,7 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
       setProjectId(quotation.projectId || '');
       setCompanyId(quotation.companyId || '');
       setStatus(quotation.status || 'draft');
+      setCustomerId((quotation as any).customerId || '');
       setItems(quotation.items || [{ productId: '', quantity: 0, unitPrice: 0 }]);
       setDiscountType(quotation.discount?.type || 'percentage');
       setDiscountValue(quotation.discount?.value || 0);
@@ -62,6 +66,7 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
       setProjectId(initialProjectId || '');
       setCompanyId(activeCompanyId);
       setStatus('draft');
+      setCustomerId('');
       setItems([{ productId: '', quantity: 0, unitPrice: 0 }]);
       setDiscountType('percentage');
       setDiscountValue(0);
@@ -150,6 +155,7 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
       total,
       validUntil: new Date(Date.now() + validDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       companyId: companyId || undefined,
+      customerId: customerId || undefined,
       status: status as QuotationStatus
     };
 
@@ -166,6 +172,7 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
   };
 
   const totals = calculateTotals();
+  const selectedCustomer = customers.find((c) => c.id === customerId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -176,7 +183,7 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Company, Project & Status Selection */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Company *</Label>
               <Select value={companyId} onValueChange={setCompanyId} required>
@@ -223,6 +230,34 @@ export default function QuotationFormDialog({ open, onOpenChange, quotation, onS
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Customer</Label>
+              <Select
+                value={customerId || 'none'}
+                onValueChange={(value) => setCustomerId(value === 'none' ? '' : value)}
+              >
+                <SelectTrigger className="min-h-11">
+                  <SelectValue placeholder="Select saved customer" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No saved customer</SelectItem>
+                  {customers.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name}
+                      {customer.contact_person ? ` — ${customer.contact_person}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedCustomer && (
+                <p className="text-xs text-muted-foreground">
+                  {[selectedCustomer.contact_person, selectedCustomer.phone, selectedCustomer.email]
+                    .filter(Boolean)
+                    .join(' · ') || 'No contact details saved'}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

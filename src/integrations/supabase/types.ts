@@ -589,6 +589,7 @@ export type Database = {
         Row: {
           company_id: string | null
           created_at: string
+          customer_id: string | null
           discount: Json | null
           id: string
           items: Json
@@ -606,6 +607,7 @@ export type Database = {
         Insert: {
           company_id?: string | null
           created_at?: string
+          customer_id?: string | null
           discount?: Json | null
           id?: string
           items?: Json
@@ -623,6 +625,7 @@ export type Database = {
         Update: {
           company_id?: string | null
           created_at?: string
+          customer_id?: string | null
           discount?: Json | null
           id?: string
           items?: Json
@@ -643,6 +646,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
           {

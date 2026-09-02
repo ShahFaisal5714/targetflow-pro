@@ -106,6 +106,7 @@ export default function Quotations() {
         total: updatedQuotation.total,
         valid_until: updatedQuotation.validUntil,
         status: updatedQuotation.status,
+        customer_id: updatedQuotation.customerId || null,
       });
       refetch();
     }
@@ -122,6 +123,7 @@ export default function Quotations() {
       total: newQuotation.total,
       valid_until: newQuotation.validUntil,
       status: newQuotation.status,
+      customer_id: newQuotation.customerId || null,
     });
 
     const project = projects.find((p) => p.id === newQuotation.projectId);

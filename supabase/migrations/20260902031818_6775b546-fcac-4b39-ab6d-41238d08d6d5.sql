@@ -1,0 +1,1 @@
+ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS customer_id uuid REFERENCES public.customers(id) ON DELETE SET NULL;
