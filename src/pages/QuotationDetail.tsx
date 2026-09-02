@@ -738,7 +738,7 @@ export default function QuotationDetail() {
           {/* Items Table */}
           <div className="p-4 sm:p-8 border-b">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[640px]">
                 <thead>
                   <tr className="bg-primary text-primary-foreground">
                     <th className="px-4 py-3 text-left text-xs font-semibold">S No</th>
